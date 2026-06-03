@@ -3,9 +3,7 @@ use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::{Float32Builder, ListBuilder};
-use arrow_array::cast::AsArray;
-use arrow_array::types::BinaryType;
-use arrow_array::{ArrayRef, BinaryArray, Float32Array, ListArray};
+use arrow_array::{ArrayRef, BinaryArray, ListArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -14,9 +12,9 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-use rasterarrow_schema::{Metadata, RasterArrowType, RasterFloat32Type};
+use rasterarrow_schema::Metadata;
 
-use rastertile_rs::{Compression, CompressionFormat, NewDataType, Tile,  TypedArray};
+use rastertile_rs::{CompressionFormat, NewDataType, Tile,  TypedArray};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct NativeTile {
@@ -82,7 +80,7 @@ impl ScalarUDFImpl for NativeTile {
     }
 }
 
-fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
+fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
     let lf = Field::new_list_field(DataType::Float32, true);
     let dt = DataType::List(Arc::new(lf));
     let out_field: Field = Field::new("", dt, true);
@@ -105,7 +103,7 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
     //     .to_field(input_field.name(), input_field.is_nullable())
     //     .into())
 }
-fn convert(metadata: Metadata, data: Option<&[u8]>) -> Vec<Option<f32>> {
+fn convert(_metadata: Metadata, data: Option<&[u8]>) -> Vec<Option<f32>> {
     let tile: Tile = Tile {
         x: 256,
         y: 256,

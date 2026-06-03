@@ -34,7 +34,7 @@ pub fn get_table(
         .schema(table_ref.schema.as_ref())
         .ok_or_else(|| DataFusionError::Plan(format!("no such schema {}", table_ref.schema)))?;
 
-    let eee = schema.table_exist(table_ref.table.as_ref());
+    let _eee = schema.table_exist(table_ref.table.as_ref());
 
         // let table =schema.table(table_ref.table.as_ref())
     // NOTE: this is bad, we are calling async code in a sync context.

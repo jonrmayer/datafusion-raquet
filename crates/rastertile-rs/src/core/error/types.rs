@@ -6,7 +6,6 @@
 use core::fmt;
 
 // #[cfg(feature = "std")]
-use thiserror::Error;
 
 /// The main error type for `OxiGDAL`
 #[derive(Debug)]

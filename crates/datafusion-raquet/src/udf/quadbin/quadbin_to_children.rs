@@ -3,8 +3,8 @@ use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
-use arrow_array::{ArrayRef, GenericListArray, ListArray, UInt64Array};
+use arrow_array::types::Int64Type;
+use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -13,7 +13,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::RaquetDataFusionResult;
 
 use quadbin_rs::{cell_to_children, cell_to_children_resolution};
 

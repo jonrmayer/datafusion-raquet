@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use std::str::FromStr;
-use std::{fmt, usize};
+use std::usize;
 
 use crate::errors::*;
 

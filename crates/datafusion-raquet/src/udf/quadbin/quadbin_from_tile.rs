@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{UInt8Type, UInt32Type, UInt64Type,Int64Type};
+use arrow_array::types::Int64Type;
 use arrow_array::{ArrayRef, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -14,7 +14,7 @@ use datafusion::logical_expr::{
 };
 
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::RaquetDataFusionResult;
 
 use quadbin_rs::{Tile, tile_to_cell};
 

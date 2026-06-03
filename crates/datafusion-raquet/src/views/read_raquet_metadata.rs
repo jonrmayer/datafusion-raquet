@@ -1,12 +1,8 @@
-use std::ops::Deref;
 use std::sync::Arc;
 
-use async_trait::async_trait;
 
-use datafusion::arrow::datatypes::{Schema, SchemaRef};
-use datafusion::arrow::record_batch::RecordBatch;
 
-use datafusion::datasource::{TableProvider, TableType};
+use datafusion::datasource::TableProvider;
 
 use datafusion::logical_expr::Expr;
 
@@ -17,7 +13,6 @@ use datafusion::catalog::{CatalogProviderList, Session, TableFunctionImpl};
 use datafusion::common::DataFusionError;
 use datafusion::physical_plan::ExecutionPlan;
 
-use datafusion::datasource::memory::MemorySourceConfig;
 use datafusion::error::Result;
 
 use datafusion_sql::TableReference;
@@ -26,11 +21,10 @@ use datafusion::common::{ScalarValue, plan_err};
 
 use datafusion::datasource::provider_as_source;
 
-use datafusion::logical_expr::{LogicalPlanBuilder, LogicalTableSource, col, lit, table_scan};
+use datafusion::logical_expr::{LogicalPlanBuilder, col, lit};
 
 use crate::views::util;
 
-use crate::RaquetTable;
 
 pub fn read_raquet_metadata(
     catalog_list: Arc<dyn CatalogProviderList>,  

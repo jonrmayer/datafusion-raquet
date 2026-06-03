@@ -81,7 +81,7 @@ impl ExtensionType for RasterFloat32Type {
         Ok(Arc::new(Metadata::deserialize(metadata)?))
     }
 
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
+    fn supports_data_type(&self, _data_type: &DataType) -> Result<(), ArrowError> {
         // let (coord_type, dim) = parse_point(data_type)?;
         // if coord_type != self.coord_type {
         //     return Err(ArrowError::SchemaError(format!(
@@ -98,7 +98,7 @@ impl ExtensionType for RasterFloat32Type {
         Ok(())
     }
 
-    fn try_new(data_type: &DataType, metadata: Self::Metadata) -> Result<Self, ArrowError> {
+    fn try_new(_data_type: &DataType, metadata: Self::Metadata) -> Result<Self, ArrowError> {
         // match data_type {
 
         // }

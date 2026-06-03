@@ -30,10 +30,9 @@ use std::collections::HashMap;
 
 use arrow_schema::{Field, FieldRef, Schema, SchemaRef};
 
-use rasterarrow_schema::error::{RasterArrowError, RasterArrowResult};
+use rasterarrow_schema::error::RasterArrowResult;
 use rasterarrow_schema::{Metadata, RasterArrowType, RasterType};
 
-use object_store::path::Path;
 
 #[derive(Debug, Clone)]
 pub struct RaquetMetadataReader {

@@ -20,7 +20,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use datafusion::arrow::datatypes::{Schema, SchemaRef};
+use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::{Session, TableProviderFactory};
 use datafusion::common::DFSchema;
 use datafusion::datasource::listing::ListingTableUrl;
@@ -28,7 +28,6 @@ use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::{DataFusionError, Result as DfResult};
 use datafusion::logical_expr::utils::conjunction;
 use datafusion::logical_expr::{CreateExternalTable, Expr, TableProviderFilterPushDown};
-use datafusion::physical_expr::create_physical_expr;
 use datafusion::physical_plan::ExecutionPlan;
 
 use super::config::RaquetTableConfig;
@@ -71,7 +70,7 @@ impl RaquetTable {
 
 impl RaquetTable {
     pub async fn get_partitioned_file(&self) -> PartitionedFile {
-        let (store, object_meta) = self
+        let (_store, object_meta) = self
             .table_config()
             .get_table_url()
             .get_store_location()

@@ -18,7 +18,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use arrow_schema::{DataType, Field, Fields, Schema, SchemaRef};
+use arrow_schema::{Fields, Schema, SchemaRef};
 use datafusion::datasource::listing::ListingTableUrl;
 use datafusion::error::{DataFusionError, Result as DfResult};
 use object_store::path::Path;

@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use parquet::arrow::ProjectionMask;
 use parquet::arrow::arrow_reader::RowFilter;
-use parquet::errors::*;
 use parquet::file::metadata::ParquetMetaData;
 
 use crate::metadata::metadata_arrow_predicate;

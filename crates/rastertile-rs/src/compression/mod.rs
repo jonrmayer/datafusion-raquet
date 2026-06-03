@@ -1,14 +1,10 @@
 mod error;
-use error::{CompressionError, Result};
 
 mod gzip;
-use gzip::*;
 
 mod jpeg;
-use jpeg::*;
 
 mod webp;
-use webp::*;
 
 use crate::CompressionFormat;
 

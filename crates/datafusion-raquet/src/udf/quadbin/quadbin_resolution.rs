@@ -3,8 +3,8 @@ use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::UInt8Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{UInt8Type, UInt32Type, UInt64Type,Int64Type};
-use arrow_array::{ArrayRef, UInt64Array,UInt8Array};
+use arrow_array::types::Int64Type;
+use arrow_array::{ArrayRef,UInt8Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -17,7 +17,7 @@ use datafusion::logical_expr::{
 // use geoarrow_array::builder::GeometryBuilder;
 // use geoarrow_schema::{GeometryType, Metadata};
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::RaquetDataFusionResult;
 
 use quadbin_rs::{cell_to_resolution};
 

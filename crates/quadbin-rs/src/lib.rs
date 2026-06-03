@@ -275,7 +275,7 @@ pub fn cell_to_children_resolution(cell: u64, child_resolution: u8) -> Vec<u64> 
     let tile = cell_to_tile(cell);
     let res_diff = child_resolution - current_res;
     let children_per_dim = 1 << res_diff;
-    let count = children_per_dim * children_per_dim;
+    let _count = children_per_dim * children_per_dim;
     let base_x = tile.x << res_diff;
     let base_y = tile.y << res_diff;
 
@@ -301,7 +301,7 @@ pub fn cell_kring(cell: u64, k: i32) -> Vec<u64> {
     if k < 0 {}
     let tile: Tile = cell_to_tile(cell);
     let max_coord = (1 << tile.z) - 1; // Maximum valid coordinate at this resolution
-    let diameter = 2 * k + 1;
+    let _diameter = 2 * k + 1;
 
     for dy in -k..=k {
         for dx in -k..=k {

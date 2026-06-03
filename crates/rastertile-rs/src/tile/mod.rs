@@ -5,9 +5,8 @@ pub use data_type::DataType;
 
 pub use array::{Array, TypedArray};
 
-use bytes::Bytes;
 
-use crate::{RasterTileError, RasterTileResult};
+use crate::RasterTileResult;
 
 use crate::{Compression, CompressionFormat};
 

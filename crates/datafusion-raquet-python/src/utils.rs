@@ -1,9 +1,3 @@
-use datafusion_ffi::table_provider::FFI_TableProvider;
-use datafusion_python_util::ffi_logical_codec_from_pycapsule;
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
-use pyo3::types::PyCapsule;
-use std::sync::Arc;
 
 
 

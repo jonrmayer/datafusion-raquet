@@ -3,9 +3,8 @@ use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::UInt64Builder;
-use arrow_array::cast::AsArray;
-use arrow_array::types::{BinaryType, UInt64Type};
-use arrow_array::{ArrayRef, BinaryArray, Float32Array, ListArray, PrimitiveArray};
+use arrow_array::types::UInt64Type;
+use arrow_array::{ArrayRef, BinaryArray, PrimitiveArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -14,10 +13,10 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-use rasterarrow_schema::{Metadata, RasterArrowType, RasterFloat32Type};
+use rasterarrow_schema::Metadata;
 
 use rastertile_rs::{
-    Compression, CompressionFormat, NewDataType, Tile, TileStatistics, TypedArray,
+    CompressionFormat, NewDataType, Tile,
 };
 
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -58,7 +57,7 @@ impl ScalarUDFImpl for StatisticsTile {
         Err(DataFusionError::Internal("return_type".to_string()))
     }
 
-    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
         Ok(Arc::new(Field::new("", DataType::UInt64, false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -84,7 +83,7 @@ impl ScalarUDFImpl for StatisticsTile {
     }
 }
 
-fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
+fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
     let lf = Field::new_list_field(DataType::Float32, true);
     let dt = DataType::List(Arc::new(lf));
     let out_field: Field = Field::new("", dt, true);
@@ -107,7 +106,7 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
     //     .to_field(input_field.name(), input_field.is_nullable())
     //     .into())
 }
-fn convert(metadata: Metadata, data: Option<&[u8]>) -> u64 {
+fn convert(_metadata: Metadata, data: Option<&[u8]>) -> u64 {
     let tile: Tile = Tile {
         x: 256,
         y: 256,

@@ -3,10 +3,8 @@ use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::GenericBinaryBuilder;
-use arrow_array::cast::AsArray;
-use arrow_array::types::BinaryType;
-use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, GenericBinaryArray};
-use arrow_schema::{DataType, Field, FieldRef};
+use arrow_array::{ArrayRef, BinaryArray};
+use arrow_schema::{DataType, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{

@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Float64Type, Int64Type, UInt64Type};
+use arrow_array::types::{Float64Type, Int64Type};
 use arrow_array::{ArrayRef, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -15,7 +15,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{Tile, lonlat_to_cell};
+use quadbin_rs::lonlat_to_cell;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinFromLonLat {

@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
+use arrow_array::types::Int64Type;
 use arrow_array::{ArrayRef, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -17,7 +17,7 @@ use datafusion::logical_expr::{
 // use geoarrow_array::builder::GeometryBuilder;
 // use geoarrow_schema::{GeometryType, Metadata};
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::RaquetDataFusionResult;
 
 use quadbin_rs::{cell_to_parent, cell_to_parent_resolution};
 

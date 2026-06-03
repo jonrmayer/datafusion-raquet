@@ -1,6 +1,5 @@
 use std::any::Any;
 use std::collections::HashMap;
-use std::ops::Deref;
 use std::sync::Arc;
 
 use arrow_schema::SchemaRef;
@@ -19,11 +18,9 @@ use datafusion_datasource::TableSchema;
 use datafusion_datasource::file_format::FileFormatFactory;
 use datafusion_datasource::file_scan_config::FileScanConfigBuilder;
 use datafusion_datasource_parquet::ParquetFormat;
-use datafusion_datasource_parquet::metadata::DFParquetMetadata;
 use datafusion_datasource_parquet::source::ParquetSource;
 // use geoarrow_schema::CoordType;
 use object_store::{ObjectMeta, ObjectStore};
-use parquet::file::metadata::ParquetMetaData;
 // use raquet::metadata::RaquetMetadata;
 // use raquet::reader::infer_geoarrow_schema;
 
