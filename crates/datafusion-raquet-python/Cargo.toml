@@ -1,0 +1,25 @@
+[package]
+name = "datafusion-raquet-python"
+version = "0.1.0"
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "datafusion_raquet_python"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.28.0"
+arrow-array = { workspace = true }
+arrow-schema = { workspace = true }
+datafusion = { workspace = true }
+datafusion-ffi = "53"
+datafusion-catalog = "53"
+datafusion-common = { version = "53", default-features = false }
+
+datafusion-expr = { version = "53" }
+datafusion-python-util = { workspace = true }
+# datafusion-python = { version = "53" }
+tokio = { workspace = true }
+
+datafusion-raquet = { workspace = true }

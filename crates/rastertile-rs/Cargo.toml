@@ -1,0 +1,48 @@
+[package]
+name = "rastertile-rs"
+version.workspace = true
+# authors.workspace = true
+edition.workspace = true
+# license.workspace = true
+# repository.workspace = true
+# rust-version.workspace = true
+# categories.workspace = true
+
+[dependencies]
+
+rolling-stats = "0.8.0"
+
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+bytes = { workspace = true }
+bytemuck =  { workspace = true }
+
+byteorder = { workspace = true }
+
+
+flate2 = { workspace = true }
+jpeg-decoder = { workspace = true }
+image-webp = { workspace = true }
+
+
+
+
+[dev-dependencies]
+
+arrow = { version ="56.2.0", features = ["ipc", "test_utils", "prettyprint", "json"] }
+parquet = { workspace = true, features = [
+    "arrow",
+    "async",
+    "brotli",
+    "flate2-zlib-rs",
+    "flate2",
+    "lz4",
+    "snap",
+    "zstd",
+] }
+
+
+
+

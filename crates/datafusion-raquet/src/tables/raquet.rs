@@ -1,0 +1,506 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+use std::any::Any;
+use std::fmt::Debug;
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use datafusion::arrow::datatypes::{Schema, SchemaRef};
+use datafusion::catalog::{Session, TableProviderFactory};
+use datafusion::common::DFSchema;
+use datafusion::datasource::listing::ListingTableUrl;
+use datafusion::datasource::{TableProvider, TableType};
+use datafusion::error::{DataFusionError, Result as DfResult};
+use datafusion::logical_expr::utils::conjunction;
+use datafusion::logical_expr::{CreateExternalTable, Expr, TableProviderFilterPushDown};
+use datafusion::physical_expr::create_physical_expr;
+use datafusion::physical_plan::ExecutionPlan;
+
+use super::config::RaquetTableConfig;
+// use super::scanner::ZarrScan;
+use crate::tables::config::RaquetTableUrl;
+use datafusion::datasource::physical_plan::{FileScanConfigBuilder, ParquetSource};
+use datafusion::execution::object_store::ObjectStoreUrl;
+
+use datafusion::datasource::memory::DataSourceExec;
+use datafusion_datasource::PartitionedFile;
+
+/// The table provider for raquet stores.
+pub struct RaquetTable {
+    table_config: RaquetTableConfig,
+}
+
+impl Debug for RaquetTable {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
+    }
+}
+
+impl RaquetTable {
+    pub fn new(table_config: RaquetTableConfig) -> Self {
+        Self { table_config }
+    }
+
+    pub fn table_config(&self) -> RaquetTableConfig {
+        self.table_config.clone()
+    }
+
+    pub async fn from_path(path: String) -> Self {
+        let table_url = ListingTableUrl::parse(path).unwrap();
+        let raquet_url = RaquetTableUrl::RaquetStore(table_url);
+        let schema = raquet_url.infer_schema().await.unwrap();
+        let table_config = RaquetTableConfig::new(raquet_url, schema);
+        Self { table_config }
+    }
+}
+
+impl RaquetTable {
+    pub async fn get_partitioned_file(&self) -> PartitionedFile {
+        let (store, object_meta) = self
+            .table_config()
+            .get_table_url()
+            .get_store_location()
+            .await
+            .unwrap();
+        PartitionedFile::new_from_meta(object_meta)
+    }
+}
+
+#[async_trait]
+impl TableProvider for RaquetTable {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn schema(&self) -> SchemaRef {
+        self.table_config.get_schema_ref()
+    }
+
+    fn table_type(&self) -> TableType {
+        TableType::Base
+    }
+
+    // there's no projected columns or partitions with the zarr data,
+    // so really all we have are arrays that are present in all the data
+    // chunks. there's not much to check here, we do use the filter
+    // pushdown to avoid reading entire chunk, so pretty much all the
+    // available arrays can be used as Inexact filters.
+    fn supports_filters_pushdown(
+        &self,
+        filters: &[&Expr],
+    ) -> datafusion::error::Result<Vec<TableProviderFilterPushDown>> {
+        Ok(vec![TableProviderFilterPushDown::Inexact; filters.len()])
+    }
+
+    async fn scan(
+        &self,
+        state: &dyn Session,
+        projection: Option<&Vec<usize>>,
+        filters: &[Expr],
+        limit: Option<usize>,
+    ) -> datafusion::error::Result<Arc<dyn ExecutionPlan>> {
+        let df_schema = DFSchema::try_from(self.schema())?;
+        let predicate = conjunction(filters.to_vec());
+        let predicate = predicate
+            .map(|predicate| state.create_physical_expr(predicate, &df_schema))
+            .transpose()?
+            // if there are no filters, use a literal true to have a predicate
+            // that always evaluates to true we can pass to the index
+            .unwrap_or_else(|| datafusion::physical_expr::expressions::lit(true));
+
+        let object_store_url = ObjectStoreUrl::parse("file://")?;
+
+        let source = Arc::new(ParquetSource::new(self.schema()).with_predicate(predicate));
+
+        let mut file_scan_config_builder = FileScanConfigBuilder::new(object_store_url, source)
+            .with_projection_indices(projection.cloned())?
+            .with_limit(limit);
+        let partitioned_file = self.get_partitioned_file().await;
+        file_scan_config_builder = file_scan_config_builder.with_file(partitioned_file);
+
+        Ok(DataSourceExec::from_data_source(
+            file_scan_config_builder.build(),
+        ))
+    }
+}
+
+/// The factory for the zarr table.
+#[derive(Debug)]
+pub struct RaquetTableFactory {}
+
+#[async_trait]
+impl TableProviderFactory for RaquetTableFactory {
+    async fn create(
+        &self,
+        _state: &dyn Session,
+        cmd: &CreateExternalTable,
+    ) -> DfResult<Arc<dyn TableProvider>> {
+        let table_url = match cmd.file_type.as_str() {
+            "RAQUET_STORE" => RaquetTableUrl::RaquetStore(ListingTableUrl::parse(&cmd.location)?),
+            // #[cfg(feature = "icechunk")]
+            // "ICECHUNK_REPO" => ZarrTableUrl::IcechunkRepo(ListingTableUrl::parse(&cmd.location)?),
+            _ => {
+                return Err(DataFusionError::Execution(format!(
+                    "Unsupported file type {}",
+                    cmd.file_type
+                )));
+            }
+        };
+
+        let inferred_schema = table_url.infer_schema().await?;
+        // if cmd.schema.fields().is_empty() {
+        let schema = inferred_schema;
+        // };
+        // } else {
+        //     let provided_schema: Schema = cmd.schema.as_ref().into();
+        //     for field in provided_schema.fields() {
+        //         let target_type = inferred_schema.field_with_name(field.name())?.data_type();
+        //         if field.data_type() != target_type {
+        //             return Err(DataFusionError::Execution(format!(
+        //                 "Requested column {}'s type does not match data from store",
+        //                 field.name()
+        //             )));
+        //         }
+        //     }
+
+        //     Arc::new(provided_schema)
+        // };
+
+        let raquet_config = RaquetTableConfig::new(table_url, schema);
+        let table_provider = RaquetTable::new(raquet_config);
+        Ok(Arc::new(table_provider))
+    }
+}
+
+// #[cfg(test)]
+// mod table_provider_tests {
+//     use std::collections::HashMap;
+
+//     use arrow::array::AsArray;
+//     use arrow::compute::concat_batches;
+//     use arrow::datatypes::Float64Type;
+//     use arrow_schema::DataType;
+//     use datafusion::execution::SessionStateBuilder;
+//     use datafusion::prelude::SessionContext;
+//     use futures_util::TryStreamExt;
+
+//     use super::*;
+//     use crate::table::table_provider::ZarrTable;
+//     #[cfg(feature = "icechunk")]
+//     use crate::test_utils::get_local_icechunk_repo;
+//     use crate::test_utils::{
+//         extract_col, get_local_zarr_store, validate_names_and_types, validate_primitive_column,
+//     };
+
+//     async fn read_and_validate(table_url: ZarrTableUrl, schema: SchemaRef) {
+//         let config = ZarrTableConfig::new(table_url, schema);
+
+//         let table_provider = ZarrTable::new(config);
+//         let state = SessionStateBuilder::new().build();
+//         let session = SessionContext::new();
+
+//         let scan = table_provider
+//             .scan(&state, None, &Vec::new(), None)
+//             .await
+//             .unwrap();
+//         let records: Vec<_> = scan
+//             .execute(0, session.task_ctx())
+//             .unwrap()
+//             .try_collect()
+//             .await
+//             .unwrap();
+
+//         let target_types = HashMap::from([
+//             ("lat".to_string(), DataType::Float64),
+//             ("lon".to_string(), DataType::Float64),
+//             ("data".to_string(), DataType::Float64),
+//         ]);
+//         validate_names_and_types(&target_types, &records[0]);
+//         assert_eq!(records.len(), 9);
+
+//         // the top left chunk, full 3x3
+//         validate_primitive_column::<Float64Type, f64>(
+//             "lat",
+//             &records[0],
+//             &[35., 35., 35., 36., 36., 36., 37., 37., 37.],
+//         );
+//         validate_primitive_column::<Float64Type, f64>(
+//             "lon",
+//             &records[0],
+//             &[
+//                 -120.0, -119.0, -118.0, -120.0, -119.0, -118.0, -120.0, -119.0, -118.0,
+//             ],
+//         );
+//         validate_primitive_column::<Float64Type, f64>(
+//             "data",
+//             &records[0],
+//             &[0.0, 1.0, 2.0, 8.0, 9.0, 10.0, 16.0, 17.0, 18.0],
+//         );
+//     }
+
+//     #[tokio::test]
+//     async fn read_data_test() {
+//         // a zarr store in a local directory.
+//         let (wrapper, schema) = get_local_zarr_store(true, 0.0, "lat_lon_data_for_provider").await;
+//         let path = wrapper.get_store_path();
+//         let table_url = ZarrTableUrl::ZarrStore(ListingTableUrl::parse(path).unwrap());
+
+//         read_and_validate(table_url, schema).await;
+
+//         // a local icechunk repo.
+//         #[cfg(feature = "icechunk")]
+//         {
+//             let (wrapper, schema) =
+//                 get_local_icechunk_repo(true, 0.0, "lat_lon_repo_for_provider").await;
+//             let path = wrapper.get_store_path();
+//             let table_url = ZarrTableUrl::IcechunkRepo(ListingTableUrl::parse(path).unwrap());
+
+//             read_and_validate(table_url, schema).await;
+//         }
+//     }
+
+//     #[tokio::test]
+//     async fn create_table_provider_test() {
+//         let (wrapper, _) = get_local_zarr_store(true, 0.0, "lat_lon_data_for_factory").await;
+//         let mut state = SessionStateBuilder::new().build();
+//         let table_path = wrapper.get_store_path();
+
+//         // here we create the table via a sql command so that we can explicitly
+//         // create it on some of the columns, to test the case where all the
+//         // selected columns are coordinates that need to be broadcasted.
+//         state
+//             .table_factories_mut()
+//             .insert("ZARR_STORE".into(), Arc::new(ZarrTableFactory {}));
+//         let query = format!(
+//             "CREATE EXTERNAL TABLE zarr_table_partial(lat double, lon double) STORED AS ZARR_STORE LOCATION '{}'",
+//             table_path,
+//         );
+
+//         let session = SessionContext::new_with_state(state.clone());
+//         session.sql(&query).await.unwrap();
+
+//         // both columns are 1d coordinates. This should get resolved to
+//         // all combinations of lat with lon (8 lats, 8 lons -> 64 rows).
+//         let query = "SELECT lat, lon FROM zarr_table_partial";
+//         let df = session.sql(query).await.unwrap();
+//         let batches = df.collect().await.unwrap();
+
+//         let schema = batches[0].schema();
+//         let batch = concat_batches(&schema, &batches).unwrap();
+//         assert_eq!(batch.num_columns(), 2);
+//         assert_eq!(batch.num_rows(), 64);
+
+//         // nw we want the full table so we can just register the table
+//         // directly on the session context.
+//         let session = SessionContext::new_with_state(state.clone());
+//         session
+//             .register_table(
+//                 "zarr_table",
+//                 Arc::new(ZarrTable::from_path(table_path.clone()).await),
+//             )
+//             .unwrap();
+
+//         // a simple select statement with a limit.
+//         let query = "SELECT lat, lon FROM zarr_table LIMIT 10";
+//         let df = session.sql(query).await.unwrap();
+//         let batches = df.collect().await.unwrap();
+
+//         let schema = batches[0].schema();
+//         let batch = concat_batches(&schema, &batches).unwrap();
+//         assert_eq!(batch.num_columns(), 2);
+//         assert_eq!(batch.num_rows(), 10);
+
+//         // a slightly more complex query involving a join.
+//         let query = "
+//                     WITH d1 AS (
+//                         SELECT lat, lon, data
+//                         FROM zarr_table
+//                     ),
+
+//                     d2 AS (
+//                         SELECT lat, lon, data*2 as data2
+//                         FROM zarr_table
+//                     )
+
+//                     SELECT data, data2
+//                     FROM d1
+//                     JOIN d2
+//                         ON d1.lat = d2.lat
+//                         AND d1.lon = d2.lon
+//                     ";
+//         let df = session.sql(query).await.unwrap();
+//         let batches = df.collect().await.unwrap();
+
+//         let schema = batches[0].schema();
+//         let batch = concat_batches(&schema, &batches).unwrap();
+
+//         let data1: Vec<_> = batch
+//             .column_by_name("data")
+//             .unwrap()
+//             .as_primitive::<Float64Type>()
+//             .values()
+//             .iter()
+//             .map(|f| f * 2.0)
+//             .collect();
+//         let data2 = batch
+//             .column_by_name("data2")
+//             .unwrap()
+//             .as_primitive::<Float64Type>()
+//             .values()
+//             .to_vec();
+//         assert_eq!(data1, data2);
+
+//         // create a table from an icechunk repo.
+//         #[cfg(feature = "icechunk")]
+//         {
+//             let (wrapper, _) = get_local_icechunk_repo(true, 0.0, "lat_lon_repo_for_factory").await;
+//             let table_path = wrapper.get_store_path();
+
+//             let session = SessionContext::new_with_state(state.clone());
+//             session
+//                 .register_table(
+//                     "zarr_table_icechunk",
+//                     Arc::new(ZarrTable::from_path_to_icechunk(table_path).await),
+//                 )
+//                 .unwrap();
+
+//             let query = "SELECT lat, lon FROM zarr_table_icechunk LIMIT 10";
+//             let df = session.sql(query).await.unwrap();
+//             let batches = df.collect().await.unwrap();
+
+//             let schema = batches[0].schema();
+//             let batch = concat_batches(&schema, &batches).unwrap();
+//             assert_eq!(batch.num_columns(), 2);
+//             assert_eq!(batch.num_rows(), 10);
+//         }
+//     }
+
+//     #[tokio::test]
+//     async fn partial_coordinates_query() {
+//         let (wrapper, _) =
+//             get_local_zarr_store(true, 0.0, "lat_lon_data_partial_coord_query").await;
+//         let state = SessionStateBuilder::new().build();
+//         let table_path = wrapper.get_store_path();
+
+//         let session = SessionContext::new_with_state(state.clone());
+//         session
+//             .register_table(
+//                 "zarr_table",
+//                 Arc::new(ZarrTable::from_path(table_path).await),
+//             )
+//             .unwrap();
+
+//         // select the 2D data and only one of the 1D coordinates. This should get
+//         // resolved to the lon being brodacasted to match the 2D data.
+//         let query = "SELECT data, lon FROM zarr_table";
+//         let df = session.sql(query).await.unwrap();
+//         let batches = df.collect().await.unwrap();
+
+//         let schema = batches[0].schema();
+//         let batch = concat_batches(&schema, &batches).unwrap();
+//         assert_eq!(batch.num_columns(), 2);
+//         assert_eq!(batch.num_rows(), 64);
+//     }
+
+//     #[tokio::test]
+//     async fn query_with_filter() {
+//         let (wrapper, _) = get_local_zarr_store(true, 0.0, "lat_lon_data_filter_query").await;
+//         let state = SessionStateBuilder::new().build();
+//         let table_path = wrapper.get_store_path();
+
+//         let session = SessionContext::new_with_state(state.clone());
+//         session
+//             .register_table(
+//                 "zarr_table",
+//                 Arc::new(ZarrTable::from_path(table_path).await),
+//             )
+//             .unwrap();
+
+//         // select the 2D data and only one of the 1D coordinates. This should get
+//         // resolved to the lon being brodacasted to match the 2D data.
+//         let query = "
+//                     SELECT lat, lon, data
+//                     FROM zarr_table
+//                     WHERE lat < 38.1
+//                     AND lon > -116.9
+//                     ";
+//         let df = session.sql(query).await.unwrap();
+//         let batches = df.collect().await.unwrap();
+
+//         // this tests for the actual WHERE clause, which is a combination
+//         // of the filter pushdown and some filtering provided by datafusion,
+//         // out-of-the-box, so the condition in the test matches the WHERE
+//         // clause exactly.
+//         for batch in batches {
+//             let lat_values = extract_col::<Float64Type>("lat", &batch);
+//             let lon_values = extract_col::<Float64Type>("lon", &batch);
+//             assert!(lat_values
+//                 .iter()
+//                 .zip(lon_values.iter())
+//                 .all(|(lat, lon)| *lat < 38.1 && *lon > -116.9));
+//         }
+//     }
+
+//     #[tokio::test]
+//     async fn table_factory_error_test() {
+//         let (wrapper, _) = get_local_zarr_store(true, 0.0, "lat_lon_data_for_factory_error").await;
+//         let mut state = SessionStateBuilder::new().build();
+//         let table_path = wrapper.get_store_path();
+//         state
+//             .table_factories_mut()
+//             .insert("ZARR_STORE".into(), Arc::new(ZarrTableFactory {}));
+
+//         // create a table with 2 explicitly selected columns, but the names
+//         // are wrong so it should error out.
+//         let query = format!(
+//             "CREATE EXTERNAL TABLE zarr_table(latitude double, longitude double) STORED AS ZARR_STORE LOCATION '{}'",
+//             table_path,
+//         );
+
+//         let session = SessionContext::new_with_state(state.clone());
+//         let res = session.sql(&query).await;
+//         match res {
+//             Ok(_) => panic!(),
+//             Err(e) => {
+//                 assert_eq!(
+//                     e.to_string(),
+//                     "Arrow error: Schema error: Unable to get field named \"latitude\". Valid fields: [\"data\", \"lat\", \"lon\"]"
+//                 );
+//             }
+//         }
+
+//         // create a table with 2 explicitly selected columns, but the type for the
+//         // columns are wrong so it should error out.
+//         let query = format!(
+//             "CREATE EXTERNAL TABLE zarr_table(lat int, lon int) STORED AS ZARR_STORE LOCATION '{}'",
+//             table_path,
+//         );
+
+//         let session = SessionContext::new_with_state(state.clone());
+//         let res = session.sql(&query).await;
+//         match res {
+//             Ok(_) => panic!(),
+//             Err(e) => {
+//                 assert_eq!(
+//                     e.to_string(),
+//                     "Execution error: Requested column lat's type does not match data from store"
+//                 );
+//             }
+//         }
+//     }
+// }

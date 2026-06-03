@@ -1,0 +1,48 @@
+[package]
+name = "datafusion-raquet"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+arrow = { workspace = true }
+arrow-array = { workspace = true }
+arrow-schema = { workspace = true }
+async-stream = "0.3"
+async-trait = { version = "0.1.89" }
+datafusion = { workspace = true }
+datafusion-datasource = { workspace = true }
+datafusion-common = { workspace = true }
+datafusion-sql = { workspace = true }
+datafusion-python-util = { workspace = true }
+
+datafusion-datasource-parquet = { workspace = true }
+
+object_store = "0.13"
+
+parquet = { workspace = true,features = [
+    "arrow",
+    "async",
+    "brotli",
+    "flate2-zlib-rs",
+    "flate2",
+    "lz4",
+    "snap",
+    "zstd",
+] }
+
+rastertile-rs = { workspace = true }
+quadbin-rs = { workspace = true }
+rasterarrow-schema = { workspace = true }
+
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+
+thiserror = { workspace = true }
+
+futures = { workspace = true }
+
+url = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "1.9", features = ["rt", "macros", "net", "rt-multi-thread"] }

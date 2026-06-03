@@ -1,0 +1,18 @@
+[package]
+name = "rasterarrow-schema"
+version.workspace = true
+# authors.workspace = true
+edition.workspace = true
+# license.workspace = true
+# repository.workspace = true
+# rust-version.workspace = true
+# categories.workspace = true
+
+
+
+[dependencies]
+arrow-schema = { workspace = true }
+rastertile-rs = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

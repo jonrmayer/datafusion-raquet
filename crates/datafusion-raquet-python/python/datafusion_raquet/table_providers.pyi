@@ -1,0 +1,6 @@
+from typing import Literal
+
+class RaquetTable:
+    def __init__(self,path:str) -> None: ...
+    def __datafusion_table_provider__(self) -> object: ...
+
