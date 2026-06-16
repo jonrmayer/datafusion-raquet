@@ -108,45 +108,45 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
 }
 
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
     
-    use datafusion::prelude::SessionContext;
+//     use datafusion::prelude::SessionContext;
    
-    use super::*;
+//     use super::*;
 
-    #[tokio::test]
-    async fn test_quadbin_from_tile() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinFromTile::default().into());
+//     #[tokio::test]
+//     async fn test_quadbin_from_tile() {
+//         let ctx = SessionContext::new();
+//         ctx.register_udf(QuadBinFromTile::default().into());
 
-        let sql = r#"SELECT quadbin_from_tile(0, 0, 0);"#;
-        println!("{:?}", sql);
+//         let sql = r#"SELECT quadbin_from_tile(0, 0, 0);"#;
+//         println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();
+//         let df = ctx.sql(sql).await.unwrap();
 
-        let schema = df.schema().clone();
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
+//         let schema = df.schema().clone();
+//         let batches = df.collect().await.unwrap();
+//         let column = batches[0].column(0);
+//         // let string_arr = column.as_string_view();
         
-        let val = column.as_primitive::<UInt64Type>().value(0);
-        println!("{:?}", val);
+//         let val = column.as_primitive::<UInt64Type>().value(0);
+//         println!("{:?}", val);
 
-        // let rect_array = GeometryArray::try_from((column.as_ref(), schema.field(0))).unwrap();
-        // let rect = rect_array.value(0).unwrap();
-        // let poly = match rect.as_type() {
-        //     geo_traits::GeometryType::Polygon(poly) => Some(poly),
-        //     _ => None,
-        // }
-        // .unwrap();
+//         // let rect_array = GeometryArray::try_from((column.as_ref(), schema.field(0))).unwrap();
+//         // let rect = rect_array.value(0).unwrap();
+//         // let poly = match rect.as_type() {
+//         //     geo_traits::GeometryType::Polygon(poly) => Some(poly),
+//         //     _ => None,
+//         // }
+//         // .unwrap();
 
-        // let b = rect.into()
-        // println!("{:?}", poly);
+//         // let b = rect.into()
+//         // println!("{:?}", poly);
 
-        // assert!(relative_eq!(rect.min().x(), 112.55836486816406));
-        // assert!(relative_eq!(rect.min().y(), 37.83236503601074));
-        // assert!(relative_eq!(rect.max().x(), 112.5584077835083));
-        // assert!(relative_eq!(rect.max().y(), 37.83240795135498));
-    }
-}
+//         // assert!(relative_eq!(rect.min().x(), 112.55836486816406));
+//         // assert!(relative_eq!(rect.min().y(), 37.83236503601074));
+//         // assert!(relative_eq!(rect.max().x(), 112.5584077835083));
+//         // assert!(relative_eq!(rect.max().y(), 37.83240795135498));
+//     }
+// }

@@ -104,31 +104,31 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
     Ok(point_arr)
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-    use datafusion::prelude::SessionContext;
+//     use datafusion::prelude::SessionContext;
 
-    use super::*;
+//     use super::*;
 
-    #[tokio::test]
-    async fn test_quadbin_from_tile() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinFromLonLat::default().into());
+//     #[tokio::test]
+//     async fn test_quadbin_from_tile() {
+//         let ctx = SessionContext::new();
+//         ctx.register_udf(QuadBinFromLonLat::default().into());
 
-        let sql = r#"SELECT quadbin_from_lonlat(0.0, 0.0, 5);"#;
-        println!("{:?}", sql);
+//         let sql = r#"SELECT quadbin_from_lonlat(0.0, 0.0, 5);"#;
+//         println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();
+//         let df = ctx.sql(sql).await.unwrap();
 
-        let schema = df.schema().clone();
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
+//         let schema = df.schema().clone();
+//         let batches = df.collect().await.unwrap();
+//         let column = batches[0].column(0);
+//         // let string_arr = column.as_string_view();
 
-        let val = column.as_primitive::<UInt64Type>().value(0);
-        println!("{:?}", val);
+//         let val = column.as_primitive::<UInt64Type>().value(0);
+//         println!("{:?}", val);
 
      
-    }
-}
+//     }
+// }

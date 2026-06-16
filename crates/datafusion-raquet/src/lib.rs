@@ -12,9 +12,7 @@ pub use metadata::RaquetMetadataReader;
 
 pub use tables::raquet::RaquetTable;
 
-pub use views::{ReadRaquet,read_raquet};
-
-
+pub use udf::raster::{NativeTile, StatisticsTile};
 
 #[cfg(test)]
 mod table_provider_tests {
@@ -24,8 +22,8 @@ mod table_provider_tests {
     use datafusion::catalog::TableProvider;
     use datafusion::prelude::{SessionConfig, SessionContext};
 
-    use crate::views::read_raquet::read_raquet;
-    use crate::views::read_raquet_metadata::read_raquet_metadata;
+    // use crate::views::read_raquet::read_raquet;
+    // use crate::views::read_raquet_metadata::read_raquet_metadata;
 
     use super::*;
     #[tokio::test]
@@ -37,43 +35,46 @@ mod table_provider_tests {
         let ctx =
             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        ctx.register_udtf(
-            "read_raquet",
-            Arc::new(ReadRaquet::new())
-            // read_raquet(
-            //     Arc::clone(ctx.state().catalog_list()),
-            //     ctx.state().config_options(),
-            // ),
-        );
+        ctx.register_udf(StatisticsTile::default().into());
+        ctx.register_udf(NativeTile::default().into());
 
-         ctx.register_udtf(
-            "read_raquet_metadata",
-            read_raquet_metadata(
-                Arc::clone(ctx.state().catalog_list()),
-                ctx.state().config_options(),
-            ),
-        );
+        // ctx.register_udtf(
+        //     "read_raquet",
+        //     Arc::new(ReadRaquet::new())
+        //     // read_raquet(
+        //     //     Arc::clone(ctx.state().catalog_list()),
+        //     //     ctx.state().config_options(),
+        //     // ),
+        // );
+
+        //  ctx.register_udtf(
+        //     "read_raquet_metadata",
+        //     read_raquet_metadata(
+        //         Arc::clone(ctx.state().catalog_list()),
+        //         ctx.state().config_options(),
+        //     ),
+        // );
 
         let t = RaquetTable::from_path(path).await;
-        // let ctx = SessionContext::new();
 
         let _ = ctx.register_table("solar", Arc::new(t));
 
-        // let solar = ctx.table_provider("solar").await.unwrap();
+        let solar = ctx.table_provider("solar").await.unwrap();
         // // let solar_raquet = solar.as_any()
         // //     .downcast_ref::<RaquetTable>()
         // //     .unwrap();
         // // solar_raquet.table_config().get_table_url().get_store_location()
-        // let solar_schema = solar.schema();
-        // println!("{:?}", solar_schema);
+        let solar_schema = solar.schema();
+        println!("{:?}", solar_schema);
         // ctx.table(table_ref)
 
         // ctx.state().catalog_list().
 
-        let sql = "select * from read_raquet('solar');";
-        // let sql = "select count(*) from solar;";
+        // let sql = "select native_tile(band_1) from solar where block<>0  ;";
+        // // let sql = "select count(*) from solar;";
 
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
+        // let df = ctx.sql(sql).await.unwrap();
+        // println!("{:?}",df.count().await);
+        // df.show().await.unwrap();
     }
 }

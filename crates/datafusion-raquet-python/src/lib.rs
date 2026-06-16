@@ -36,11 +36,11 @@ fn _internal(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     check_debug_build(py)?;
     m.add_wrapped(wrap_pyfunction!(___version))?;
 
-    // let quadbin_mod = wrap_pymodule!(udf::quadbin::quadbin)(py);
-    // m.add_submodule(quadbin_mod.bind(py))?;
-    // py.import(intern!(py, "sys"))?
-    //     .getattr(intern!(py, "modules"))?
-    //     .set_item("raquet_df.quadbin", quadbin_mod)?;
+    let quadbin_mod = wrap_pymodule!(udf::quadbin::quadbin)(py);
+    m.add_submodule(quadbin_mod.bind(py))?;
+    py.import(intern!(py, "sys"))?
+        .getattr(intern!(py, "modules"))?
+        .set_item("datafusion_raquet.quadbin", quadbin_mod)?;
 
     let raster_mod = wrap_pymodule!(udf::rastertile::rastertile)(py);
     m.add_submodule(raster_mod.bind(py))?;

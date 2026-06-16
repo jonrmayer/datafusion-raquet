@@ -2,9 +2,10 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
-use arrow_array::builder::UInt64Builder;
+use arrow::datatypes::Fields;
+use arrow_array::builder::{Float64Builder, UInt64Builder};
 use arrow_array::types::UInt64Type;
-use arrow_array::{ArrayRef, BinaryArray, PrimitiveArray};
+use arrow_array::{ArrayRef, BinaryArray, PrimitiveArray, StructArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -12,12 +13,11 @@ use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
     Volatility,
 };
+use datafusion_common::scalar::ScalarStructBuilder;
 
 use rasterarrow_schema::Metadata;
 
-use rastertile_rs::{
-    CompressionFormat, NewDataType, Tile,
-};
+use rastertile_rs::{CompressionFormat, NewDataType, RasterDataType, Tile, TileStatistics};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct StatisticsTile {
@@ -30,6 +30,30 @@ impl StatisticsTile {
             signature: Signature::exact(vec![DataType::Binary], Volatility::Immutable),
         }
     }
+
+    fn data_type(&self) -> DataType {
+        let values_fields = vec![
+            Field::new("min", DataType::Float64, false),
+            Field::new("max", DataType::Float64, false),
+            Field::new("mean", DataType::Float64, false),
+            Field::new("std_dev", DataType::Float64, false),
+            Field::new("valid_count", DataType::UInt64, false),
+        ];
+        DataType::Struct(values_fields.into())
+    }
+    fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
+        Field::new(name, self.data_type(), nullable)
+    }
+
+    // fn builders(&self) {
+    //     let b = vec![
+    //         Box::new(Float64Builder::new()),
+    //         Box::new(Float64Builder::new()),
+    //         Box::new(Float64Builder::new()),
+    //         Box::new(Float64Builder::new()),
+    //         Box::new(UInt64Builder::new()),
+    //     ];
+    // }
 }
 
 impl Default for StatisticsTile {
@@ -58,11 +82,10 @@ impl ScalarUDFImpl for StatisticsTile {
     }
 
     fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
-        Ok(Arc::new(Field::new("", DataType::UInt64, false)))
+        Ok(Arc::new(self.to_field("", false)))
+        // Ok(Arc::new(Field::new("", DataType::UInt64, false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        // let field = &args.arg_fields[0];
-        // let to_type = RasterArrowType::from_arrow_field(args.return_field.as_ref()).unwrap();
         let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
         let cell_arr = build_cell_array(arrays, existing_metadata)?;
@@ -83,61 +106,78 @@ impl ScalarUDFImpl for StatisticsTile {
     }
 }
 
-fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    let lf = Field::new_list_field(DataType::Float32, true);
-    let dt = DataType::List(Arc::new(lf));
-    let out_field: Field = Field::new("", dt, true);
-    // let input_field = &args.arg_fields[0];
-    // let existing_metadata = Arc::new(Metadata::try_from(input_field.as_ref())?);
-    // let new_metadata = Metadata::new(
-    //     existing_metadata.tile_size,
-    //     existing_metadata.binary_type,
-    //     existing_metadata.data_type,
-    //     CompressionFormat::None,
-    // );
-    // let metadata = Arc::new(new_metadata);
-    // let values_field: Field = Field::new("", DataType::Float32, true);
-    // let dt = DataType::List(Arc::new(values_field));
-    // Field::
-    // let out_field: Field = Field::
-    // let output_type = RasterFloat32Type::new(metadata);
-    Ok(Arc::new(out_field))
-    // Ok(raster_type
-    //     .to_field(input_field.name(), input_field.is_nullable())
-    //     .into())
+fn get_data_type_from_metadata(metadata: Metadata) -> Option<NewDataType> {
+    let data_type: Option<NewDataType> = match metadata.data_type() {
+        RasterDataType::UInt8 => Some(NewDataType::UInt8),
+        RasterDataType::Int8 => Some(NewDataType::Int8),
+        RasterDataType::UInt16 => Some(NewDataType::UInt16),
+        RasterDataType::Int16 => Some(NewDataType::Int16),
+        RasterDataType::UInt32 => Some(NewDataType::UInt32),
+        RasterDataType::Int32 => Some(NewDataType::Int32),
+        RasterDataType::UInt64 => Some(NewDataType::UInt64),
+        RasterDataType::Int64 => Some(NewDataType::Int64),
+        RasterDataType::Float32 => Some(NewDataType::Float32),
+        RasterDataType::Float64 => Some(NewDataType::Float64),
+    };
+    data_type
 }
-fn convert(_metadata: Metadata, data: Option<&[u8]>) -> u64 {
+
+fn convert(metadata: Metadata, data: Option<&[u8]>) -> TileStatistics {
     let tile: Tile = Tile {
-        x: 256,
-        y: 256,
-        data_type: Some(NewDataType::Float32),
+        x: metadata.tile_size().clone(),
+        y: metadata.tile_size().clone(),
+        data_type: get_data_type_from_metadata(metadata.clone()),
         compressed_bytes: data.unwrap().to_vec(),
-        compression_method: CompressionFormat::Gzip,
+        compression_method: metadata.compression().clone(),
     };
 
     let ts = tile.statistics().unwrap();
 
-    ts.valid_count
+    ts
 }
 
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
     metadata: Metadata,
-) -> RaquetDataFusionResult<PrimitiveArray<UInt64Type>> {
+) -> RaquetDataFusionResult<StructArray> {
     let in_binary = arrays[0]
         .as_any()
         .downcast_ref::<BinaryArray>()
         .expect("cast failed");
 
-    let mut values_builder = UInt64Builder::new();
-    // let mut builder = StructBuilder::new(values_builder);
+    let mut min_builder = Float64Builder::new();
+    let mut max_builder = Float64Builder::new();
+    let mut mean_builder = Float64Builder::new();
+    let mut std_dev_builder = Float64Builder::new();
+    let mut valid_count_builder = UInt64Builder::new();
 
     for input in in_binary.iter() {
         let output = convert(metadata.clone(), input);
-        values_builder.append_value(output);
+        min_builder.append_value(output.min);
+        max_builder.append_value(output.max);
+        mean_builder.append_value(output.mean);
+        std_dev_builder.append_value(output.std_dev);
+        valid_count_builder.append_value(output.valid_count);
     }
 
-    let point_arr = values_builder.finish();
+    let values_fields = vec![
+        Field::new("min", DataType::Float64, false),
+        Field::new("max", DataType::Float64, false),
+        Field::new("mean", DataType::Float64, false),
+        Field::new("std_dev", DataType::Float64, false),
+        Field::new("valid_count", DataType::UInt64, false),
+    ];
 
-    Ok(point_arr)
+    let fields = Fields::from(values_fields);
+
+    let arrays: Vec<ArrayRef> = vec![
+        Arc::new(min_builder.finish()),
+        Arc::new(max_builder.finish()),
+        Arc::new(mean_builder.finish()),
+        Arc::new(std_dev_builder.finish()),
+        Arc::new(valid_count_builder.finish()),
+    ];
+    let nulls = None;
+    let arr = StructArray::new(fields, arrays, nulls);
+    Ok(arr)
 }

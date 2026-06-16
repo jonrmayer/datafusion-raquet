@@ -1,21 +1,19 @@
 mod decode;
-mod test;
 mod native;
 mod statistics;
+mod test;
 
-pub use test::TestFromTile;
+mod utils;
+
 pub use decode::DecodeTile;
 pub use native::NativeTile;
 pub use statistics::StatisticsTile;
+pub use test::TestFromTile;
+
+pub use utils::{convert_list_array_f32,convert_list_array_f64};
 pub fn register(session_context: &datafusion::prelude::SessionContext) {
     session_context.register_udf(TestFromTile::default().into());
     session_context.register_udf(DecodeTile::default().into());
     session_context.register_udf(NativeTile::default().into());
     session_context.register_udf(StatisticsTile::default().into());
-
-    // session_context.register_udf(QuadBinToBBOXMercator::default().into());
-    // session_context.register_udf(QuadBinToBBOXWGS84::default().into());
-    // session_context.register_udf(QuadBinToPixelXY::default().into());
-    // session_context.register_udf(QuadBinToWKT::default().into());
-    // session_context.register_udf(QuadBinToGeoJSON::default().into());
 }

@@ -9,10 +9,10 @@ use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
 use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
-use arrow_convert::{
-    ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
-    serialize::TryIntoArrow,
-};
+// use arrow_convert::{
+//     ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
+//     serialize::TryIntoArrow,
+// };
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -23,8 +23,8 @@ use datafusion::logical_expr::{
 
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
-use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
-use quadbin_rs::{cell_to_lonlat};
+// use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
+use quadbin_rs::cell_to_lonlat;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToLonLat {
@@ -33,12 +33,19 @@ pub struct QuadBinToLonLat {
 
 impl QuadBinToLonLat {
     pub fn new() -> Self {
-         Self {
-            signature: Signature::exact(
-                vec![DataType::Int64],
-                Volatility::Immutable,
-            ),
+        Self {
+            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
         }
+    }
+    fn data_type(&self) -> DataType {
+        let values_fields = vec![
+            Field::new("lon", DataType::Float64, false),
+            Field::new("lat", DataType::Float64, false),
+        ];
+        DataType::Struct(values_fields.into())
+    }
+    fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
+        Field::new(name, self.data_type(), nullable)
     }
 }
 
@@ -67,8 +74,8 @@ impl ScalarUDFImpl for QuadBinToLonLat {
         Err(DataFusionError::Internal("return_type".to_string()))
     }
 
-    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
-        Ok(return_field_impl(args)?)
+    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
+        Ok(Arc::new(self.to_field("", false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
@@ -90,31 +97,53 @@ impl ScalarUDFImpl for QuadBinToLonLat {
     }
 }
 
-fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    let lon = Field::new("lon", DataType::Float64, false);
-    let lat = Field::new("lat", DataType::Float64, false);
-  
-    
-    let fields = Fields::from(vec![lon,lat]);
-    let lonlat = Field::new_struct("", fields, false);
-    // let item_field = Arc::new(bbox.clone());
-    Ok(Arc::new(lonlat))
-}
+// fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
+//     let lon = Field::new("lon", DataType::Float64, false);
+//     let lat = Field::new("lat", DataType::Float64, false);
+
+//     let fields = Fields::from(vec![lon, lat]);
+//     let lonlat = Field::new_struct("", fields, false);
+//     // let item_field = Arc::new(bbox.clone());
+//     Ok(Arc::new(lonlat))
+// }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
     let cells = arrays[0].as_primitive::<Int64Type>();
-    let mut vcells: Vec<LonLat> = vec![];
+    let mut lon_builder = Float64Builder::new();
+    let mut lat_builder = Float64Builder::new();
+
     for cell in cells.iter() {
         let lonlat = cell_to_lonlat(cell.unwrap() as u64);
-        let alonlat = LonLat::new(lonlat.0,lonlat.1);
-        vcells.push(alonlat);
+        lon_builder.append_value(lonlat.0);
+        lat_builder.append_value(lonlat.1);
     }
-    let box_array: ArrayRef = vcells.try_into_arrow().unwrap();
-    let struct_array = box_array
-        .as_any()
-        .downcast_ref::<arrow::array::StructArray>()
-        .unwrap();
-    Ok(struct_array.clone())
+
+    let values_fields = vec![
+        Field::new("lon", DataType::Float64, false),
+        Field::new("lat", DataType::Float64, false),
+    ];
+
+    let fields = Fields::from(values_fields);
+
+    let arrays: Vec<ArrayRef> = vec![
+        Arc::new(lon_builder.finish()),
+        Arc::new(lat_builder.finish()),
+    ];
+    let nulls = None;
+    let arr = StructArray::new(fields, arrays, nulls);
+    // let mut vcells: Vec<LonLat> = vec![];
+    // for cell in cells.iter() {
+    //     let lonlat = cell_to_lonlat(cell.unwrap() as u64);
+    //     let alonlat = LonLat::new(lonlat.0, lonlat.1);
+    //     vcells.push(alonlat);
+    // }
+    // let box_array: ArrayRef = vcells.try_into_arrow().unwrap();
+    // let struct_array = box_array
+    //     .as_any()
+    //     .downcast_ref::<arrow::array::StructArray>()
+    //     .unwrap();
+    // Ok(struct_array.clone())
+    Ok(arr)
 }
 
 #[cfg(test)]
@@ -124,20 +153,24 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_quadbin_to_children() {
+    async fn test_quadbin_to_lonlat() {
         let ctx = SessionContext::new();
         ctx.register_udf(QuadBinToLonLat::default().into());
-        let sql = r#"SELECT quadbin_to_bbox_mercator(5256690695657226239) ;"#;
+        let sql = r#"SELECT quadbin_to_lonlat(5256690695657226239) ;"#;
         println!("{:?}", sql);
 
         let df = ctx.sql(sql).await.unwrap();
         // df.show();
         let batches = df.collect().await.unwrap();
-        // let column = batches[0].column(0);
-        // // let string_arr = column.as_string_view();
+        let output_batch = &batches[0];
+        let output_schema = output_batch.schema();
+        println!("{:?}", output_schema);
+        let output_field = output_schema.field(0);
 
-        // let val = column.as_list(0).value(0);
-        // println!("{:?}", val);
+        let output_column = output_batch.column(0);
+        let point_arr = output_column.as_struct();
+        println!("{:?}", point_arr);
+       
     }
 
     #[tokio::test]

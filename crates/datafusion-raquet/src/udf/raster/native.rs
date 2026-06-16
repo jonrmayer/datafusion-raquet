@@ -2,8 +2,12 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
-use arrow_array::builder::{Float32Builder, ListBuilder};
-use arrow_array::{ArrayRef, BinaryArray, ListArray};
+use arrow::array::GenericListBuilder;
+use arrow_array::builder::{Float32Builder, Float64Builder, ListBuilder, PrimitiveBuilder};
+use arrow_array::{
+    ArrayRef, BinaryArray, ListArray,
+    types::{Float32Type, Float64Type},
+};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -12,9 +16,10 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
+use datafusion_sql::sqlparser::ast::DataType::Float32;
 use rasterarrow_schema::Metadata;
 
-use rastertile_rs::{CompressionFormat, NewDataType, Tile,  TypedArray};
+use rastertile_rs::{CompressionFormat, NewDataType, RasterDataType, Tile, TypedArray};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct NativeTile {
@@ -58,8 +63,6 @@ impl ScalarUDFImpl for NativeTile {
         Ok(return_field_impl(args)?)
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        // let field = &args.arg_fields[0];
-        // let to_type = RasterArrowType::from_arrow_field(args.return_field.as_ref()).unwrap();
         let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
         let cell_arr = build_cell_array(arrays, existing_metadata)?;
@@ -80,71 +83,58 @@ impl ScalarUDFImpl for NativeTile {
     }
 }
 
-fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    let lf = Field::new_list_field(DataType::Float32, true);
-    let dt = DataType::List(Arc::new(lf));
-    let out_field: Field = Field::new("", dt, true);
-    // let input_field = &args.arg_fields[0];
-    // let existing_metadata = Arc::new(Metadata::try_from(input_field.as_ref())?);
-    // let new_metadata = Metadata::new(
-    //     existing_metadata.tile_size,
-    //     existing_metadata.binary_type,
-    //     existing_metadata.data_type,
-    //     CompressionFormat::None,
-    // );
-    // let metadata = Arc::new(new_metadata);
-    // let values_field: Field = Field::new("", DataType::Float32, true);
-    // let dt = DataType::List(Arc::new(values_field));
-    // Field::
-    // let out_field: Field = Field::
-    // let output_type = RasterFloat32Type::new(metadata);
-    Ok(Arc::new(out_field))
-    // Ok(raster_type
-    //     .to_field(input_field.name(), input_field.is_nullable())
-    //     .into())
-}
-fn convert(_metadata: Metadata, data: Option<&[u8]>) -> Vec<Option<f32>> {
-    let tile: Tile = Tile {
-        x: 256,
-        y: 256,
-        data_type: Some(NewDataType::Float32),
-        compressed_bytes: data.unwrap().to_vec(),
-        compression_method: CompressionFormat::Gzip,
-    };
-    let a = tile.decode().unwrap();
-    let bb = a.data().clone();
+fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
+    let metadata = Arc::new(Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default());
 
-    let vals: Vec<Option<f32>> = match bb {
-        TypedArray::Float32(v) => {
-            let out = v.iter().map(|n| Some(n.clone())).collect();
-            out
-        }
-        _ => panic!("expected Float32"),
+    let list_field = match metadata.data_type() {
+        // RasterDataType::UInt8 => Some(NewDataType::UInt8),
+        // RasterDataType::Int8 => Some(NewDataType::Int8),
+        // RasterDataType::UInt16 => Some(NewDataType::UInt16),
+        // RasterDataType::Int16 => Some(NewDataType::Int16),
+        // RasterDataType::UInt32 => Some(NewDataType::UInt32),
+        // RasterDataType::Int32 => Some(NewDataType::Int32),
+        // RasterDataType::UInt64 => Some(NewDataType::UInt64),
+        // RasterDataType::Int64 => Some(NewDataType::Int64),
+        RasterDataType::Float32 => Some(Field::new_list_field(DataType::Float32, true)),
+        RasterDataType::Float64 => Some(Field::new_list_field(DataType::Float64, true)),
+        _ => None,
     };
-   
-    vals
+
+    let dt = DataType::List(Arc::new(list_field.unwrap()));
+    let out_field: Field = Field::new("", dt, true);
+  
+    Ok(Arc::new(out_field))
+
 }
 
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
     metadata: Metadata,
 ) -> RaquetDataFusionResult<ListArray> {
-    let in_binary = arrays[0]
-        .as_any()
-        .downcast_ref::<BinaryArray>()
-        .expect("cast failed");
+    let in_binary =
+        arrays[0]
+            .as_any()
+            .downcast_ref::<BinaryArray>()
+            .expect("cast failed");
 
-    let values_builder = Float32Builder::new();
-    let mut builder = ListBuilder::new(values_builder);
-
-    for input in in_binary.iter() {
-        let output = convert(metadata.clone(), input);
-        builder.append_value(output);
-    }
-
-    let point_arr = builder.finish();
-
-    Ok(point_arr)
+    let out = match metadata.data_type() {
+        // RasterDataType::UInt8 => Some(NewDataType::UInt8),
+        // RasterDataType::Int8 => Some(NewDataType::Int8),
+        // RasterDataType::UInt16 => Some(NewDataType::UInt16),
+        // RasterDataType::Int16 => Some(NewDataType::Int16),
+        // RasterDataType::UInt32 => Some(NewDataType::UInt32),
+        // RasterDataType::Int32 => Some(NewDataType::Int32),
+        // RasterDataType::UInt64 => Some(NewDataType::UInt64),
+        // RasterDataType::Int64 => Some(NewDataType::Int64),
+        RasterDataType::Float32 => Some(crate::udf::raster::convert_list_array_f32(
+            in_binary.clone(), metadata,
+        )),
+        // RasterDataType::Float64 => Some(crate::udf::raster::convert_list_array_f64(
+        //     in_binary, metadata,
+        // )),
+        _ => None,
+    };
+    Ok(out.unwrap())
 }
 
 // #[cfg(test)]

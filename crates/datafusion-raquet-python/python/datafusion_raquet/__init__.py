@@ -36,6 +36,23 @@ class RaquetSessionContext(SessionContext):
         self.register_udf(udf(rastertile.NativeTile()))
         self.register_udf(udf(rastertile.StatisticsTile()))
 
+    def register_all_quadbin(self) -> None:
+        from . import quadbin
+
+        self.register_udf(udf(quadbin.QuadBinFromTile()))
+        # ctx.register_udf(udf(quadbin.QuadBinFromLonLat()))
+        self.register_udf(udf(quadbin.QuadBinToParent()))
+        self.register_udf(udf(quadbin.QuadBinResolution()))
+        self.register_udf(udf(quadbin.QuadBinToChildren()))
+        self.register_udf(udf(quadbin.QuadBinToSibling()))
+        self.register_udf(udf(quadbin.QuadBinKRing()))
+        # ctx.register_udf(udf(quadbin.QuadBinToBBOXMercator()))
+        # ctx.register_udf(udf(quadbin.QuadBinToBBOXWGS84()))
+        # ctx.register_udf(udf(quadbin.QuadBinToLonLat()))
+        # ctx.register_udf(udf(quadbin.QuadBinToPixelXY()))
+        # ctx.register_udf(udf(quadbin.QuadBinToWKT()))
+        # ctx.register_udf(udf(quadbin.QuadBinToGeoJSON()))
+
   
 
 

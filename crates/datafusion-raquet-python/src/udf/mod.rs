@@ -1,4 +1,5 @@
 pub(crate) mod rastertile;
+pub(crate) mod quadbin;
 
 #[macro_export]
 macro_rules! impl_udf {

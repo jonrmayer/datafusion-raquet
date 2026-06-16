@@ -9,10 +9,7 @@ use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
 use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
-use arrow_convert::{
-    ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
-    serialize::TryIntoArrow,
-};
+
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -23,7 +20,7 @@ use datafusion::logical_expr::{
 
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
-use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
+
 use quadbin_rs::{Tile, cell_to_tile, tile_to_bbox_wgs84};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -98,29 +95,60 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
     let min_y = Field::new("min_y", DataType::Float64, false);
     let max_x = Field::new("max_x", DataType::Float64, false);
     let max_y = Field::new("max_y", DataType::Float64, false);
-   
-    
+
     let fields = Fields::from(vec![min_x, min_y, max_x, max_y]);
     let bbox = Field::new_struct("", fields, false);
-    // let item_field = Arc::new(bbox.clone());
+   
     Ok(Arc::new(bbox))
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
     let cells = arrays[0].as_primitive::<Int64Type>();
-    let mut vcells: Vec<Abbox> = vec![];
+    let mut xmin_builder = Float64Builder::new();
+    let mut ymin_builder = Float64Builder::new();
+    let mut xmax_builder = Float64Builder::new();
+    let mut ymax_builder = Float64Builder::new();
+
     for cell in cells.iter() {
         let tile: Tile = cell_to_tile(cell.unwrap() as u64);
         let bbox_wgs84 = tile_to_bbox_wgs84(tile);
-        let abox: Abbox = Abbox::new(bbox_wgs84);
-        vcells.push(abox);
+        xmin_builder.append_value(bbox_wgs84.min_x);
+        ymin_builder.append_value(bbox_wgs84.min_y);
+        xmax_builder.append_value(bbox_wgs84.max_x);
+        ymax_builder.append_value(bbox_wgs84.max_y);
     }
-    let box_array: ArrayRef = vcells.try_into_arrow().unwrap();
-    let struct_array = box_array
-        .as_any()
-        .downcast_ref::<arrow::array::StructArray>()
-        .unwrap();
-    Ok(struct_array.clone())
+
+    let values_fields = vec![
+        Field::new("min_x", DataType::Float64, false),
+        Field::new("min_y", DataType::Float64, false),
+        Field::new("max_x", DataType::Float64, false),
+        Field::new("max_y", DataType::Float64, false),
+    ];
+
+    let fields = Fields::from(values_fields);
+
+    let arrays: Vec<ArrayRef> = vec![
+        Arc::new(xmin_builder.finish()),
+        Arc::new(ymin_builder.finish()),
+        Arc::new(xmax_builder.finish()),
+        Arc::new(ymax_builder.finish()),
+    ];
+    let nulls = None;
+    let arr = StructArray::new(fields, arrays, nulls);
+    // let mut vcells: Vec<Abbox> = vec![];
+    // for cell in cells.iter() {
+    //     let tile: Tile = cell_to_tile(cell.unwrap() as u64);
+    //     let bbox_wgs84 = tile_to_bbox_wgs84(tile);
+    //     let abox: Abbox = Abbox::new(bbox_wgs84);
+    //     vcells.push(abox);
+    // }
+    // let box_array: ArrayRef = vcells.try_into_arrow().unwrap();
+    // let struct_array = box_array
+    //     .as_any()
+    //     .downcast_ref::<arrow::array::StructArray>()
+    //     .unwrap();
+    // Ok(struct_array.clone())
+     Ok(arr)
 }
 
 #[cfg(test)]
@@ -137,8 +165,7 @@ mod tests {
         println!("{:?}", sql);
 
         let df = ctx.sql(sql).await.unwrap();
-        // df.show();
-        let batches = df.collect().await.unwrap();
+       df.show().await.unwrap();
         // let column = batches[0].column(0);
         // // let string_arr = column.as_string_view();
 
@@ -146,19 +173,5 @@ mod tests {
         // println!("{:?}", val);
     }
 
-    #[tokio::test]
-    async fn test_quadbin_to_parent_resolution() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToBBOXWGS84::default().into());
-        let sql = r#"SELECT quadbin_to_children(5256690695657226239,13) cell;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
-
-        let val = column.as_primitive::<UInt64Type>().value(0);
-        println!("{:?}", val);
-    }
+   
 }

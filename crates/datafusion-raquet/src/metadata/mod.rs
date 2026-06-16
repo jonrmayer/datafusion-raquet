@@ -31,8 +31,10 @@ use std::collections::HashMap;
 use arrow_schema::{Field, FieldRef, Schema, SchemaRef};
 
 use rasterarrow_schema::error::RasterArrowResult;
-use rasterarrow_schema::{Metadata, RasterArrowType, RasterType};
+use rasterarrow_schema::{Metadata as TileMetadata, RasterArrowType, RasterType};
 
+use quadbin_schema::error::QuadbinArrowResult;
+use quadbin_schema::{Metadata as QMetadata, QuadbinArrowType, QuadbinType};
 
 #[derive(Debug, Clone)]
 pub struct RaquetMetadataReader {
@@ -54,10 +56,36 @@ impl RaquetMetadataReader {
 
     pub async fn get_raquet_schema(&self) -> SchemaRef {
         let (raquet_format, existing_schema) = self.get_format_and_schema().await.unwrap();
-        let raquet_metadata = self.get_raquet_metadata(raquet_format).unwrap();
+        let raquet_metadata = self.get_raquet_metadata(raquet_format.clone()).unwrap();
+        let quadbin_metadata = self
+            .get_quadbin_metadata(raquet_format.clone(), existing_schema.clone())
+            .unwrap();
 
-        let new_schema = infer_rasterarrow_schema(&existing_schema, &raquet_metadata).unwrap();
+        let new_schema = infer_rasterarrow_schema(&existing_schema, &raquet_metadata,&quadbin_metadata).unwrap();
         new_schema
+    }
+
+    fn get_quadbin_metadata(
+        &self,
+        raquet_format: RaquetFormat,
+        existing_schema: Schema,
+    ) -> Result<QuadbinMetadata> {
+        let mut columns: HashMap<String, QuadbinColumnMetadata> = HashMap::new();
+        let version = raquet_format.version().unwrap();
+        let min_zoom = raquet_format.tiling().unwrap().min_zoom.unwrap();
+        let max_zoom = raquet_format.tiling().unwrap().max_zoom.unwrap();
+        let quadbin_column_name = existing_schema
+            .fields()
+            .iter()
+            .filter(|&x| *x.data_type() == arrow::datatypes::DataType::UInt64)
+            .collect::<Vec<_>>()[0]
+            .name();
+        let qcm = QuadbinColumnMetadata::new(min_zoom, max_zoom);
+        columns.insert(quadbin_column_name.to_string(), qcm);
+
+        let qm = QuadbinMetadata { version, columns };
+
+        return Ok(qm);
     }
 
     fn get_raquet_metadata(&self, raquet_format: RaquetFormat) -> Result<RaquetMetadata> {
@@ -114,6 +142,42 @@ impl RaquetMetadataReader {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct QuadbinMetadata {
+    /// The version identifier for the GeoParquet specification.
+    pub version: String,
+
+    /// Metadata about geometry columns. Each key is the name of a geometry column in the table.
+    pub columns: HashMap<String, QuadbinColumnMetadata>,
+}
+
+/// Raquet column metadata
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct QuadbinColumnMetadata {
+    pub min_zoom: i32,
+    pub max_zoom: i32,
+}
+
+impl QuadbinColumnMetadata {
+    pub fn new(min_zoom: i32, max_zoom: i32) -> Self {
+        QuadbinColumnMetadata {
+            min_zoom: min_zoom,
+            max_zoom: max_zoom,
+        }
+    }
+}
+
+// impl From<QuadbinColumnMetadata> for TileMetadata {
+//     fn from(value: QuadbinColumnMetadata) -> Self {
+//         TileMetadata::new(
+//             value.tile_size,
+//             value.binary_type,
+//             value.data_type,
+//             value.compression,
+//         )
+//     }
+// }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RaquetMetadata {
     /// The version identifier for the GeoParquet specification.
     pub version: String,
@@ -122,7 +186,7 @@ pub struct RaquetMetadata {
     pub columns: HashMap<String, RaquetColumnMetadata>,
 }
 
-/// GeoParquet column metadata
+/// Raquet column metadata
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RaquetColumnMetadata {
     pub tile_size: usize,
@@ -146,9 +210,9 @@ impl RaquetColumnMetadata {
     }
 }
 
-impl From<RaquetColumnMetadata> for Metadata {
+impl From<RaquetColumnMetadata> for TileMetadata {
     fn from(value: RaquetColumnMetadata) -> Self {
-        Metadata::new(
+        TileMetadata::new(
             value.tile_size,
             value.binary_type,
             value.data_type,
@@ -157,14 +221,23 @@ impl From<RaquetColumnMetadata> for Metadata {
     }
 }
 
+impl From<QuadbinColumnMetadata> for QMetadata {
+    fn from(value: QuadbinColumnMetadata) -> Self {
+        QMetadata::new(value.min_zoom, value.max_zoom)
+    }
+}
+
 pub fn infer_rasterarrow_schema(
     existing_schema: &Schema,
     raquet_metadata: &RaquetMetadata,
+    quadbin_metadata: &QuadbinMetadata,
 ) -> RasterArrowResult<SchemaRef> {
     let mut new_fields: Vec<FieldRef> = Vec::with_capacity(existing_schema.fields().len());
     for existing_field in existing_schema.fields() {
         if let Some(column_meta) = raquet_metadata.columns.get(existing_field.name()) {
             new_fields.push(infer_target_field(existing_field, column_meta)?)
+        } else if let Some(column_meta) = quadbin_metadata.columns.get(existing_field.name()) {
+            new_fields.push(infer_quadbin_field(existing_field, column_meta)?)
         } else {
             new_fields.push(existing_field.clone());
         }
@@ -180,11 +253,25 @@ fn infer_target_field(
     existing_field: &Field,
     column_meta: &RaquetColumnMetadata,
 ) -> RasterArrowResult<FieldRef> {
-    let metadata = Arc::new(Metadata::from(column_meta.clone()));
+    let metadata = Arc::new(TileMetadata::from(column_meta.clone()));
 
     let target_geo_data_type = RasterArrowType::Raster(RasterType::new(metadata));
 
     Ok(Arc::new(target_geo_data_type.to_field(
+        existing_field.name(),
+        existing_field.is_nullable(),
+    )))
+}
+
+fn infer_quadbin_field(
+    existing_field: &Field,
+    column_meta: &QuadbinColumnMetadata,
+) -> RasterArrowResult<FieldRef> {
+    let metadata = Arc::new(QMetadata::from(column_meta.clone()));
+
+    let target_quadbin_data_type = QuadbinArrowType::QuadbinU64(QuadbinType::new(metadata));
+
+    Ok(Arc::new(target_quadbin_data_type.to_field(
         existing_field.name(),
         existing_field.is_nullable(),
     )))

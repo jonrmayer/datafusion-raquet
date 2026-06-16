@@ -7,10 +7,7 @@ use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
 use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
-use arrow_convert::{
-    ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
-    serialize::TryIntoArrow,
-};
+
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -18,10 +15,11 @@ use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
 };
+use quadbin_geo_rs::GeoFormats;
 
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
-use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
+
 use quadbin_rs::{Tile, cell_to_tile, tile_to_bbox_wgs84};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -96,7 +94,7 @@ fn build_geojson_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<Columnar
     for cell in cells.iter() {
         let tile: Tile = cell_to_tile(cell.unwrap() as u64);
         let bbox = tile_to_bbox_wgs84(tile);
-        let geojson = bbox_to_geojson(bbox);
+        let geojson = GeoFormats::new(bbox).to_geojson();
         builder.append_value(geojson);
     }
 
@@ -113,32 +111,13 @@ mod tests {
     async fn test_quadbin_to_children() {
         let ctx = SessionContext::new();
         ctx.register_udf(QuadBinToGeoJSON::default().into());
-        let sql = r#"SELECT quadbin_to_bbox_mercator(5256690695657226239) ;"#;
+        let sql = r#"SELECT quadbin_to_geojson(5256690695657226239) ;"#;
         println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();
-        // df.show();
-        let batches = df.collect().await.unwrap();
-        // let column = batches[0].column(0);
-        // // let string_arr = column.as_string_view();
 
-        // let val = column.as_list(0).value(0);
-        // println!("{:?}", val);
+         let df = ctx.sql(sql).await.unwrap();
+        df.show().await.unwrap();
     }
 
-    #[tokio::test]
-    async fn test_quadbin_to_parent_resolution() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToGeoJSON::default().into());
-        let sql = r#"SELECT quadbin_to_children(5256690695657226239,13) cell;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
-
-        let val = column.as_primitive::<UInt64Type>().value(0);
-        println!("{:?}", val);
-    }
+    
 }

@@ -32,7 +32,9 @@ parquet = { workspace = true,features = [
 
 rastertile-rs = { workspace = true }
 quadbin-rs = { workspace = true }
+quadbin-geo-rs = { workspace = true }
 rasterarrow-schema = { workspace = true }
+quadbin-schema = { workspace = true }
 
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

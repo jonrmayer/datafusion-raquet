@@ -54,7 +54,7 @@ pub struct Tile {
     pub z: u8,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct Bbox {
     pub min_x: f64,
     pub min_y: f64,
@@ -150,10 +150,20 @@ pub fn lonlat_to_tile(lon: f64, mut lat: f64, z: i8) -> Tile {
         lat = -MAX_LATITUDE;
     }
 
-    let n: f64 = f64::powf(2.0, z as f64);
+    // let n: f64 = f64::powf(2.0, z as f64);
+    let n: f64 = 2f64.powf(z as f64);
+
+// x = (( (lon + 180.0) / 360.0 * n).floor()) as i32;
+
+// let lat_rad = lat * PI / 180.0;
+// y = (((1.0 - (lat_rad.tan().asinh()) / PI) / 2.0 * n).floor()) as i32;
+
+
+
     let fx: f64 = ((lon + 180.0) / 360.0 * n).floor();
     let lat_rad = lat * PI / 180.0;
-    let fy: f64 = ((1.0 - (lat_rad.tan() / PI).asinh()) / PI) / 2.0 * n;
+    // let fy: f64 = ((1.0 - (lat_rad.tan() / PI).asinh()) / PI) / 2.0 * n;
+    let fy = (((1.0 - (lat_rad.tan().asinh()) / PI) / 2.0 * n).floor());
 
     let mut x: u32 = fx as u32;
     let mut y: u32 = fy as u32;

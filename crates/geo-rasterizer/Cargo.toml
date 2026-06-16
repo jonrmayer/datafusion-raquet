@@ -1,0 +1,12 @@
+[package]
+name = "geo-rasterizer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+euclid = "0.22.14"
+ndarray = "0.17.2"
+geo = "0.33.1"
+thiserror = "=1.0.69"
+num-traits = "0.2.19"
+itertools = "0.14.0"

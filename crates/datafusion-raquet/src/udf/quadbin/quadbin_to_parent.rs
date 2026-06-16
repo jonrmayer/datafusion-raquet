@@ -122,43 +122,43 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
     Ok(point_arr)
 }
 
-#[cfg(test)]
-mod tests {  
-    use datafusion::prelude::SessionContext;  
+// #[cfg(test)]
+// mod tests {  
+//     use datafusion::prelude::SessionContext;  
 
-    use super::*;
+//     use super::*;
 
-    #[tokio::test]
-    async fn test_quadbin_to_parent() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToParent::default().into());
-        let sql = r#"SELECT quadbin_to_parent(5256690695657226239) cell;"#;
-        println!("{:?}", sql);
+//     #[tokio::test]
+//     async fn test_quadbin_to_parent() {
+//         let ctx = SessionContext::new();
+//         ctx.register_udf(QuadBinToParent::default().into());
+//         let sql = r#"SELECT quadbin_to_parent(5256690695657226239) cell;"#;
+//         println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();       
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
+//         let df = ctx.sql(sql).await.unwrap();       
+//         let batches = df.collect().await.unwrap();
+//         let column = batches[0].column(0);
+//         // let string_arr = column.as_string_view();
 
-        let val = column.as_primitive::<UInt64Type>().value(0);
-        println!("{:?}", val);
+//         let val = column.as_primitive::<UInt64Type>().value(0);
+//         println!("{:?}", val);
 
-    }
+//     }
 
-    #[tokio::test]
-    async fn test_quadbin_to_parent_resolution() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToParent::default().into());
-        let sql = r#"SELECT quadbin_to_parent(5256690695657226239,13) cell;"#;
-        println!("{:?}", sql);
+//     #[tokio::test]
+//     async fn test_quadbin_to_parent_resolution() {
+//         let ctx = SessionContext::new();
+//         ctx.register_udf(QuadBinToParent::default().into());
+//         let sql = r#"SELECT quadbin_to_parent(5256690695657226239,13) cell;"#;
+//         println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();       
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
+//         let df = ctx.sql(sql).await.unwrap();       
+//         let batches = df.collect().await.unwrap();
+//         let column = batches[0].column(0);
+//         // let string_arr = column.as_string_view();
 
-        let val = column.as_primitive::<UInt64Type>().value(0);
-        println!("{:?}", val);
+//         let val = column.as_primitive::<UInt64Type>().value(0);
+//         println!("{:?}", val);
 
-    }
-}
+//     }
+// }

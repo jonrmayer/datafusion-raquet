@@ -7,10 +7,10 @@ use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
 use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
-use arrow_convert::{
-    ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
-    serialize::TryIntoArrow,
-};
+// use arrow_convert::{
+//     ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
+//     serialize::TryIntoArrow,
+// };
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -21,8 +21,9 @@ use datafusion::logical_expr::{
 
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
-use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
+// use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
 use quadbin_rs::{Tile, cell_to_tile, tile_to_bbox_wgs84};
+use quadbin_geo_rs::GeoFormats;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToWKT {
@@ -96,7 +97,7 @@ fn build_wkt_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ColumnarValu
     for cell in cells.iter() {
         let tile: Tile = cell_to_tile(cell.unwrap() as u64);
         let bbox = tile_to_bbox_wgs84(tile);
-        let wkt = bbox_to_wkt(bbox);
+        let wkt = GeoFormats::new(bbox).to_wkt();
         builder.append_value(wkt);
     }
 
@@ -113,14 +114,14 @@ mod tests {
     async fn test_quadbin_to_children() {
         let ctx = SessionContext::new();
         ctx.register_udf(QuadBinToWKT::default().into());
-        let sql = r#"SELECT quadbin_to_bbox_mercator(5256690695657226239) ;"#;
+        let sql = r#"SELECT quadbin_to_wkt(5256690695657226239) ;"#;
         println!("{:?}", sql);
 
         let df = ctx.sql(sql).await.unwrap();
-        // df.show();
-        let batches = df.collect().await.unwrap();
+        df.show().await.unwrap();
+        // let batches = df.collect().await.unwrap();
         // let column = batches[0].column(0);
-        // // let string_arr = column.as_string_view();
+        // let string_arr = column.as_string_view();
 
         // let val = column.as_list(0).value(0);
         // println!("{:?}", val);
