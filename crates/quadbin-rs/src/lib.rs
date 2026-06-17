@@ -54,7 +54,7 @@ pub struct Tile {
     pub z: u8,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Bbox {
     pub min_x: f64,
     pub min_y: f64,
@@ -153,12 +153,10 @@ pub fn lonlat_to_tile(lon: f64, mut lat: f64, z: i8) -> Tile {
     // let n: f64 = f64::powf(2.0, z as f64);
     let n: f64 = 2f64.powf(z as f64);
 
-// x = (( (lon + 180.0) / 360.0 * n).floor()) as i32;
+    // x = (( (lon + 180.0) / 360.0 * n).floor()) as i32;
 
-// let lat_rad = lat * PI / 180.0;
-// y = (((1.0 - (lat_rad.tan().asinh()) / PI) / 2.0 * n).floor()) as i32;
-
-
+    // let lat_rad = lat * PI / 180.0;
+    // y = (((1.0 - (lat_rad.tan().asinh()) / PI) / 2.0 * n).floor()) as i32;
 
     let fx: f64 = ((lon + 180.0) / 360.0 * n).floor();
     let lat_rad = lat * PI / 180.0;
@@ -233,8 +231,14 @@ pub fn tile_to_bbox_wgs84(tile: Tile) -> Bbox {
     let n: f64 = f64::powf(2.0, tile.z as f64);
     let min_lon = tile.x as f64 / n * 360.0 - 180.0;
     let max_lon = (tile.x as f64 + 1.0) / n * 360.0 - 180.0;
-    let min_lat_rad = ((PI * (1.0 - 2.0 * tile.y as f64 + 1.0 / n)).sinh()).atan();
-    let max_lat_rad = ((PI * (1.0 - 2.0 * tile.y as f64 / n)).sinh()).atan();
+    // let min_lat_rad = ((PI * (1.0 - 2.0 * tile.y as f64 + 1.0 / n)).sinh()).atan();
+    // let max_lat_rad = ((PI * (1.0 - 2.0 * tile.y as f64 / n)).sinh()).atan();
+
+    let min_lat_rad = (PI * (1.0 - 2.0 * (tile.y as f64 + 1.0) / n as f64))
+        .sinh()
+        .atan();
+    let max_lat_rad = (PI * (1.0 - 2.0 * tile.y as f64 / n as f64)).sinh().atan();
+
     let min_lat = min_lat_rad * 180.0 / PI;
     let max_lat = max_lat_rad * 180.0 / PI;
 
@@ -445,7 +449,7 @@ mod tests {
 
     #[test]
     fn test_tile_to_bbox_wgs84() {
-        let tile: Tile = Tile { x: 3, y: 0, z: 2 };
+        let tile: Tile = Tile { x: 3, y: 2, z: 3 };
         let bbox = tile_to_bbox_wgs84(tile);
         println!("tile_to_bbox_wgs84: {:?}", bbox);
     }
@@ -491,5 +495,4 @@ mod tests {
         let cells = lonlat_to_pixel(0.0, 0.0, 4, 256);
         println!("lonlat_to_pixel: {:?}", cells);
     }
-
 }

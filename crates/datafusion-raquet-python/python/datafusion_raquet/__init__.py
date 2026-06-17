@@ -40,18 +40,22 @@ class RaquetSessionContext(SessionContext):
         from . import quadbin
 
         self.register_udf(udf(quadbin.QuadBinFromTile()))
-        # ctx.register_udf(udf(quadbin.QuadBinFromLonLat()))
+        self.register_udf(udf(quadbin.QuadBinToTile()))
+        self.register_udf(udf(quadbin.QuadBinFromLonLat()))
         self.register_udf(udf(quadbin.QuadBinToParent()))
         self.register_udf(udf(quadbin.QuadBinResolution()))
         self.register_udf(udf(quadbin.QuadBinToChildren()))
         self.register_udf(udf(quadbin.QuadBinToSibling()))
         self.register_udf(udf(quadbin.QuadBinKRing()))
-        # ctx.register_udf(udf(quadbin.QuadBinToBBOXMercator()))
-        # ctx.register_udf(udf(quadbin.QuadBinToBBOXWGS84()))
-        # ctx.register_udf(udf(quadbin.QuadBinToLonLat()))
-        # ctx.register_udf(udf(quadbin.QuadBinToPixelXY()))
-        # ctx.register_udf(udf(quadbin.QuadBinToWKT()))
-        # ctx.register_udf(udf(quadbin.QuadBinToGeoJSON()))
+
+        self.register_udf(udf(quadbin.QuadBinToBBOX()))
+
+        self.register_udf(udf(quadbin.QuadBinToBBOXMercator()))
+        self.register_udf(udf(quadbin.QuadBinToBBOXWGS84()))
+        self.register_udf(udf(quadbin.QuadBinToLonLat()))
+        # self.register_udf(udf(quadbin.QuadBinToPixelXY()))
+        self.register_udf(udf(quadbin.QuadBinToWKT()))
+        self.register_udf(udf(quadbin.QuadBinToGeoJSON()))
 
   
 
