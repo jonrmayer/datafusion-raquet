@@ -82,7 +82,7 @@ impl ScalarUDFImpl for QuadBinToBBOX {
             Documentation::builder(
                 DOC_SECTION_OTHER,
                 "Return a Bbox Struct from a quadbin cell ",
-                "quadbin_to_bbox(5256690695657226239) ",
+                "quadbin_to_bbox(5202642732031410175) ",
             )
             .with_argument("cell", "cell value")
             .build()
@@ -161,7 +161,7 @@ mod tests {
     async fn test_quadbin_to_children() {
         let ctx = SessionContext::new();
         ctx.register_udf(QuadBinToBBOX::default().into());
-        let sql = r#"SELECT quadbin_to_bbox_wgs84(5256690695657226239) ;"#;
+        let sql = r#"SELECT quadbin_to_bbox(5202642732031410175) ;"#;
         println!("{:?}", sql);
 
         let df = ctx.sql(sql).await.unwrap();

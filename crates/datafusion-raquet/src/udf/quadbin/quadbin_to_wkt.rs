@@ -114,7 +114,7 @@ mod tests {
     async fn test_quadbin_to_children() {
         let ctx = SessionContext::new();
         ctx.register_udf(QuadBinToWKT::default().into());
-        let sql = r#"SELECT quadbin_to_wkt(5256690695657226239) ;"#;
+        let sql = r#"SELECT quadbin_to_wkt(5202642732031410175) ;"#;
         println!("{:?}", sql);
 
         let df = ctx.sql(sql).await.unwrap();
