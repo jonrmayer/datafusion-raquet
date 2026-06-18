@@ -1,9 +1,11 @@
 use rasterarrow_schema::Metadata;
-use rastertile_rs::{CompressionFormat, NewDataType, RasterDataType, Tile, TypedArray};
+use rastertile_rs::{BinaryType, CompressionFormat, NewDataType, RasterDataType, Tile, TypedArray};
 
 use crate::error::RaquetDataFusionResult;
 use arrow::array::GenericListBuilder;
-use arrow_array::builder::{Float32Builder, Float64Builder, ListBuilder, PrimitiveBuilder};
+use arrow_array::builder::{
+    Float32Builder, Float64Builder, ListBuilder, PrimitiveBuilder, UInt8Builder,
+};
 use arrow_array::{
     ArrayRef, BinaryArray, ListArray,
     types::{Float32Type, Float64Type},
@@ -26,14 +28,45 @@ fn get_data_type_from_metadata(metadata: Metadata) -> Option<NewDataType> {
 }
 
 fn get_tile(metadata: Metadata, data: Option<&[u8]>) -> Tile {
-    let tile: Tile = Tile {
-        x: metadata.tile_size().clone(),
-        y: metadata.tile_size().clone(),
-        data_type: get_data_type_from_metadata(metadata.clone()),
-        compressed_bytes: data.unwrap().to_vec(),
-        compression_method: metadata.compression().clone(),
+    let samples = match metadata.clone().bands {
+        Some(bands) => bands.len(),
+        _ => 1,
     };
-    tile
+      let tile: Tile = Tile {
+                x: metadata.tile_size().clone(),
+                y: metadata.tile_size().clone(),
+                data_type: get_data_type_from_metadata(metadata.clone()),
+                compressed_bytes: data.unwrap().to_vec(),
+                compression_method: metadata.compression().clone(),
+                samples,
+            };
+            tile
+    // let psize = match metadata.clone().bands {
+    //     Some(a) => a.len(),
+    //     _ => 0,
+    // };
+    // match metadata.binary_type().clone() {
+    //     BinaryType::Separated => {
+    //         let tile: Tile = Tile {
+    //             x: metadata.tile_size().clone(),
+    //             y: metadata.tile_size().clone(),
+    //             data_type: get_data_type_from_metadata(metadata.clone()),
+    //             compressed_bytes: data.unwrap().to_vec(),
+    //             compression_method: metadata.compression().clone(),
+    //         };
+    //         tile
+    //     }
+    //     BinaryType::Interleaved => {
+    //         let tile: Tile = Tile {
+    //             x: metadata.tile_size().clone() * psize,
+    //             y: metadata.tile_size().clone() * psize,
+    //             data_type: get_data_type_from_metadata(metadata.clone()),
+    //             compressed_bytes: data.unwrap().to_vec(),
+    //             compression_method: metadata.compression().clone(),
+    //         };
+    //         tile
+    //     }
+    // }
 }
 
 //   let tile: Tile = Tile {
@@ -95,10 +128,7 @@ macro_rules! impl_convert_array {
     };
 }
 
-pub fn convert_list_array_f32(
-    in_binary: BinaryArray,
-    metadata: Metadata,
-) -> ListArray {
+pub fn convert_list_array_f32(in_binary: BinaryArray, metadata: Metadata) -> ListArray {
     let values_builder = Float32Builder::new();
     let mut builder = ListBuilder::new(values_builder);
 
@@ -114,7 +144,26 @@ pub fn convert_list_array_f32(
 
     arr
 }
+
+pub fn convert_list_array_u8(in_binary: BinaryArray, metadata: Metadata) -> ListArray {
+    let values_builder = UInt8Builder::new();
+    let mut builder = ListBuilder::new(values_builder);
+
+    for input in in_binary.iter() {
+        let tile: Tile = get_tile(metadata.clone(), input);
+        let decoded_array = tile.decode().unwrap();
+        let output: Vec<Option<u8>> = convert_uint8(decoded_array.data());
+
+        builder.append_value(output);
+    }
+
+    let arr = builder.finish();
+
+    arr
+}
+
 impl_convert_array!(Float32, f32, convert_f32);
+impl_convert_array!(UInt8, u8, convert_uint8);
 // impl_convert_list_array!(Float32, f32,Float32Builder, convert_list_array_f32);
 impl_convert_list_array!(Float64, f64, Float64Builder, convert_list_array_f64);
 // impl_table_provider!(RaquetTable, PyRaquetTable, "RaquetTable");

@@ -36,6 +36,8 @@ use rasterarrow_schema::{Metadata as TileMetadata, RasterArrowType, RasterType};
 use quadbin_schema::error::QuadbinArrowResult;
 use quadbin_schema::{Metadata as QMetadata, QuadbinArrowType, QuadbinType};
 
+use crate::metadata::format::BandInfo;
+
 #[derive(Debug, Clone)]
 pub struct RaquetMetadataReader {
     pub meta: ObjectMeta,
@@ -56,12 +58,16 @@ impl RaquetMetadataReader {
 
     pub async fn get_raquet_schema(&self) -> SchemaRef {
         let (raquet_format, existing_schema) = self.get_format_and_schema().await.unwrap();
-        let raquet_metadata = self.get_raquet_metadata(raquet_format.clone()).unwrap();
+        let raquet_metadata = self
+            .get_raquet_metadata(raquet_format.clone(), existing_schema.clone())
+            .unwrap();
         let quadbin_metadata = self
             .get_quadbin_metadata(raquet_format.clone(), existing_schema.clone())
             .unwrap();
 
-        let new_schema = infer_rasterarrow_schema(&existing_schema, &raquet_metadata,&quadbin_metadata).unwrap();
+        let new_schema =
+            infer_rasterarrow_schema(&existing_schema, &raquet_metadata, &quadbin_metadata)
+                .unwrap();
         new_schema
     }
 
@@ -88,22 +94,47 @@ impl RaquetMetadataReader {
         return Ok(qm);
     }
 
-    fn get_raquet_metadata(&self, raquet_format: RaquetFormat) -> Result<RaquetMetadata> {
+    fn get_raquet_metadata(
+        &self,
+        raquet_format: RaquetFormat,
+        existing_schema: Schema,
+    ) -> Result<RaquetMetadata> {
         let mut columns: HashMap<String, RaquetColumnMetadata> = HashMap::new();
+
         let version = raquet_format.version().unwrap();
         let tile_size = raquet_format.tiling().unwrap().block_height.unwrap() as usize;
-        // println!("tile_size{:?}", tile_size);
+
         let compression_str = raquet_format.compression().unwrap();
         let compression = CompressionFormat::from_str(&compression_str).unwrap();
+
+        let raster_columns = existing_schema
+            .fields()
+            .iter()
+            .filter(|&x| *x.data_type() == arrow::datatypes::DataType::Binary)
+            .collect::<Vec<_>>();
         let bands = raquet_format.bands().unwrap();
 
-        for (_, band) in bands.iter().enumerate() {
-            let name = band.name.clone().unwrap();
+        if bands.len() == raster_columns.len() {
+            let binary_type: BinaryType = BinaryType::Separated;
+            for (_, band) in bands.iter().enumerate() {
+                let name = band.name.clone().unwrap();
+                let dtype = band.r#type.clone().unwrap();
+                let rdt = RasterDataType::from_str(&dtype).unwrap();
+                let rcm = RaquetColumnMetadata::new(tile_size, rdt, compression, binary_type, None);
+                columns.insert(name, rcm);
+            }
+        } else {
+            let binary_type: BinaryType = BinaryType::Interleaved;
+            let band = &bands[0];
+            let names: Vec<String> = bands.iter().map(|x| x.clone().name.unwrap()).collect();
+            let name = raster_columns[0].name().clone();
             let dtype = band.r#type.clone().unwrap();
             let rdt = RasterDataType::from_str(&dtype).unwrap();
-            let rcm = RaquetColumnMetadata::new(tile_size, rdt, compression);
+            let rcm =
+                RaquetColumnMetadata::new(tile_size, rdt, compression, binary_type, Some(names));
             columns.insert(name, rcm);
         }
+
         let rm = RaquetMetadata { version, columns };
 
         return Ok(rm);
@@ -193,6 +224,7 @@ pub struct RaquetColumnMetadata {
     pub binary_type: BinaryType,
     pub data_type: RasterDataType,
     pub compression: CompressionFormat,
+    pub bands: Option<Vec<String>>,
 }
 
 impl RaquetColumnMetadata {
@@ -200,12 +232,15 @@ impl RaquetColumnMetadata {
         tile_size: usize,
         data_type: RasterDataType,
         compression: CompressionFormat,
+        binary_type: BinaryType,
+        bands: Option<Vec<String>>,
     ) -> Self {
         RaquetColumnMetadata {
             tile_size: tile_size,
-            binary_type: BinaryType::Separated,
+            binary_type: binary_type,
             data_type: data_type,
             compression: compression,
+            bands: bands,
         }
     }
 }
@@ -217,6 +252,7 @@ impl From<RaquetColumnMetadata> for TileMetadata {
             value.binary_type,
             value.data_type,
             value.compression,
+            value.bands,
         )
     }
 }

@@ -87,7 +87,7 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
     let metadata = Arc::new(Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default());
 
     let list_field = match metadata.data_type() {
-        // RasterDataType::UInt8 => Some(NewDataType::UInt8),
+        RasterDataType::UInt8 => Some(Field::new_list_field(DataType::UInt8, true)),
         // RasterDataType::Int8 => Some(NewDataType::Int8),
         // RasterDataType::UInt16 => Some(NewDataType::UInt16),
         // RasterDataType::Int16 => Some(NewDataType::Int16),
@@ -102,23 +102,24 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
 
     let dt = DataType::List(Arc::new(list_field.unwrap()));
     let out_field: Field = Field::new("", dt, true);
-  
-    Ok(Arc::new(out_field))
 
+    Ok(Arc::new(out_field))
 }
 
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
     metadata: Metadata,
 ) -> RaquetDataFusionResult<ListArray> {
-    let in_binary =
-        arrays[0]
-            .as_any()
-            .downcast_ref::<BinaryArray>()
-            .expect("cast failed");
+    let in_binary = arrays[0]
+        .as_any()
+        .downcast_ref::<BinaryArray>()
+        .expect("cast failed");
 
     let out = match metadata.data_type() {
-        // RasterDataType::UInt8 => Some(NewDataType::UInt8),
+        RasterDataType::UInt8 => Some(crate::udf::raster::convert_list_array_u8(
+            in_binary.clone(),
+            metadata,
+        )),
         // RasterDataType::Int8 => Some(NewDataType::Int8),
         // RasterDataType::UInt16 => Some(NewDataType::UInt16),
         // RasterDataType::Int16 => Some(NewDataType::Int16),
@@ -127,7 +128,8 @@ fn build_cell_array(
         // RasterDataType::UInt64 => Some(NewDataType::UInt64),
         // RasterDataType::Int64 => Some(NewDataType::Int64),
         RasterDataType::Float32 => Some(crate::udf::raster::convert_list_array_f32(
-            in_binary.clone(), metadata,
+            in_binary.clone(),
+            metadata,
         )),
         // RasterDataType::Float64 => Some(crate::udf::raster::convert_list_array_f64(
         //     in_binary, metadata,
@@ -137,122 +139,38 @@ fn build_cell_array(
     Ok(out.unwrap())
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use arrow_array::RecordBatch;
-//     use arrow_buffer::ScalarBuffer;
-//     use arrow_schema::Schema;
-//     use datafusion::prelude::SessionContext;
+#[cfg(test)]
+mod tests {
 
-//     use std::fs::File;
-//     use std::path::Path;
-//     use std::path::PathBuf;
-//     use std::sync::Arc;
+    use super::*;
+    use crate::RaquetTable;
+    use crate::udf::raster::DecodeTile;
+    use datafusion::prelude::{SessionConfig, SessionContext};
 
-//     use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-//     use parquet::file::reader::{FileReader, SerializedFileReader};
+    #[tokio::test]
+    async fn test_native_interleaved_tile() {
+        let path =
+            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/tci_interleaved_gzip.parquet"
+                .to_string();
 
-//     use raquet::reader::{RaquetFileReader, RaquetReaderBuilder, RaquetRecordBatchReader};
-//     // use parquet::record::{Field, Row, RowAccessor};
+        let ctx =
+            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-//     use super::*;
-//     pub(crate) fn fixture_dir() -> PathBuf {
-//         let p = PathBuf::from("/home/jonrm/projects/git/raquet-arrow/fixtures");
-//         assert!(p.exists());
-//         p
-//     }
+        ctx.register_udf(NativeTile::default().into());
+        ctx.register_udf(DecodeTile::default().into());
+        let t = RaquetTable::from_path(path).await;
 
-//     pub(crate) fn spain_solar_ghi() -> PathBuf {
-//         fixture_dir().join("spain_solar_ghi.parquet")
-//     }
+        let _ = ctx.register_table("tci", Arc::new(t));
+        // let tci = ctx.table_provider("tci").await.unwrap();
 
-//     // pub(crate) fn geoarrow_data_example_crs_files() -> PathBuf {
-//     //     fixture_dir().join("geoarrow-data/example-crs/files")
-//     // }
+        // let tci_schema = tci.schema();
+        // println!("{:?}", tci_schema);
 
-//     fn read_gpq_file(path: impl AsRef<Path>) -> Vec<RecordBatch> {
-//         println!("reading path: {:?}", path.as_ref());
-//         // path.
-//         let inner_file = File::open(spain_solar_ghi()).unwrap();
-//         let outer_file = File::open(spain_solar_ghi()).unwrap();
+        let sql = "select array_length(native_tile(pixels),1) from tci where block<>0 limit 1 ;";
+        // let sql = "select count(*) from solar;";
 
-//         let reader = SerializedFileReader::new(inner_file).unwrap();
-//         let fm = reader.metadata().file_metadata();
-//         // reader.
-
-//         let raquet_file_metadata = reader.raquet_file_metadata().unwrap().unwrap();
-//         let format = reader.raquet_format().unwrap().unwrap();
-
-//         let reader_builder = ParquetRecordBatchReaderBuilder::try_new(outer_file).unwrap();
-//         let raquet_meta = reader_builder.raquet_metadata(format).unwrap().unwrap();
-//         let raquet_schema = reader_builder.raquet_schema(&raquet_meta, true).unwrap();
-//         // reader_builder.with_row_groups(raquet_file_metadata.raquet_row_groups)
-//         let pq_reader = reader_builder
-//             .with_row_groups(raquet_file_metadata.raquet_row_groups())
-//             .build()
-//             .unwrap();
-
-//         let reader = RaquetRecordBatchReader::try_new(pq_reader, raquet_schema.clone()).unwrap();
-//         let batches = reader.collect::<Result<Vec<_>, _>>().unwrap();
-
-//         batches
-//     }
-
-//     //   #[tokio::test]
-//     // async fn test_list_array() {
-//     //     let list_array = get_la().unwrap();
-//     //     let v = list_array.value(0);
-
-//     //     // let s = ScalarBuffer::from(v.to_data());
-//     //     // println!("{:?}", v.to_data().into_parts());
-//     //     // list_array.values()
-//     //     // let path = spain_solar_ghi();
-//     //     // let batch = read_gpq_file(path);
-//     //     // let ctx = SessionContext::new();
-//     //     // ctx.read_batches(batches)
-//     //     // ctx.re
-//     //     // ctx.register_batch("solar", batch[0].clone());
-//     //     // ctx.register_udf(NativeTile::default().into());
-
-//     //     // let sql = r#"SELECT native_tile(band_1) decoded_tile from solar ;"#;
-//     //     // // println!("{:?}", sql);
-
-//     //     // let df = ctx.sql(sql).await.unwrap();
-//     //     // // let schema = df.schema();
-
-//     //     // let schema = df.schema().clone();
-//     //     // // schema.field(0).metadata();
-//     //     // println!("{:?}", schema.field(0).metadata());
-//     //     // let batches = df.collect().await.unwrap();
-//     //     // let column = batches[0].column(0);
-//     //     // // column.type_id();
-
-//     //     // let val = column.as_primitive::<BinaryType>().value(0);
-//     // }
-
-//     #[tokio::test]
-//     async fn test_native_tile() {
-//         let path = spain_solar_ghi();
-//         let batch = read_gpq_file(path);
-//         let ctx = SessionContext::new();
-//         // ctx.read_batches(batches)
-//         // ctx.re
-//         ctx.register_batch("solar", batch[0].clone());
-//         ctx.register_udf(NativeTile::default().into());
-
-//         let sql = r#"SELECT native_tile(band_1) decoded_tile from solar limit 1 ;"#;
-//         // println!("{:?}", sql);
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         // let schema = df.schema();
-
-//         let schema = df.schema().clone();
-//         // schema.field(0).metadata();
-//         println!("{:?}", schema.field(0).metadata());
-//         let batches = df.collect().await.unwrap();
-//         let column = batches[0].column(0);
-//         // column.type_id();
-
-//         // let val = column.as_primitive::<BinaryType>().value(0);
-//     }
-// }
+        let df = ctx.sql(sql).await.unwrap();
+        // println!("{:?}",df.count().await);
+        df.show().await.unwrap();
+    }
+}

@@ -123,12 +123,17 @@ fn get_data_type_from_metadata(metadata: Metadata) -> Option<NewDataType> {
 }
 
 fn convert(metadata: Metadata, data: Option<&[u8]>) -> TileStatistics {
+     let samples = match metadata.clone().bands {
+        Some(bands) => bands.len(),
+        _ => 1,
+    };
     let tile: Tile = Tile {
         x: metadata.tile_size().clone(),
         y: metadata.tile_size().clone(),
         data_type: get_data_type_from_metadata(metadata.clone()),
         compressed_bytes: data.unwrap().to_vec(),
         compression_method: metadata.compression().clone(),
+        samples,
     };
 
     let ts = tile.statistics().unwrap();

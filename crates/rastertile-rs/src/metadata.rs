@@ -7,6 +7,8 @@ use std::usize;
 
 use crate::errors::*;
 
+
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
 pub enum BinaryType {
     /// Separated

@@ -43,6 +43,7 @@ pub struct Tile {
 
     pub compressed_bytes: Vec<u8>,
     pub compression_method: CompressionFormat,
+    pub samples:usize,
 }
 
 impl Tile {
@@ -54,6 +55,10 @@ impl Tile {
     /// The row index of this tile.
     pub fn y(&self) -> usize {
         self.y
+    }
+
+     pub fn samples(&self) -> usize {
+        self.samples
     }
 
     /// Access the compressed bytes underlying this tile.
@@ -78,7 +83,7 @@ impl Tile {
         };
         let decoded = compression.decompress(self.compressed_bytes());
 
-        let shape = [1, self.x(), self.y()];
+        let shape = [self.samples(), self.x(), self.y()];
         Array::try_new(decoded, shape, self.data_type)
     }
 
