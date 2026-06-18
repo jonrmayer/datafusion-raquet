@@ -85,6 +85,7 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
         existing_metadata.binary_type,
         existing_metadata.data_type,
         CompressionFormat::None,
+        existing_metadata.bands,
     );
     let metadata = Arc::new(new_metadata);
     let output_type = RasterType::new(metadata);

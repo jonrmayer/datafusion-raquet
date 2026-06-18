@@ -29,7 +29,7 @@ mod table_provider_tests {
     #[tokio::test]
     async fn read_data_test() {
         let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
+            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/tci_interleaved_gzip.parquet"
                 .to_string();
 
         let ctx =

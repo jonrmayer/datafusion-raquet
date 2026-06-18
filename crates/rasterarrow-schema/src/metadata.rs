@@ -5,10 +5,7 @@ use serde_json::Value;
 use std::str::FromStr;
 use std::usize;
 
-
-
-use rastertile_rs::{BinaryType,RasterDataType,CompressionFormat};
-
+use rastertile_rs::{BinaryType, CompressionFormat, RasterDataType};
 
 /// GeoArrow extension metadata.
 ///
@@ -25,6 +22,7 @@ pub struct Metadata {
     pub binary_type: BinaryType,
     pub data_type: RasterDataType,
     pub compression: CompressionFormat,
+    pub bands: Option<Vec<String>>,
 }
 
 impl Metadata {
@@ -34,13 +32,24 @@ impl Metadata {
         binary_type: BinaryType,
         data_type: RasterDataType,
         compression: CompressionFormat,
+        bands: Option<Vec<String>>,
     ) -> Self {
         Self {
             tile_size,
             binary_type,
             data_type,
             compression,
+            bands,
         }
+    }
+
+     pub fn bands(&self) -> Vec<String> {
+        match &self.bands {
+            Some(a) => a.clone(),
+            None => todo!()
+            
+        }
+        
     }
 
     /// Expose the underlying tile_size.
