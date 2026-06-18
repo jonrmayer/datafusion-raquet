@@ -3,10 +3,12 @@ use pyo3::prelude::*;
 use datafusion_raquet::udf::quadbin::{
     QuadBinFromLonLat, QuadBinFromTile, QuadBinKRing, QuadBinResolution, QuadBinToBBOX,
     QuadBinToBBOXMercator, QuadBinToBBOXWGS84, QuadBinToChildren, QuadBinToGeoJSON,
-    QuadBinToLonLat, QuadBinToParent, QuadBinToSibling, QuadBinToTile, QuadBinToWKT,
+    QuadBinToLonLat, QuadBinToParent, QuadBinToSibling, QuadBinToTile, QuadBinToWKT,QuadBinPolyFill,
 };
 
 use crate::impl_udf;
+
+impl_udf!(QuadBinPolyFill, PyQuadBinPolyFill, "QuadBinPolyFill");
 
 impl_udf!(QuadBinFromTile, PyQuadBinFromTile, "QuadBinFromTile");
 
@@ -53,6 +55,11 @@ pub(crate) fn quadbin(m: &Bound<PyModule>) -> PyResult<()> {
     // m.add_class::<PyQuadBinToPixelXY>()?;
     m.add_class::<PyQuadBinToWKT>()?;
     m.add_class::<PyQuadBinToGeoJSON>()?;
+
+
+    m.add_class::<PyQuadBinPolyFill>()?;
+
+    
 
     Ok(())
 }

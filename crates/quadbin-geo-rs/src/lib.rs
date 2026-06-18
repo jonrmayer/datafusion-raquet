@@ -44,7 +44,7 @@ impl GeoCells {
         let (min_x, min_y, max_x, max_y) = gt.tile_extent();
 
         for new_x in min_x..=max_x {
-            for new_y in max_y..=min_y {
+            for new_y in min_y..=max_y {
                 let new_tile = Tile {
                     x: new_x,
                     y: new_y,
@@ -59,30 +59,30 @@ impl GeoCells {
 
     pub fn intersecting_cells(&self) -> Vec<u64> {
         let mut result: Vec<u64> = vec![];
-        let geotiles = GeoTiles::new(self.geo());
+        // let geotiles = GeoTiles::new(self.geo());
         // let w_h = self.tile_width_height();
         // let max = w_h.0.max(w_h.1);
         // let base_resolution =  self.resolution()-max.ilog2() as i8;
-        println!("{:?}  ",geotiles.geos(5));
+        // println!("{:?}  ",geotiles.geos(5));
 
 
-        // let tile_geom = transforms::transform_latlon_to_tile_coord(self.geom(), self.resolution());
+        let tile_geom = transforms::transform_latlon_to_tile_coord(self.geo().geom(), self.geo().resolution());
 
-        // let georast = rasterizer::GeoRasterizer::new(tile_geom);
+        let georast = rasterizer::GeoRasterizer::new(tile_geom);
 
-        // let pixels = georast.intersecting_pixels();
-        // result = pixels
-        //     .iter()
-        //     .map(|p| {
-        //         let new_tile = Tile {
-        //             x: p.0 as u32,
-        //             y: p.1 as u32,
-        //             z: self.resolution() as u8,
-        //         };
-        //         let cell = tile_to_cell(new_tile);
-        //         cell
-        //     })
-        //     .collect();
+        let pixels = georast.intersecting();
+        result = pixels
+            .iter()
+            .map(|p| {
+                let new_tile = Tile {
+                    x: p.0 as u32,
+                    y: p.1 as u32,
+                    z: self.geo().resolution() as u8,
+                };
+                let cell = tile_to_cell(new_tile);
+                cell
+            })
+            .collect();
 
         result
     }
@@ -111,17 +111,17 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let wkt_str = "POLYGON((-74.0 40.7, -73.9 40.7, -73.9 40.8, -74.0 40.8, -74.0 40.7))";
+        let wkt_str = "POLYGON((-45 40.9798980696201, 0 40.9798980696201, 0 66.5132604431119, -45 66.5132604431119, -45 40.9798980696201))";
         let linestring_str = "LINESTRING(-45 40.979898069620134, 0 40.979898069620134, 0 66.51326044311186, -45 66.51326044311186, -45 40.979898069620134)";
         let wkt_pt_str = "POINT(-74.0 40.7)";
-        let z: i8 = 25;
+        let z: i8 = 5;
        
 
-        let gc = GeoCells::new(linestring_str.to_string(), z);
+        let gc = GeoCells::new(wkt_str.to_string(), z);
         // println!("extent {:?}", gc.extent());
-        // let bounding = gc.bounding_cells();
-        // println!("bounding cells {:?}", bounding.len());
-        let intersecting = gc.intersecting_cells();
+        let bounding = gc.intersecting_cells();
+        println!("bounding cells {:?}", bounding.len());
+        // let intersecting = gc.intersecting_cells();
         // println!("intersecting cells {:?}", intersecting.len());
     }
 }
