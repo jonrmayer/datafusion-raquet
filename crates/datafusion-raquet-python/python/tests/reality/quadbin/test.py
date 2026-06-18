@@ -297,6 +297,33 @@ def raquet_quadbin_to_bbox():
 
     decoded.show()
 
+def duckdb_quadbin_polyfill():
+    """ """
+
+    sql = """
+    LOAD raquet;
+    with data as(
+    select unnest(quadbin_polyfill('POLYGON((-74.1 40.6, -73.8 40.6, -73.8 40.9, -74.1 40.9, -74.1 40.6))'::GEOMETRY,11)) as cells
+    )
+    select cells,quadbin_to_wkt(cells) from data 
+    """
+    duckdb.sql(sql).show()
+
+
+def raquet_quadbin_polyfill():
+    """ """
+    sql = """ 
+    with data as(
+    select unnest(quadbin_polyfill('POLYGON((-74.1 40.6, -73.8 40.6, -73.8 40.9, -74.1 40.9, -74.1 40.6))',11)) cells
+    
+    )
+
+    select cells,quadbin_to_wkt(cast(cells as bigint)) from data 
+    """
+    decoded = ctx.sql(sql)
+
+    decoded.show()
+
 
 # duckdb_quadbin_resolution()
 # raquet_quadbin_resolution()
@@ -342,5 +369,9 @@ def raquet_quadbin_to_bbox():
 # raquet_quadbin_to_geojson()
 
 
-duckdb_quadbin_to_bbox()
-raquet_quadbin_to_bbox()
+# duckdb_quadbin_to_bbox()
+# raquet_quadbin_to_bbox()
+
+
+# duckdb_quadbin_polyfill()
+# raquet_quadbin_polyfill()
