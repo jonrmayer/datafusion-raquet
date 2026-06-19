@@ -1,12 +1,13 @@
 mod error;
+mod formats;
 mod proj;
 mod rasterizer;
 mod tiles;
 mod transforms;
-mod formats;
 
 mod base;
 
+use geo::geometry::Point;
 use geo::map_coords::MapCoords;
 use geo::{BoundingRect, Geometry};
 use quadbin_rs::{
@@ -20,16 +21,24 @@ use crate::tiles::GeoTiles;
 use crate::base::BaseGeo;
 pub use crate::formats::GeoFormats;
 
+pub fn wkt_to_lonlat(wkt: String) -> (f64, f64) {
+    let geom = geo_types::Geometry::<f64>::try_from_wkt_str(&wkt).unwrap();
+    let lonlat = match geom {
+        Geometry::Point(p) => Some((p.x(), p.y())),
+        _ => None,
+    };
+    lonlat.unwrap()
+}
+
 #[derive(Debug)]
 pub struct GeoCells {
     pub geo: BaseGeo,
-   
 }
 
 impl GeoCells {
     pub fn new(wkt: String, resolution: i8) -> Self {
         let geom = geo_types::Geometry::<f64>::try_from_wkt_str(&wkt).unwrap();
-        let geo =BaseGeo::new(geom, resolution);
+        let geo = BaseGeo::new(geom, resolution);
         Self { geo }
     }
 
@@ -37,7 +46,6 @@ impl GeoCells {
         self.geo.clone()
     }
 
-   
     pub fn bounding_cells(&self) -> Vec<u64> {
         let mut result: Vec<u64> = Vec::new();
         let gt = GeoTiles::new(self.geo());
@@ -65,8 +73,8 @@ impl GeoCells {
         // let base_resolution =  self.resolution()-max.ilog2() as i8;
         // println!("{:?}  ",geotiles.geos(5));
 
-
-        let tile_geom = transforms::transform_latlon_to_tile_coord(self.geo().geom(), self.geo().resolution());
+        let tile_geom =
+            transforms::transform_latlon_to_tile_coord(self.geo().geom(), self.geo().resolution());
 
         let georast = rasterizer::GeoRasterizer::new(tile_geom);
 
@@ -115,7 +123,6 @@ mod tests {
         let linestring_str = "LINESTRING(-45 40.979898069620134, 0 40.979898069620134, 0 66.51326044311186, -45 66.51326044311186, -45 40.979898069620134)";
         let wkt_pt_str = "POINT(-74.0 40.7)";
         let z: i8 = 5;
-       
 
         let gc = GeoCells::new(wkt_str.to_string(), z);
         // println!("extent {:?}", gc.extent());

@@ -2,7 +2,7 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{
-    ArrayBuilder, Float64Builder, Int8Builder, ListBuilder, StructBuilder, UInt64Builder,
+    ArrayBuilder, Float64Builder, Int8Builder, ListBuilder, StructBuilder, UInt64Builder,Int32Builder,
 };
 use arrow_array::cast::AsArray;
 use arrow_array::types::{Float64Type, Int64Type};
@@ -44,8 +44,8 @@ impl QuadBinToPixelXY {
     }
     fn data_type(&self) -> DataType {
         let values_fields = vec![
-            Field::new("pixel_x", DataType::Int8, false),
-            Field::new("pixel_y", DataType::Int8, false),
+            Field::new("pixel_x", DataType::Int32, false),
+            Field::new("pixel_y", DataType::Int32, false),
         ];
         DataType::Struct(values_fields.into())
     }
@@ -115,8 +115,8 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let resolution = arrays[2].as_primitive::<Int64Type>();
     let tile_size = arrays[3].as_primitive::<Int64Type>();
 
-    let mut pixel_x_builder = Int8Builder::new();
-    let mut pixel_y_builder = Int8Builder::new();
+    let mut pixel_x_builder = Int32Builder::new();
+    let mut pixel_y_builder = Int32Builder::new();
 
     for (lon, lat, resolution, tile_size) in multizip((lon, lat, resolution, tile_size)) {
         let pc = lonlat_to_pixel(
@@ -125,13 +125,13 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
             resolution.unwrap() as i8,
             tile_size.unwrap() as i16,
         );
-        pixel_x_builder.append_value(pc.pixel_x as i8);
-        pixel_y_builder.append_value(pc.pixel_y as i8);
+        pixel_x_builder.append_value(pc.pixel_x as i32);
+        pixel_y_builder.append_value(pc.pixel_y as i32);
     }
 
     let values_fields = vec![
-        Field::new("pixel_x", DataType::Int8, false),
-        Field::new("pixel_y", DataType::Int8, false),
+        Field::new("pixel_x", DataType::Int32, false),
+        Field::new("pixel_y", DataType::Int32, false),
     ];
 
     let fields = Fields::from(values_fields);
