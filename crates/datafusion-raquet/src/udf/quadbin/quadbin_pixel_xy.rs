@@ -2,17 +2,12 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{
-    ArrayBuilder, Float64Builder, ListBuilder, StructBuilder, UInt64Builder,
+    ArrayBuilder, Float64Builder, Int8Builder, ListBuilder, StructBuilder, UInt64Builder,
 };
 use arrow_array::cast::AsArray;
 use arrow_array::types::{Float64Type, Int64Type};
 use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
-
-use arrow_convert::{
-    ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
-    serialize::TryIntoArrow,
-};
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -21,9 +16,11 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
+use itertools::multizip;
+
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
-use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
+
 use quadbin_rs::lonlat_to_pixel;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -44,6 +41,16 @@ impl QuadBinToPixelXY {
                 Volatility::Immutable,
             ),
         }
+    }
+    fn data_type(&self) -> DataType {
+        let values_fields = vec![
+            Field::new("pixel_x", DataType::Int8, false),
+            Field::new("pixel_y", DataType::Int8, false),
+        ];
+        DataType::Struct(values_fields.into())
+    }
+    fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
+        Field::new(name, self.data_type(), nullable)
     }
 }
 
@@ -72,8 +79,8 @@ impl ScalarUDFImpl for QuadBinToPixelXY {
         Err(DataFusionError::Internal("return_type".to_string()))
     }
 
-    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
-        Ok(return_field_impl(args)?)
+    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
+        Ok(Arc::new(self.to_field("", false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
@@ -98,36 +105,45 @@ impl ScalarUDFImpl for QuadBinToPixelXY {
     }
 }
 
-fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    let pixel_x = Field::new("pixel_x", DataType::Int32, false);
-    let pixel_y = Field::new("pixel_y", DataType::Int32, false);
 
-    let fields = Fields::from(vec![pixel_x, pixel_y]);
-    let pixel = Field::new_struct("", fields, false);
-    // let item_field = Arc::new(bbox.clone());
-    Ok(Arc::new(pixel))
-}
 
-use itertools::multizip;
+
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
     let lon = arrays[0].as_primitive::<Float64Type>();
     let lat = arrays[1].as_primitive::<Float64Type>();
     let resolution = arrays[2].as_primitive::<Int64Type>();
     let tile_size = arrays[3].as_primitive::<Int64Type>();
-    let mut vcells: Vec<Pixel> = vec![];
+
+    let mut pixel_x_builder = Int8Builder::new();
+    let mut pixel_y_builder = Int8Builder::new();
+
     for (lon, lat, resolution, tile_size) in multizip((lon, lat, resolution, tile_size)) {
-        let pc = lonlat_to_pixel(lon.unwrap(), lat.unwrap(), resolution.unwrap() as i8, tile_size.unwrap() as i16);
-        let pixel:Pixel = Pixel::new(pc.pixel_x as i32, pc.pixel_y as i32);
-        vcells.push(pixel);
+        let pc = lonlat_to_pixel(
+            lon.unwrap(),
+            lat.unwrap(),
+            resolution.unwrap() as i8,
+            tile_size.unwrap() as i16,
+        );
+        pixel_x_builder.append_value(pc.pixel_x as i8);
+        pixel_y_builder.append_value(pc.pixel_y as i8);
     }
 
-    let box_array: ArrayRef = vcells.try_into_arrow().unwrap();
-    let struct_array = box_array
-        .as_any()
-        .downcast_ref::<arrow::array::StructArray>()
-        .unwrap();
-    Ok(struct_array.clone())
+    let values_fields = vec![
+        Field::new("pixel_x", DataType::Int8, false),
+        Field::new("pixel_y", DataType::Int8, false),
+    ];
+
+    let fields = Fields::from(values_fields);
+
+    let arrays: Vec<ArrayRef> = vec![
+        Arc::new(pixel_x_builder.finish()),
+        Arc::new(pixel_y_builder.finish()),
+    ];
+
+    let nulls = None;
+    let arr = StructArray::new(fields, arrays, nulls);
+    Ok(arr)
 }
 
 #[cfg(test)]
@@ -136,36 +152,18 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test]
-    async fn test_quadbin_to_children() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToPixelXY::default().into());
-        let sql = r#"SELECT quadbin_to_bbox_mercator(5256690695657226239) ;"#;
-        println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();
-        // df.show();
-        let batches = df.collect().await.unwrap();
-        // let column = batches[0].column(0);
-        // // let string_arr = column.as_string_view();
-
-        // let val = column.as_list(0).value(0);
-        // println!("{:?}", val);
-    }
 
     #[tokio::test]
-    async fn test_quadbin_to_parent_resolution() {
+    async fn test_quadbin_pixel_xy() {
         let ctx = SessionContext::new();
         ctx.register_udf(QuadBinToPixelXY::default().into());
-        let sql = r#"SELECT quadbin_to_children(5256690695657226239,13) cell;"#;
+        let sql = r#"SELECT quadbin_pixel_xy(0.0, 0.0, 4, 256) pixel;"#;
         println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
 
-        // let val = column.as_primitive::<UInt64Type>().value(0);
-        // println!("{:?}", val);
+
+        let df = ctx.sql(sql).await.unwrap();
+        df.show().await.unwrap();
     }
 }

@@ -53,7 +53,7 @@ class RaquetSessionContext(SessionContext):
         self.register_udf(udf(quadbin.QuadBinToBBOXMercator()))
         self.register_udf(udf(quadbin.QuadBinToBBOXWGS84()))
         self.register_udf(udf(quadbin.QuadBinToLonLat()))
-        # self.register_udf(udf(quadbin.QuadBinToPixelXY()))
+        self.register_udf(udf(quadbin.QuadBinToPixelXY()))
         self.register_udf(udf(quadbin.QuadBinToWKT()))
         self.register_udf(udf(quadbin.QuadBinToGeoJSON()))
         self.register_udf(udf(quadbin.QuadBinPolyFill()))

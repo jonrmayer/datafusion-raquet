@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use datafusion_raquet::udf::quadbin::{
     QuadBinFromLonLat, QuadBinFromTile, QuadBinKRing, QuadBinResolution, QuadBinToBBOX,
     QuadBinToBBOXMercator, QuadBinToBBOXWGS84, QuadBinToChildren, QuadBinToGeoJSON,
-    QuadBinToLonLat, QuadBinToParent, QuadBinToSibling, QuadBinToTile, QuadBinToWKT,QuadBinPolyFill,
+    QuadBinToLonLat, QuadBinToParent, QuadBinToSibling, QuadBinToTile, QuadBinToWKT,QuadBinPolyFill,QuadBinToPixelXY,
 };
 
 use crate::impl_udf;
@@ -33,7 +33,7 @@ impl_udf!(
     "QuadBinToBBOXWGS84"
 );
 impl_udf!(QuadBinToLonLat, PyQuadBinToLonLat, "QuadBinToLonLat");
-// impl_udf!(QuadBinToPixelXY, PyQuadBinToPixelXY, "QuadBinToPixelXY");
+impl_udf!(QuadBinToPixelXY, PyQuadBinToPixelXY, "QuadBinToPixelXY");
 impl_udf!(QuadBinToWKT, PyQuadBinToWKT, "QuadBinToWKT");
 impl_udf!(QuadBinToGeoJSON, PyQuadBinToGeoJSON, "QuadBinToGeoJSON");
 
@@ -52,12 +52,14 @@ pub(crate) fn quadbin(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyQuadBinToBBOXMercator>()?;
     m.add_class::<PyQuadBinToBBOXWGS84>()?;
     m.add_class::<PyQuadBinToLonLat>()?;
-    // m.add_class::<PyQuadBinToPixelXY>()?;
+    m.add_class::<PyQuadBinToPixelXY>()?;
     m.add_class::<PyQuadBinToWKT>()?;
     m.add_class::<PyQuadBinToGeoJSON>()?;
 
 
     m.add_class::<PyQuadBinPolyFill>()?;
+
+
 
     
 
