@@ -4,7 +4,7 @@ mod quadbin_from_lonlat;
 mod quadbin_from_tile;
 mod quadbin_to_tile;
 mod quadbin_kring;
-// mod quadbin_pixel_xy;
+mod quadbin_pixel_xy;
 mod quadbin_resolution;
 mod quadbin_sibling;
 mod quadbin_to_bbox;
@@ -32,7 +32,7 @@ pub use quadbin_to_bbox_mercator::QuadBinToBBOXMercator;
 pub use quadbin_to_bbox_wgs84::QuadBinToBBOXWGS84;
 pub use quadbin_to_children::QuadBinToChildren;
 pub use quadbin_to_parent::QuadBinToParent;
-// pub use quadbin_pixel_xy::QuadBinToPixelXY;
+pub use quadbin_pixel_xy::QuadBinToPixelXY;
 pub use quadbin_to_wkt::QuadBinToWKT;
 pub use quadbin_to_geojson::QuadBinToGeoJSON;
 
@@ -54,4 +54,5 @@ pub fn register(session_context: &datafusion::prelude::SessionContext) {
     session_context.register_udf(QuadBinToWKT::default().into());
     session_context.register_udf(QuadBinToGeoJSON::default().into());
     session_context.register_udf(QuadBinPolyFill::default().into());
+    session_context.register_udf(QuadBinToPixelXY::default().into());
 }

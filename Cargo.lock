@@ -1084,7 +1084,7 @@ dependencies = [
  "datafusion-sql",
  "flate2",
  "futures",
- "itertools",
+ "itertools 0.14.0",
  "liblzma",
  "log",
  "object_store",
@@ -1118,7 +1118,7 @@ dependencies = [
  "datafusion-physical-plan",
  "datafusion-session",
  "futures",
- "itertools",
+ "itertools 0.14.0",
  "log",
  "object_store",
  "parking_lot",
@@ -1143,7 +1143,7 @@ dependencies = [
  "datafusion-physical-expr-common",
  "datafusion-physical-plan",
  "futures",
- "itertools",
+ "itertools 0.14.0",
  "log",
  "object_store",
 ]
@@ -1161,7 +1161,7 @@ dependencies = [
  "half",
  "hashbrown 0.16.1",
  "indexmap",
- "itertools",
+ "itertools 0.14.0",
  "libc",
  "log",
  "object_store",
@@ -1208,7 +1208,7 @@ dependencies = [
  "flate2",
  "futures",
  "glob",
- "itertools",
+ "itertools 0.14.0",
  "liblzma",
  "log",
  "object_store",
@@ -1238,7 +1238,7 @@ dependencies = [
  "datafusion-physical-plan",
  "datafusion-session",
  "futures",
- "itertools",
+ "itertools 0.14.0",
  "object_store",
  "tokio",
 ]
@@ -1312,7 +1312,7 @@ dependencies = [
  "datafusion-pruning",
  "datafusion-session",
  "futures",
- "itertools",
+ "itertools 0.14.0",
  "log",
  "object_store",
  "parking_lot",
@@ -1365,7 +1365,7 @@ dependencies = [
  "datafusion-functions-window-common",
  "datafusion-physical-expr-common",
  "indexmap",
- "itertools",
+ "itertools 0.14.0",
  "paste",
  "recursive",
  "serde_json",
@@ -1381,7 +1381,7 @@ dependencies = [
  "arrow 58.3.0",
  "datafusion-common",
  "indexmap",
- "itertools",
+ "itertools 0.14.0",
  "paste",
 ]
 
@@ -1435,7 +1435,7 @@ dependencies = [
  "datafusion-expr-common",
  "datafusion-macros",
  "hex",
- "itertools",
+ "itertools 0.14.0",
  "log",
  "md-5",
  "memchr",
@@ -1501,7 +1501,7 @@ dependencies = [
  "datafusion-macros",
  "datafusion-physical-expr-common",
  "hashbrown 0.16.1",
- "itertools",
+ "itertools 0.14.0",
  "itoa",
  "log",
  "paste",
@@ -1575,7 +1575,7 @@ dependencies = [
  "datafusion-expr-common",
  "datafusion-physical-expr",
  "indexmap",
- "itertools",
+ "itertools 0.14.0",
  "log",
  "recursive",
  "regex",
@@ -1598,7 +1598,7 @@ dependencies = [
  "half",
  "hashbrown 0.16.1",
  "indexmap",
- "itertools",
+ "itertools 0.14.0",
  "parking_lot",
  "paste",
  "petgraph",
@@ -1618,7 +1618,7 @@ dependencies = [
  "datafusion-functions",
  "datafusion-physical-expr",
  "datafusion-physical-expr-common",
- "itertools",
+ "itertools 0.14.0",
 ]
 
 [[package]]
@@ -1634,7 +1634,7 @@ dependencies = [
  "datafusion-expr-common",
  "hashbrown 0.16.1",
  "indexmap",
- "itertools",
+ "itertools 0.14.0",
  "parking_lot",
 ]
 
@@ -1653,7 +1653,7 @@ dependencies = [
  "datafusion-physical-expr-common",
  "datafusion-physical-plan",
  "datafusion-pruning",
- "itertools",
+ "itertools 0.14.0",
  "recursive",
 ]
 
@@ -1681,7 +1681,7 @@ dependencies = [
  "half",
  "hashbrown 0.16.1",
  "indexmap",
- "itertools",
+ "itertools 0.14.0",
  "log",
  "num-traits",
  "parking_lot",
@@ -1741,7 +1741,7 @@ dependencies = [
  "datafusion-physical-expr",
  "datafusion-physical-expr-common",
  "datafusion-physical-plan",
- "itertools",
+ "itertools 0.14.0",
  "log",
 ]
 
@@ -1775,6 +1775,7 @@ dependencies = [
  "datafusion-python-util",
  "datafusion-sql",
  "futures",
+ "itertools 0.15.0",
  "object_store",
  "parquet",
  "quadbin-geo-rs",
@@ -2119,7 +2120,7 @@ version = "0.1.0"
 dependencies = [
  "euclid",
  "geo",
- "itertools",
+ "itertools 0.14.0",
  "ndarray",
  "num-traits",
  "thiserror 1.0.69",
@@ -2568,6 +2569,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2910,7 +2920,7 @@ dependencies = [
  "futures-util",
  "http",
  "humantime",
- "itertools",
+ "itertools 0.14.0",
  "parking_lot",
  "percent-encoding",
  "thiserror 2.0.18",
@@ -3125,7 +3135,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27c6023962132f4b30eb4c172c91ce92d933da334c59c23cddee82358ddafb0b"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.117",

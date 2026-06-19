@@ -324,6 +324,25 @@ def raquet_quadbin_polyfill():
 
     decoded.show()
 
+def duckdb_quadbin_pixel_xy():
+    """ """
+
+    sql = """
+    LOAD raquet;
+    select quadbin_pixel_xy(0.0, 0.0, 4, 256) as output
+    """
+    duckdb.sql(sql).show()
+
+
+def raquet_quadbin_pixel_xy():
+    """ """
+    sql = """    
+    select quadbin_pixel_xy(0.0, 0.0, 4, 256) as output
+    """
+    decoded = ctx.sql(sql)
+
+    decoded.show()
+
 
 # duckdb_quadbin_resolution()
 # raquet_quadbin_resolution()
@@ -375,3 +394,7 @@ def raquet_quadbin_polyfill():
 
 # duckdb_quadbin_polyfill()
 # raquet_quadbin_polyfill()
+
+
+duckdb_quadbin_pixel_xy()
+raquet_quadbin_pixel_xy()
