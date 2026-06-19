@@ -3,6 +3,21 @@ from datafusion import SessionConfig
 from pyarrow import Table
 from datafusion_raquet import RaquetSessionContext
 
+import time
+
+def timer(func):
+    def wrapper(*args, **kwargs):
+        nonlocal total
+        start = time.time()
+        result = func(*args, **kwargs)
+        duration = time.time() - start
+        total += duration
+        print(f"Execution time: {duration}   Total: {total}")
+        return result
+
+    total = 0
+    return wrapper
+
 config = SessionConfig().with_information_schema(True)
 
 ctx = RaquetSessionContext(config=config)
@@ -32,9 +47,48 @@ select sum(pl) from data
 
 
 """
-decoded = ctx.sql(sql)
-decoded.show()
 
+
+sql = """
+LOAD raquet;
+"""
+# duckdb.sql(sql)
+
+
+@timer
+def raquet():
+    sql = """
+    with data as (
+    SELECT raquet_pixel(band_1,124,124) as pixel_value from solar where block<>0 
+    --SELECT native_tile(band_1) as pixel_value from solar where block<>0 
+    )
+
+    select count(*) from data
+
+
+    """
+    decoded = ctx.sql(sql)
+    decoded.show()
+
+@timer
+def db():
+
+    sql = """
+    LOAD raquet;
+    with data as (
+    --select raquet_decode_band(band_1, 'float32', 256, 256, 'gzip') as band_data
+    select raquet_pixel(band_1,metadata,124,124) as pixel_value 
+    FROM read_raquet('/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet') 
+    )
+    select count(*) from data
+
+    """
+    duckdb.sql(sql).show()
+
+
+
+db()
+raquet()
 
 # def duckdb_quadbin_to_tile():
 #     """ """

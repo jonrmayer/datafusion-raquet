@@ -35,6 +35,8 @@ class RaquetSessionContext(SessionContext):
         self.register_udf(udf(rastertile.DecodeTile()))
         self.register_udf(udf(rastertile.NativeTile()))
         self.register_udf(udf(rastertile.StatisticsTile()))
+        self.register_udf(udf(rastertile.RaquetPixel()))
+        
 
     def register_all_quadbin(self) -> None:
         from . import quadbin

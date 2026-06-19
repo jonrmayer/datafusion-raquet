@@ -27,7 +27,7 @@ fn get_data_type_from_metadata(metadata: Metadata) -> Option<NewDataType> {
     data_type
 }
 
-fn get_tile(metadata: Metadata, data: Option<&[u8]>) -> Tile {
+pub fn get_tile(metadata: Metadata, data: Option<&[u8]>) -> Tile {
     let samples = match metadata.clone().bands {
         Some(bands) => bands.len(),
         _ => 1,

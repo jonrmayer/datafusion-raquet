@@ -396,5 +396,13 @@ def raquet_quadbin_pixel_xy():
 # raquet_quadbin_polyfill()
 
 
-duckdb_quadbin_pixel_xy()
-raquet_quadbin_pixel_xy()
+# duckdb_quadbin_pixel_xy()
+# raquet_quadbin_pixel_xy()
+
+
+sql = """    
+    select (quadbin_pixel_xy(-19.6875,26.4312280645064, 4, 256)).pixel_x as output
+    """
+decoded = ctx.sql(sql)
+
+decoded.show()
