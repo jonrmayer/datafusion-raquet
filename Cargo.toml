@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/datafusion-raquet","crates/rastertile-rs","crates/rasterarrow-schema","crates/quadbin-schema","crates/datafusion-raquet-python","crates/quadbin-rs","crates/quadbin-geo-rs", "crates/geo-rasterizer"]
+members = ["crates/datafusion-raquet","crates/rastertile-rs","crates/rastertile-schema","crates/quadbin-schema","crates/datafusion-raquet-python","crates/quadbin-rs","crates/quadbin-geo-rs", "crates/geo-rasterizer"]
 resolver = "2"
 
 [workspace.package]
@@ -47,7 +47,7 @@ quadbin-geo-rs = { path = "crates/quadbin-geo-rs", version = "0.1.0" }
 
 rastertile-rs = { path = "crates/rastertile-rs", version = "0.1.0" }
 
-rasterarrow-schema = { path = "crates/rasterarrow-schema", version = "0.1.0" }
+rastertile-schema = { path = "crates/rastertile-schema", version = "0.1.0" }
 
 quadbin-schema = { path = "crates/quadbin-schema", version = "0.1.0" }
 

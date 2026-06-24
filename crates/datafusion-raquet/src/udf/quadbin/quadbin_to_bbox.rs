@@ -21,7 +21,7 @@ use datafusion::logical_expr::{
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
 
-use quadbin_rs::{Tile, cell_to_tile, tile_to_bbox_wgs84};
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToBBOX {
@@ -109,9 +109,8 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let mut xmax_builder = Float64Builder::new();
     let mut ymax_builder = Float64Builder::new();
 
-    for cell in cells.iter() {
-        let tile: Tile = cell_to_tile(cell.unwrap() as u64);
-        let bbox_wgs84 = tile_to_bbox_wgs84(tile);
+    for cell in cells.iter() {       
+        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap() as u64)?.to_tile()?.to_bbox_wgs84()?;
         xmin_builder.append_value(bbox_wgs84.min_x);
         ymin_builder.append_value(bbox_wgs84.min_y);
         xmax_builder.append_value(bbox_wgs84.max_x);

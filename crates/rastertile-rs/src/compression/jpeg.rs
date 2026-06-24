@@ -1,7 +1,7 @@
+use crate::compression::error::CompressionResult;
 use jpeg_decoder::Decoder;
-
-pub fn decompress(input: &[u8]) -> Vec<u8> {
+pub fn decompress(input: &[u8]) -> CompressionResult<Vec<u8>> {
     let mut decoder = Decoder::new(input);
-    let pixels = decoder.decode().unwrap();
-    pixels
+    let pixels = decoder.decode()?;
+    Ok(pixels)
 }

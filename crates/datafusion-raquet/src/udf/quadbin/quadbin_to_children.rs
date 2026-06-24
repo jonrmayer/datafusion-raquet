@@ -15,7 +15,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{cell_to_children, cell_to_children_resolution};
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToChildren {
@@ -103,7 +103,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
         Some(resolution) => {
             for (cell, resolution) in cell.iter().zip(resolution.iter()) {
                 if let (Some(cell), Some(resolution)) = (cell, resolution) {
-                    let child_cells = cell_to_children_resolution(cell as u64, resolution as u8);
+                    let child_cells = QuadBin::from_cell(cell as u64)?.children_resolution(resolution as u8)?;
                     let children = UInt64Array::from(child_cells);
                     builder.append_value(&children);
                 }
@@ -112,7 +112,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
         None => {
             for cell in cell.iter() {
                 if let Some(cell) = cell {
-                    let child_cells = cell_to_children(cell as u64);
+                    let child_cells = QuadBin::from_cell(cell as u64)?.children()?;
                     let children = UInt64Array::from(child_cells);
                     builder.append_value(&children);
                 }

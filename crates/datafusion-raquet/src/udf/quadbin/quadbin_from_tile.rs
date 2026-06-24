@@ -16,7 +16,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{Tile, tile_to_cell};
+use quadbin_rs::{Tile};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinFromTile {
@@ -98,8 +98,8 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
     let mut builder = UInt64Builder::with_capacity(x.len());
 
     for ((x, y), z) in x.iter().zip(y.iter()).zip(z.iter()) {
-        let tile: Tile = Tile::new(x.unwrap() as u32, y.unwrap() as u32, z.unwrap() as u8).unwrap();
-        let cell = tile_to_cell(tile);
+        
+        let cell = Tile::from_xyz(x.unwrap() as u32, y.unwrap() as u32, z.unwrap() as u8)?.to_cell()?;
         builder.append_value(cell);
     }
     let point_arr = builder.finish();

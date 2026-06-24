@@ -1,7 +1,5 @@
 use geo::{BoundingRect, Geometry};
-use quadbin_rs::{
-    Tile, lonlat_to_cell, lonlat_to_tile, tile_to_bbox_mercator, tile_to_bbox_wgs84, tile_to_cell,
-};
+use quadbin_rs::{QuadBin, Tile};
 
 use crate::rasterizer::GeoRasterizer;
 use crate::transforms::transform_latlon_to_tile_coord;
@@ -26,9 +24,9 @@ impl GeoTiles {
     pub fn tile_extent(&self) -> (u32, u32, u32, u32) {
         let (min_x, min_y, max_x, max_y) = self.geo().extent();
 
-        let min_tile = lonlat_to_tile(min_x, min_y, self.geo().resolution());
+        let min_tile = Tile::from_lonlat(min_x, min_y, self.geo().resolution()).unwrap();
 
-        let max_tile = lonlat_to_tile(max_x, max_y, self.geo().resolution());
+        let max_tile = Tile::from_lonlat(max_x, max_y, self.geo().resolution()).unwrap();
         (min_tile.x, max_tile.y, max_tile.x, min_tile.y)
     }
 
@@ -48,7 +46,7 @@ impl GeoTiles {
         let gr1 = GeoRasterizer::new(tile_geom1);
         // gr.
         for (i, v) in gr0.intersecting().iter().enumerate() {
-            println!("{:?}", 2.0_f64.powf(5.0)+ v.0);
+            println!("{:?}", 2.0_f64.powf(5.0) + v.0);
         }
 
         for (i, v) in gr1.intersecting().iter().enumerate() {

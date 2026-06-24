@@ -6,7 +6,7 @@ use arrow::datatypes::{Fields, Int8Type};
 use arrow_array::builder::{Float64Builder, UInt64Builder};
 use arrow_array::cast::{AsArray, as_primitive_array, as_string_array};
 use arrow_array::types::Int64Type;
-use arrow_array::{ArrayRef, BinaryArray, PrimitiveArray, StructArray,Float64Array};
+use arrow_array::{ArrayRef, BinaryArray, Float64Array, PrimitiveArray, StructArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -17,13 +17,13 @@ use datafusion::logical_expr::{
 use datafusion_common::scalar::ScalarStructBuilder;
 use itertools::multizip;
 
-use rasterarrow_schema::Metadata;
+use rastertile_schema::Metadata;
 
-use rastertile_rs::{CompressionFormat, NewDataType, RasterDataType, Tile, TileStatistics};
+use rastertile_rs::{CompressionFormat, Operations};
 
 use quadbin_geo_rs::wkt_to_lonlat;
 
-use crate::udf::raster::utils::{convert_f32,get_tile};
+// use crate::udf::raster::utils::{convert_f32,get_tile,get_pixel};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct RaquetPixel {
@@ -117,24 +117,6 @@ impl ScalarUDFImpl for RaquetPixel {
     }
 }
 
-fn get_data_type_from_metadata(metadata: Metadata) -> Option<NewDataType> {
-    let data_type: Option<NewDataType> = match metadata.data_type() {
-        RasterDataType::UInt8 => Some(NewDataType::UInt8),
-        RasterDataType::Int8 => Some(NewDataType::Int8),
-        RasterDataType::UInt16 => Some(NewDataType::UInt16),
-        RasterDataType::Int16 => Some(NewDataType::Int16),
-        RasterDataType::UInt32 => Some(NewDataType::UInt32),
-        RasterDataType::Int32 => Some(NewDataType::Int32),
-        RasterDataType::UInt64 => Some(NewDataType::UInt64),
-        RasterDataType::Int64 => Some(NewDataType::Int64),
-        RasterDataType::Float32 => Some(NewDataType::Float32),
-        RasterDataType::Float64 => Some(NewDataType::Float64),
-    };
-    data_type
-}
-
-
-
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
     metadata: Metadata,
@@ -144,23 +126,14 @@ fn build_cell_array(
         .downcast_ref::<BinaryArray>()
         .expect("cast failed");
 
-    let pixel_x_array =  arrays[1].as_primitive::<Int64Type>();
+    let pixel_x_array = arrays[1].as_primitive::<Int64Type>();
     let pixel_y_array = arrays[2].as_primitive::<Int64Type>();
 
     let mut out_builder = Float64Builder::new();
-
-    for (binary, pixel_x,pixel_y) in multizip((binary_array, pixel_x_array,pixel_y_array)) {
-        let offset = (pixel_y.unwrap() * 256 + pixel_x.unwrap()) as usize ; 
-        let tile: Tile = get_tile(metadata.clone(), binary);
-        let decoded_array = tile.decode().unwrap();
-        let native = match metadata.clone().data_type(){
-            RasterDataType::Float32 => Some(convert_f32(decoded_array.data())),
-              _ => None,
-
-        }.unwrap();
-        let value = native[offset].unwrap() as f64;
+    let ops: Operations = Operations::new(metadata.inner());
+    for (binary, pixel_x, pixel_y) in multizip((binary_array, pixel_x_array, pixel_y_array)) {
+        let value = ops.getpixel(binary, pixel_x.unwrap() as u64, pixel_y.unwrap() as u64)?;
         out_builder.append_value(value);
-        // let (lon, lat) = wkt_to_lonlat(wkt.unwrap().to_string());
     }
 
     let point_arr = out_builder.finish();
@@ -172,11 +145,11 @@ mod tests {
     // use datafusion::prelude::SessionContext;
 
     use super::*;
-        use crate::RaquetTable;
+    use crate::RaquetTable;
     use crate::udf::quadbin::QuadBinToPixelXY;
     use datafusion::prelude::{SessionConfig, SessionContext};
 
- #[tokio::test]
+    #[tokio::test]
     async fn test_raquet_pixel() {
         let path =
             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
@@ -192,12 +165,11 @@ mod tests {
         let _ = ctx.register_table("solar", Arc::new(t));
         // -19.6875,
         // 26.4312280645064
-       
-        let sql = r#"SELECT raquet_pixel(band_1,cast(32 as bigint),cast(17 as bigint)) from solar where block<>0 limit 1;"#;
+
+        let sql = r#"SELECT raquet_pixel(band_1,cast(32 as bigint),cast(17 as bigint)) from solar where block<>0 ;"#;
         println!("{:?}", sql);
 
-
-         let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
+        let df = ctx.sql(sql).await.unwrap();
+        println!("{:?}", df.count().await);
     }
 }

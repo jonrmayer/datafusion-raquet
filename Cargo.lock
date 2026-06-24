@@ -1781,8 +1781,8 @@ dependencies = [
  "quadbin-geo-rs",
  "quadbin-rs",
  "quadbin-schema",
- "rasterarrow-schema",
  "rastertile-rs",
+ "rastertile-schema",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -3219,6 +3219,7 @@ dependencies = [
  "geo-types",
  "geojson",
  "quadbin-rs",
+ "thiserror 1.0.69",
  "vaster",
  "wkt",
 ]
@@ -3226,6 +3227,9 @@ dependencies = [
 [[package]]
 name = "quadbin-rs"
 version = "0.1.0"
+dependencies = [
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "quadbin-schema"
@@ -3319,17 +3323,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rasterarrow-schema"
-version = "0.1.0"
-dependencies = [
- "arrow-schema 58.3.0",
- "rastertile-rs",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "rastertile-rs"
 version = "0.1.0"
 dependencies = [
@@ -3340,8 +3333,20 @@ dependencies = [
  "flate2",
  "image-webp",
  "jpeg-decoder",
+ "ndarray",
  "parquet",
  "rolling-stats",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "rastertile-schema"
+version = "0.1.0"
+dependencies = [
+ "arrow-schema 58.3.0",
+ "rastertile-rs",
  "serde",
  "serde_json",
  "thiserror 1.0.69",

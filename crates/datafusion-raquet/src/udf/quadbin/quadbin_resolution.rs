@@ -4,7 +4,7 @@ use std::sync::{Arc, OnceLock};
 use arrow_array::builder::UInt8Builder;
 use arrow_array::cast::AsArray;
 use arrow_array::types::Int64Type;
-use arrow_array::{ArrayRef,UInt8Array};
+use arrow_array::{ArrayRef, UInt8Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -19,7 +19,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{cell_to_resolution};
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinResolution {
@@ -29,10 +29,7 @@ pub struct QuadBinResolution {
 impl QuadBinResolution {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(
-                vec![DataType::Int64],
-                Volatility::Immutable,
-            ),
+            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
         }
     }
 }
@@ -68,7 +65,7 @@ impl ScalarUDFImpl for QuadBinResolution {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
         let cell_arr = build_cell_array(arrays)?;
-        let array_ref: ArrayRef = Arc::new(cell_arr);       
+        let array_ref: ArrayRef = Arc::new(cell_arr);
         Ok(ColumnarValue::Array(array_ref))
     }
 
@@ -79,7 +76,7 @@ impl ScalarUDFImpl for QuadBinResolution {
                 "Return a QUADBIN resolution from a quadbin cell.",
                 "quadbin_resolution(5256690695657226239)",
             )
-            .with_argument("cell", "cell value")        
+            .with_argument("cell", "cell value")
             .build()
         }))
     }
@@ -89,23 +86,19 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
     Ok(Arc::new(Field::new("", DataType::UInt8, false)))
 }
 
-
-
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt8Array> {
     let cell = arrays[0].as_primitive::<Int64Type>();
 
-
     let mut builder = UInt8Builder::with_capacity(cell.len());
 
-    for cell in cell.iter() {      
-        let resolution = cell_to_resolution(cell.unwrap() as u64);
+    for cell in cell.iter() {
+        let resolution = QuadBin::from_cell(cell.unwrap() as u64)?.resolution()?;
         builder.append_value(resolution);
     }
     let point_arr = builder.finish();
 
     Ok(point_arr)
 }
-
 
 // #[cfg(test)]
 // mod tests {
@@ -131,7 +124,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt8Array>
 //         let batches = df.collect().await.unwrap();
 //         let column = batches[0].column(0);
 //         // let string_arr = column.as_string_view();
-        
+
 //         let val = column.as_primitive::<UInt8Type>().value(0);
 //         println!("{:?}", val);
 

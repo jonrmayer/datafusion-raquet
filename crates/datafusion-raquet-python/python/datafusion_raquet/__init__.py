@@ -31,7 +31,7 @@ class RaquetSessionContext(SessionContext):
         """
         """
         from . import rastertile
-        self.register_udf(udf(rastertile.TestFromTile()))
+        self.register_udf(udf(rastertile.DecompressTile()))
         self.register_udf(udf(rastertile.DecodeTile()))
         self.register_udf(udf(rastertile.NativeTile()))
         self.register_udf(udf(rastertile.StatisticsTile()))

@@ -1,7 +1,7 @@
 use bytemuck::{cast_slice, cast_vec, try_cast_vec};
 
-use crate::tile::DataType;
-use crate::{RasterTileResult,RasterTileError};
+use crate::DataType;
+use crate::operations::{OperationsResult,OperationsError};
 
 /// A 3D array that represents decoded TIFF image data.
 #[derive(Debug, Clone)]
@@ -28,13 +28,13 @@ impl Array {
         data: Vec<u8>,
         shape: [usize; 3],
         data_type: Option<DataType>,
-    ) -> RasterTileResult<Self> {
+    ) -> OperationsResult<Self> {
         let expected_len = shape[0] * shape[1] * shape[2];
 
         let typed_data = if data_type == Some(DataType::Bool) {
             let required_bytes = expected_len.div_ceil(8);
             if data.len() < required_bytes {
-                return Err(RasterTileError::General(format!(
+                return Err(OperationsError::Array(format!(
                     "Bool data length {} is less than required {} bytes for {} elements",
                     data.len(),
                     required_bytes,
@@ -45,7 +45,7 @@ impl Array {
         } else {
             let typed_data = TypedArray::try_new(data, data_type)?;
             if typed_data.len() != expected_len {
-                return Err(RasterTileError::General(format!(
+                return Err(OperationsError::Array(format!(
                     "Internal error: incorrect shape or data length passed to Array::try_new. Got data length {}, expected {}",
                     typed_data.len(),
                     expected_len
@@ -140,19 +140,19 @@ impl TypedArray {
     /// Create a new TypedArray from raw byte data and a specified DataType.
     ///
     /// Returns an error if the data length is not divisible by the element size.
-    pub fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> RasterTileResult<Self> {
+    pub fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> OperationsResult<Self> {
         match data_type {
             None | Some(DataType::UInt8) => Ok(TypedArray::UInt8(data)),
             Some(DataType::Bool) => {
                 // Bool requires knowing the element count for expansion.
                 // Construct Bool directly via Array::try_new.
-                Err(RasterTileError::General(
+                Err(OperationsError::Array(
                     "Bool must be constructed via Array::try_new".to_string(),
                 ))
             }
             Some(DataType::UInt16) => {
                 if !data.len().is_multiple_of(2) {
-                    return Err(RasterTileError::General(format!(
+                    return Err(OperationsError::Array(format!(
                         "Data length {} is not divisible by UInt16 size (2 bytes)",
                         data.len()
                     )));
@@ -168,7 +168,7 @@ impl TypedArray {
             }
             Some(DataType::UInt32) => {
                 if !data.len().is_multiple_of(4) {
-                    return Err(RasterTileError::General(format!(
+                    return Err(OperationsError::Array(format!(
                         "Data length {} is not divisible by UInt32 size (4 bytes)",
                         data.len()
                     )));
@@ -184,7 +184,7 @@ impl TypedArray {
             }
             Some(DataType::UInt64) => {
                 if !data.len().is_multiple_of(8) {
-                    return Err(RasterTileError::General(format!(
+                    return Err(OperationsError::Array(format!(
                         "Data length {} is not divisible by UInt64 size (8 bytes)",
                         data.len()
                     )));
@@ -204,7 +204,7 @@ impl TypedArray {
             Some(DataType::Int8) => Ok(TypedArray::Int8(cast_vec(data))),
             Some(DataType::Int16) => {
                 if !data.len().is_multiple_of(2) {
-                    return Err(RasterTileError::General(format!(
+                    return Err(OperationsError::Array(format!(
                         "Data length {} is not divisible by Int16 size (2 bytes)",
                         data.len()
                     )));
@@ -220,7 +220,7 @@ impl TypedArray {
             }
             Some(DataType::Int32) => {
                 if !data.len().is_multiple_of(4) {
-                    return Err(RasterTileError::General(format!(
+                    return Err(OperationsError::Array(format!(
                         "Data length {} is not divisible by Int32 size (4 bytes)",
                         data.len()
                     )));
@@ -236,7 +236,7 @@ impl TypedArray {
             }
             Some(DataType::Int64) => {
                 if !data.len().is_multiple_of(8) {
-                    return Err(RasterTileError::General(format!(
+                    return Err(OperationsError::Array(format!(
                         "Data length {} is not divisible by Int64 size (8 bytes)",
                         data.len()
                     )));
@@ -254,7 +254,7 @@ impl TypedArray {
             }
             Some(DataType::Float32) => {
                 if !data.len().is_multiple_of(4) {
-                    return Err(RasterTileError::General(format!(
+                    return Err(OperationsError::Array(format!(
                         "Data length {} is not divisible by Float32 size (4 bytes)",
                         data.len()
                     )));
@@ -270,7 +270,7 @@ impl TypedArray {
             }
             Some(DataType::Float64) => {
                 if !data.len().is_multiple_of(8) {
-                    return Err(RasterTileError::General(format!(
+                    return Err(OperationsError::Array(format!(
                         "Data length {} is not divisible by Float64 size (8 bytes)",
                         data.len()
                     )));

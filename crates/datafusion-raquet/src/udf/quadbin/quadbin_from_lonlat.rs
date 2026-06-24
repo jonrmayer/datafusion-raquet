@@ -15,7 +15,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::lonlat_to_cell;
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinFromLonLat {
@@ -96,7 +96,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
 
     for ((lon, lat), resolution) in lon.iter().zip(lat.iter()).zip(resolution.iter()) {
         // let tile: Tile = Tile::new(x.unwrap() as u32, y.unwrap() as u32, z.unwrap() as i8).unwrap();
-        let cell = lonlat_to_cell(lon.unwrap(), lat.unwrap(), resolution.unwrap() as i8);
+        let cell = QuadBin::from_lonlat(lon.unwrap(), lat.unwrap(), resolution.unwrap() as i8)?.cell();
         builder.append_value(cell);
     }
     let point_arr = builder.finish();

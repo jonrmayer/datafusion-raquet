@@ -14,7 +14,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{cell_siblings};
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToSibling {
@@ -89,7 +89,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
 
     let mut builder = ListBuilder::new(values_builder);
     for cell in cell.iter() {
-        let cell_siblings = cell_siblings(cell.unwrap() as u64);
+        let cell_siblings = QuadBin::from_cell(cell.unwrap() as u64)?.siblings()?;
         let siblings = UInt64Array::from(cell_siblings);
         builder.append_value(&siblings);
     }

@@ -26,6 +26,8 @@ flate2 = { workspace = true }
 jpeg-decoder = { workspace = true }
 image-webp = { workspace = true }
 
+ndarray = "0.17.2"
+
 
 
 

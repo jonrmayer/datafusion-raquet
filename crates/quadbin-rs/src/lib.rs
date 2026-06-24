@@ -19,39 +19,321 @@ pub(crate) const B: &[u64; 6] = &[
 
 pub(crate) const S: &[u8; 5] = &[1, 2, 4, 8, 16];
 
-use std::error::Error;
-use std::fmt;
+mod error;
+pub use error::{QuadBinError, QuadBinResult};
 
-#[derive(Debug, PartialEq)]
-pub enum QuadbinError {
-    InvalidDirection(u8),
-    InvalidCell(Option<u64>),
-    InvalidResolution(u8),
-    InvalidOffset(f64),
+pub struct QuadBin {
+    pub cell: u64,
 }
 
-impl fmt::Display for QuadbinError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            QuadbinError::InvalidDirection(e) => write!(f, "invalid direction: {}", e),
-            QuadbinError::InvalidCell(e) => write!(f, "invalid cell index: {:?}", e),
-            QuadbinError::InvalidResolution(e) => write!(
-                f,
-                "Invalid resolution specified: {}. Accepted values are between 0 and 26, inclusive",
-                e
-            ),
-            QuadbinError::InvalidOffset(msg) => write!(f, "invalid offset: {}", msg),
+impl QuadBin {
+    pub fn from_cell(cell: u64) -> QuadBinResult<QuadBin> {
+        Ok(QuadBin { cell })
+    }
+
+    pub fn from_lonlat(lon: f64, lat: f64, z: i8) -> QuadBinResult<QuadBin> {
+        let tile: Tile = Tile::from_lonlat(lon, lat, z)?;
+        let cell = tile.to_cell()?;
+        Ok(QuadBin { cell })
+    }
+    pub fn from_tile(tile: Tile) -> QuadBinResult<QuadBin> {
+        let z: u64 = tile.z as u64;
+        let mut ux: u64 = (tile.x as u64) << (32 - z);
+        let mut uy: u64 = (tile.y as u64) << (32 - z);
+        // Morton code interleaving (spread bits)
+        ux = (ux | (ux << S[4])) & B[4];
+        uy = (uy | (uy << S[4])) & B[4];
+
+        ux = (ux | (ux << S[3])) & B[3];
+        uy = (uy | (uy << S[3])) & B[3];
+
+        ux = (ux | (ux << S[2])) & B[2];
+        uy = (uy | (uy << S[2])) & B[2];
+
+        ux = (ux | (ux << S[1])) & B[1];
+        uy = (uy | (uy << S[1])) & B[1];
+
+        ux = (ux | (ux << S[0])) & B[0];
+        uy = (uy | (uy << S[0])) & B[0];
+
+        // Combine: HEADER | MODE | resolution | interleaved_xy | trailing_ones
+        let cell = HEADER | MODE | (z << 52) | ((ux | (uy << 1)) >> 12) | (FOOTER >> (z * 2));
+        Ok(QuadBin { cell })
+    }
+    pub fn cell(&self) -> u64 {
+        self.cell.clone()
+    }
+    pub fn resolution(&self) -> QuadBinResult<u8> {
+        let out = ((self.cell() >> 52) & 0x1F) as u8;
+        Ok(out)
+    }
+    pub fn to_tile(&self) -> QuadBinResult<Tile> {
+        let z = self.resolution()?;
+        let q = (self.cell() & FOOTER) << 12;
+        let mut ux = q;
+        let mut uy = q >> 1;
+
+        ux &= B[0];
+        uy &= B[0];
+
+        ux = (ux | (ux >> S[0])) & B[1];
+        uy = (uy | (uy >> S[0])) & B[1];
+
+        ux = (ux | (ux >> S[1])) & B[2];
+        uy = (uy | (uy >> S[1])) & B[2];
+
+        ux = (ux | (ux >> S[2])) & B[3];
+        uy = (uy | (uy >> S[2])) & B[3];
+
+        ux = (ux | (ux >> S[3])) & B[4];
+        uy = (uy | (uy >> S[3])) & B[4];
+
+        ux = (ux | (ux >> S[4])) & B[5];
+        uy = (uy | (uy >> S[4])) & B[5];
+
+        ux >>= 32 - z;
+        uy >>= 32 - z;
+        let tile = Tile {
+            x: ux as u32,
+            y: uy as u32,
+            z: z,
+        };
+        Ok(tile)
+    }
+
+    pub fn children(&self) -> QuadBinResult<Vec<u64>> {
+        let children = self.children_resolution(self.resolution()? + 1)?;
+        Ok(children)
+    }
+
+    // Get children cells at higher resolution (returns 4 children)
+    pub fn children_resolution(&self, child_resolution: u8) -> QuadBinResult<Vec<u64>> {
+        let mut result: Vec<u64> = vec![];
+        let current_res = self.resolution()?;
+        if child_resolution <= current_res || child_resolution > MAX_RESOLUTION {}
+        let tile = self.to_tile()?;
+        let res_diff = child_resolution - current_res;
+        let children_per_dim = 1 << res_diff;
+        let _count = children_per_dim * children_per_dim;
+        let base_x = tile.x << res_diff;
+        let base_y = tile.y << res_diff;
+
+        for dy in 0..children_per_dim {
+            for dx in 0..children_per_dim {
+                let tile = Tile::from_xyz(base_x + dx, base_y + dy, child_resolution)?;
+                let cell = tile.to_cell()?;
+                result.push(cell);
+            }
         }
+        Ok(result)
+    }
+
+    pub fn parent_resolution(&self, parent_resolution: u8) -> QuadBinResult<u64> {
+        let current_res = self.resolution()?;
+        if parent_resolution > current_res {
+
+            //  return Err(QuadbinError::InvalidResolution(z));
+        }
+        if parent_resolution == current_res {
+            return Ok(self.cell());
+        }
+
+        let tile = self.to_tile()?;
+        let shift = tile.z - parent_resolution;
+        let parent_x = tile.x >> shift;
+        let parent_y = tile.y >> shift;
+        let new_tile: Tile = Tile {
+            x: parent_x,
+            y: parent_y,
+            z: parent_resolution,
+        };
+        Ok(new_tile.to_cell()?)
+    }
+
+    // Get parent cell at resolution - 1
+    pub fn parent(&self) -> QuadBinResult<u64> {
+        let current_res = self.resolution()?;
+        if current_res == 0 {
+            return Ok(self.cell());
+        }
+        Ok(self.parent_resolution(current_res - 1)?)
+    }
+
+    // Convert quadbin cell to longitude/latitude (center of cell)
+    pub fn to_lonlat(&self) -> QuadBinResult<(f64, f64)> {
+        let tile = self.to_tile()?;
+        let n: f64 = f64::powf(2.0, tile.z as f64);
+        let lon = (tile.x as f64 + 0.5) / n * 360.0 - 180.0;
+        let lat_rad = ((PI * (1.0 - 2.0 * (tile.y as f64 + 0.5) / n)).sinh()).atan();
+        let lat = lat_rad * 180.0 / PI;
+        Ok((lon, lat))
+    }
+
+    // Returns cells in a grid pattern around the center cell
+    pub fn kring(&self, k: i32) -> QuadBinResult<Vec<u64>> {
+        let mut result: Vec<u64> = vec![];
+        if k < 0 {}
+        let tile: Tile = self.to_tile()?;
+        let max_coord = (1 << tile.z) - 1; // Maximum valid coordinate at this resolution
+        let _diameter = 2 * k + 1;
+
+        for dy in -k..=k {
+            for dx in -k..=k {
+                let nx = (tile.x as i32 + dx) as u32;
+                let ny = (tile.y as i32 + dy) as u32;
+                if nx > max_coord || ny > max_coord {
+                    continue;
+                }
+                let tile = Tile::from_xyz(nx, ny, tile.z)?;
+                let cell = tile.to_cell()?;
+                result.push(cell);
+            }
+        }
+        Ok(result)
+    }
+
+    // Get sibling cells (other children of the same parent)
+    pub fn siblings(&self) -> QuadBinResult<Vec<u64>> {
+        let parent = self.parent()?;
+        let result = QuadBin::from_cell(parent)?.children()?;
+        Ok(result)
     }
 }
-
-impl Error for QuadbinError {}
 
 #[derive(Debug)]
 pub struct Tile {
     pub x: u32,
     pub y: u32,
     pub z: u8,
+}
+
+impl Tile {
+    pub fn from_xyz(x: u32, y: u32, z: u8) -> QuadBinResult<Tile> {
+        Ok(Tile { x, y, z })
+    }
+    pub fn from_lonlat(lon: f64, mut lat: f64, z: i8) -> QuadBinResult<Tile> {
+        if lat > MAX_LATITUDE {
+            lat = MAX_LATITUDE;
+        }
+        if lat < -MAX_LATITUDE {
+            lat = -MAX_LATITUDE;
+        }
+
+        let n: f64 = 2f64.powf(z as f64);
+
+        let fx: f64 = ((lon + 180.0) / 360.0 * n).floor();
+        let lat_rad = lat * PI / 180.0;
+
+        let fy = ((1.0 - (lat_rad.tan().asinh()) / PI) / 2.0 * n).floor();
+
+        let mut x: u32 = fx as u32;
+        let mut y: u32 = fy as u32;
+        let n_int: i8 = n as i8;
+
+        if x < 0 {
+            x = 0;
+        }
+        if fx >= n {
+            x = (n_int - 1) as u32;
+        }
+
+        if y < 0 {
+            y = 0;
+        }
+        if fy >= n {
+            y = (n_int - 1) as u32;
+        }
+        Ok(Tile { x, y, z: z as u8 })
+    }
+
+    pub fn x(&self) -> u32 {
+        self.x.clone()
+    }
+    pub fn y(&self) -> u32 {
+        self.y.clone()
+    }
+    pub fn z(&self) -> u8 {
+        self.z.clone()
+    }
+    pub fn is_valid(&self) -> QuadBinResult<bool> {
+        if self.z() > MAX_RESOLUTION {
+            Ok(false)
+        } else {
+            Ok(true)
+        }
+    }
+    pub fn to_lonlat(&self) -> QuadBinResult<(f64, f64)> {
+        let n: f64 = f64::powf(2.0, self.z() as f64);
+        let lon = self.x() as f64 / n * 360.0 - 180.0;
+        let lat_rad = ((PI * (1.0 - 2.0 * self.y() as f64 / n)).sinh()).atan();
+        let lat = lat_rad * 180.0 / PI;
+        Ok((lon, lat))
+    }
+
+    pub fn to_cell(&self) -> QuadBinResult<u64> {
+        let z: u64 = self.z() as u64;
+        let mut ux: u64 = (self.x() as u64) << (32 - z);
+        let mut uy: u64 = (self.y() as u64) << (32 - z);
+        // Morton code interleaving (spread bits)
+        ux = (ux | (ux << S[4])) & B[4];
+        uy = (uy | (uy << S[4])) & B[4];
+
+        ux = (ux | (ux << S[3])) & B[3];
+        uy = (uy | (uy << S[3])) & B[3];
+
+        ux = (ux | (ux << S[2])) & B[2];
+        uy = (uy | (uy << S[2])) & B[2];
+
+        ux = (ux | (ux << S[1])) & B[1];
+        uy = (uy | (uy << S[1])) & B[1];
+
+        ux = (ux | (ux << S[0])) & B[0];
+        uy = (uy | (uy << S[0])) & B[0];
+        // Combine: HEADER | MODE | resolution | interleaved_xy | trailing_ones
+
+        let cell = HEADER | MODE | (z << 52) | ((ux | (uy << 1)) >> 12) | (FOOTER >> (z * 2));
+        Ok(cell)
+    }
+
+    // Get tile bounds in Web Mercator (EPSG:3857)
+    pub fn to_bbox_mercator(&self) -> QuadBinResult<Bbox> {
+        let n: f64 = f64::powf(2.0, self.z() as f64);
+        let tile_size = 2.0 * PI * EARTH_RADIUS / n;
+        let min_x = self.x() as f64 * tile_size - PI * EARTH_RADIUS;
+        let max_x = (self.x() as f64 + 1.0) * tile_size - PI * EARTH_RADIUS;
+        let max_y = PI * EARTH_RADIUS - self.y() as f64 * tile_size;
+        let min_y = PI * EARTH_RADIUS - (self.y() as f64 + 1.0) * tile_size;
+        Ok(Bbox {
+            min_x,
+            min_y,
+            max_x,
+            max_y,
+        })
+    }
+
+    // Get tile bounds in WGS84 (EPSG:4326)
+    pub fn to_bbox_wgs84(&self) -> QuadBinResult<Bbox> {
+        let n: f64 = f64::powf(2.0, self.z() as f64);
+        let min_lon = self.x() as f64 / n * 360.0 - 180.0;
+        let max_lon = (self.x() as f64 + 1.0) / n * 360.0 - 180.0;
+
+        let min_lat_rad = (PI * (1.0 - 2.0 * (self.y() as f64 + 1.0) / n as f64))
+            .sinh()
+            .atan();
+        let max_lat_rad = (PI * (1.0 - 2.0 * self.y() as f64 / n as f64))
+            .sinh()
+            .atan();
+
+        let min_lat = min_lat_rad * 180.0 / PI;
+        let max_lat = max_lat_rad * 180.0 / PI;
+
+        Ok(Bbox {
+            min_x: min_lon,
+            min_y: min_lat,
+            max_x: max_lon,
+            max_y: max_lat,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -70,276 +352,6 @@ pub struct PixelCoord {
     pub tile_y: f64,
 }
 
-impl Tile {
-    pub fn new(x: u32, y: u32, z: u8) -> Result<Tile, QuadbinError> {
-        if z > MAX_RESOLUTION {
-            return Err(QuadbinError::InvalidResolution(z));
-        } else {
-        }
-        Ok(Tile { x, y, z })
-    }
-}
-// Convert quadbin cell to tile zoom
-pub fn cell_to_resolution(cell: u64) -> u8 {
-    ((cell >> 52) & 0x1F) as u8
-}
-// Convert quadbin cell to tile coordinates
-pub fn cell_to_tile(cell: u64) -> Tile {
-    let z = cell_to_resolution(cell);
-    let q = (cell & FOOTER) << 12;
-    let mut ux = q;
-    let mut uy = q >> 1;
-
-    ux &= B[0];
-    uy &= B[0];
-
-    ux = (ux | (ux >> S[0])) & B[1];
-    uy = (uy | (uy >> S[0])) & B[1];
-
-    ux = (ux | (ux >> S[1])) & B[2];
-    uy = (uy | (uy >> S[1])) & B[2];
-
-    ux = (ux | (ux >> S[2])) & B[3];
-    uy = (uy | (uy >> S[2])) & B[3];
-
-    ux = (ux | (ux >> S[3])) & B[4];
-    uy = (uy | (uy >> S[3])) & B[4];
-
-    ux = (ux | (ux >> S[4])) & B[5];
-    uy = (uy | (uy >> S[4])) & B[5];
-
-    ux >>= 32 - z;
-    uy >>= 32 - z;
-    Tile {
-        x: ux as u32,
-        y: uy as u32,
-        z: z,
-    }
-}
-
-// Convert tile coordinates to quadbin cell
-pub fn tile_to_cell(tile: Tile) -> u64 {
-    let z: u64 = tile.z as u64;
-    let mut ux: u64 = (tile.x as u64) << (32 - z);
-    let mut uy: u64 = (tile.y as u64) << (32 - z);
-    // Morton code interleaving (spread bits)
-    ux = (ux | (ux << S[4])) & B[4];
-    uy = (uy | (uy << S[4])) & B[4];
-
-    ux = (ux | (ux << S[3])) & B[3];
-    uy = (uy | (uy << S[3])) & B[3];
-
-    ux = (ux | (ux << S[2])) & B[2];
-    uy = (uy | (uy << S[2])) & B[2];
-
-    ux = (ux | (ux << S[1])) & B[1];
-    uy = (uy | (uy << S[1])) & B[1];
-
-    ux = (ux | (ux << S[0])) & B[0];
-    uy = (uy | (uy << S[0])) & B[0];
-
-    // Combine: HEADER | MODE | resolution | interleaved_xy | trailing_ones
-    HEADER | MODE | (z << 52) | ((ux | (uy << 1)) >> 12) | (FOOTER >> (z * 2))
-}
-
-pub fn lonlat_to_tile(lon: f64, mut lat: f64, z: i8) -> Tile {
-    if lat > MAX_LATITUDE {
-        lat = MAX_LATITUDE;
-    }
-    if lat < -MAX_LATITUDE {
-        lat = -MAX_LATITUDE;
-    }
-
-    // let n: f64 = f64::powf(2.0, z as f64);
-    let n: f64 = 2f64.powf(z as f64);
-
-    // x = (( (lon + 180.0) / 360.0 * n).floor()) as i32;
-
-    // let lat_rad = lat * PI / 180.0;
-    // y = (((1.0 - (lat_rad.tan().asinh()) / PI) / 2.0 * n).floor()) as i32;
-
-    let fx: f64 = ((lon + 180.0) / 360.0 * n).floor();
-    let lat_rad = lat * PI / 180.0;
-    // let fy: f64 = ((1.0 - (lat_rad.tan() / PI).asinh()) / PI) / 2.0 * n;
-    let fy = (((1.0 - (lat_rad.tan().asinh()) / PI) / 2.0 * n).floor());
-
-    let mut x: u32 = fx as u32;
-    let mut y: u32 = fy as u32;
-    let n_int: i8 = n as i8;
-
-    if x < 0 {
-        x = 0;
-    }
-    if fx >= n {
-        x = (n_int - 1) as u32;
-    }
-
-    if y < 0 {
-        y = 0;
-    }
-    if fy >= n {
-        y = (n_int - 1) as u32;
-    }
-    Tile {
-        x: x,
-        y: y,
-        z: z as u8,
-    }
-}
-
-pub fn lonlat_to_cell(lon: f64, lat: f64, z: i8) -> u64 {
-    let tile: Tile = lonlat_to_tile(lon, lat, z);
-    tile_to_cell(tile)
-}
-
-pub fn tile_to_lonlat(tile: Tile) -> (f64, f64) {
-    let n: f64 = f64::powf(2.0, tile.z as f64);
-    let lon = tile.x as f64 / n * 360.0 - 180.0;
-    let lat_rad = ((PI * (1.0 - 2.0 * tile.y as f64 / n)).sinh()).atan();
-    let lat = lat_rad * 180.0 / PI;
-    (lon, lat)
-}
-
-// Convert quadbin cell to longitude/latitude (center of cell)
-pub fn cell_to_lonlat(cell: u64) -> (f64, f64) {
-    let tile = cell_to_tile(cell);
-    let n: f64 = f64::powf(2.0, tile.z as f64);
-    let lon = (tile.x as f64 + 0.5) / n * 360.0 - 180.0;
-    let lat_rad = ((PI * (1.0 - 2.0 * (tile.y as f64 + 0.5) / n)).sinh()).atan();
-    let lat = lat_rad * 180.0 / PI;
-    (lon, lat)
-}
-
-// Get tile bounds in Web Mercator (EPSG:3857)
-pub fn tile_to_bbox_mercator(tile: Tile) -> Bbox {
-    let n: f64 = f64::powf(2.0, tile.z as f64);
-    let tile_size = 2.0 * PI * EARTH_RADIUS / n;
-    let min_x = tile.x as f64 * tile_size - PI * EARTH_RADIUS;
-    let max_x = (tile.x as f64 + 1.0) * tile_size - PI * EARTH_RADIUS;
-    let max_y = PI * EARTH_RADIUS - tile.y as f64 * tile_size;
-    let min_y = PI * EARTH_RADIUS - (tile.y as f64 + 1.0) * tile_size;
-    Bbox {
-        min_x,
-        min_y,
-        max_x,
-        max_y,
-    }
-}
-
-// Get tile bounds in WGS84 (EPSG:4326)
-pub fn tile_to_bbox_wgs84(tile: Tile) -> Bbox {
-    let n: f64 = f64::powf(2.0, tile.z as f64);
-    let min_lon = tile.x as f64 / n * 360.0 - 180.0;
-    let max_lon = (tile.x as f64 + 1.0) / n * 360.0 - 180.0;
-    // let min_lat_rad = ((PI * (1.0 - 2.0 * tile.y as f64 + 1.0 / n)).sinh()).atan();
-    // let max_lat_rad = ((PI * (1.0 - 2.0 * tile.y as f64 / n)).sinh()).atan();
-
-    let min_lat_rad = (PI * (1.0 - 2.0 * (tile.y as f64 + 1.0) / n as f64))
-        .sinh()
-        .atan();
-    let max_lat_rad = (PI * (1.0 - 2.0 * tile.y as f64 / n as f64)).sinh().atan();
-
-    let min_lat = min_lat_rad * 180.0 / PI;
-    let max_lat = max_lat_rad * 180.0 / PI;
-
-    Bbox {
-        min_x: min_lon,
-        min_y: min_lat,
-        max_x: max_lon,
-        max_y: max_lat,
-    }
-}
-// Get parent cell at lower resolution
-pub fn cell_to_parent_resolution(cell: u64, parent_resolution: u8) -> u64 {
-    let current_res = cell_to_resolution(cell);
-    if parent_resolution > current_res {
-
-        //  return Err(QuadbinError::InvalidResolution(z));
-    }
-    if parent_resolution == current_res {
-        return cell;
-    }
-
-    let tile = cell_to_tile(cell);
-    let shift = tile.z - parent_resolution;
-    let parent_x = tile.x >> shift;
-    let parent_y = tile.y >> shift;
-    let tile: Tile = Tile {
-        x: parent_x,
-        y: parent_y,
-        z: parent_resolution,
-    };
-    tile_to_cell(tile)
-}
-
-// Get parent cell at resolution - 1
-pub fn cell_to_parent(cell: u64) -> u64 {
-    let current_res = cell_to_resolution(cell);
-    if current_res == 0 {
-        return cell;
-    }
-    cell_to_parent_resolution(cell, current_res - 1)
-}
-
-// Get children cells at higher resolution (returns 4 children)
-pub fn cell_to_children_resolution(cell: u64, child_resolution: u8) -> Vec<u64> {
-    let mut result: Vec<u64> = vec![];
-    let current_res = cell_to_resolution(cell);
-    if child_resolution <= current_res || child_resolution > MAX_RESOLUTION {}
-    let tile = cell_to_tile(cell);
-    let res_diff = child_resolution - current_res;
-    let children_per_dim = 1 << res_diff;
-    let _count = children_per_dim * children_per_dim;
-    let base_x = tile.x << res_diff;
-    let base_y = tile.y << res_diff;
-
-    for dy in 0..children_per_dim {
-        for dx in 0..children_per_dim {
-            let tile = Tile::new(base_x + dx, base_y + dy, child_resolution).unwrap();
-            let cell = tile_to_cell(tile);
-            result.push(cell);
-        }
-    }
-    result
-}
-
-// Get immediate children (4 cells at resolution + 1)
-pub fn cell_to_children(cell: u64) -> Vec<u64> {
-    cell_to_children_resolution(cell, cell_to_resolution(cell) + 1)
-}
-
-// Get k-ring neighbors (cells within distance k)
-// Returns cells in a grid pattern around the center cell
-pub fn cell_kring(cell: u64, k: i32) -> Vec<u64> {
-    let mut result: Vec<u64> = vec![];
-    if k < 0 {}
-    let tile: Tile = cell_to_tile(cell);
-    let max_coord = (1 << tile.z) - 1; // Maximum valid coordinate at this resolution
-    let _diameter = 2 * k + 1;
-
-    for dy in -k..=k {
-        for dx in -k..=k {
-            let nx = (tile.x as i32 + dx) as u32;
-            let ny = (tile.y as i32 + dy) as u32;
-            if nx > max_coord || ny > max_coord {
-                continue;
-            }
-            let tile = Tile::new(nx, ny, tile.z).unwrap();
-            let cell = tile_to_cell(tile);
-            result.push(cell);
-        }
-    }
-    result
-}
-
-// Get sibling cells (other children of the same parent)
-pub fn cell_siblings(cell: u64) -> Vec<u64> {
-    let mut result: Vec<u64> = vec![cell, cell, cell, cell];
-
-    let parent = cell_to_parent(cell);
-    result = cell_to_children(parent);
-    result
-}
 // Calculate pixel coordinates within a tile for a given lon/lat
 pub fn lonlat_to_pixel(lon: f64, mut lat: f64, z: i8, tile_size: i16) -> PixelCoord {
     // Clamp latitude
@@ -392,14 +404,14 @@ mod tests {
     fn test_cell_to_resolution() {
         let cell: u64 = 5256690695657226239;
 
-        let resolution = cell_to_resolution(cell);
+        let resolution = QuadBin::from_cell(cell).unwrap().resolution().unwrap();
         println!("test_cell_to_resolution: {:?}", resolution);
     }
 
     #[test]
     fn test_cell_to_tile() {
         let cell: u64 = 5256690695657226239;
-        let tile = cell_to_tile(cell);
+        let tile = QuadBin::from_cell(cell).unwrap().to_tile().unwrap();
         println!("test_cell_to_tile: {:?}", tile);
     }
 
@@ -410,19 +422,19 @@ mod tests {
             y: 12333,
             z: 15,
         };
-        let cell: u64 = tile_to_cell(tile);
+        let cell: u64 = tile.to_cell().unwrap();
         println!("test_tile_to_cell: {:?}", cell);
     }
 
     #[test]
     fn test_lonlat_to_tile() {
-        let tile = lonlat_to_tile(185.0, 85.0, 2);
+        let tile = Tile::from_lonlat(185.0, 85.0, 2).unwrap();
         println!("test_lonlat_to_tile: {:?}", tile);
     }
 
     #[test]
     fn test_lonlat_to_cell() {
-        let cell = lonlat_to_cell(-73.98, 40.75, 13);
+        let cell = QuadBin::from_lonlat(-73.98, 40.75, 13).unwrap().cell();
         println!("test_lonlat_to_cell: {:?}", cell);
     }
 
@@ -430,63 +442,84 @@ mod tests {
     fn test_tile_to_lonlat() {
         let tile: Tile = Tile { x: 3, y: 0, z: 2 };
 
-        let lonlat = tile_to_lonlat(tile);
+        let lonlat = tile.to_lonlat().unwrap();
         println!("tile_to_lonlat: {:?}", lonlat);
     }
 
     #[test]
     fn test_cell_to_lonlat() {
-        let lonlat = cell_to_lonlat(5256690695657226239);
+        let lonlat = QuadBin::from_cell(5256690695657226239)
+            .unwrap()
+            .to_lonlat()
+            .unwrap();
         println!("cell_to_lonlat: {:?}", lonlat);
     }
 
     #[test]
     fn test_tile_to_bbox_mercator() {
         let tile: Tile = Tile { x: 3, y: 0, z: 2 };
-        let bbox = tile_to_bbox_mercator(tile);
+        let bbox = tile.to_bbox_mercator().unwrap();
         println!("tile_to_bbox_mercator: {:?}", bbox);
     }
 
     #[test]
     fn test_tile_to_bbox_wgs84() {
         let tile: Tile = Tile { x: 3, y: 2, z: 3 };
-        let bbox = tile_to_bbox_wgs84(tile);
+        let bbox = tile.to_bbox_wgs84().unwrap();
         println!("tile_to_bbox_wgs84: {:?}", bbox);
     }
 
     #[test]
     fn test_cell_to_parent_resolution() {
-        let parent_cell = cell_to_parent_resolution(5256690695657226239, 10);
+        let parent_cell = QuadBin::from_cell(5256690695657226239)
+            .unwrap()
+            .parent_resolution(10)
+            .unwrap();
         println!("cell_to_parent_resolution: {:?}", parent_cell);
     }
 
     #[test]
     fn test_cell_to_parent() {
-        let parent_cell = cell_to_parent(5256690695657226239);
+        let parent_cell = QuadBin::from_cell(5256690695657226239)
+            .unwrap()
+            .parent()
+            .unwrap();
         println!("cell_to_parent: {:?}", parent_cell);
     }
 
     #[test]
     fn test_cell_to_children_resolution() {
-        let cells = cell_to_children_resolution(5256690695657226239, 16);
+        let cells = QuadBin::from_cell(5256690695657226239)
+            .unwrap()
+            .children_resolution(16)
+            .unwrap();
         println!("cell_to_children_resolution: {:?}", cells);
     }
 
     #[test]
     fn test_cell_to_children() {
-        let cells = cell_to_children(5256690695657226239);
+        let cells = QuadBin::from_cell(5256690695657226239)
+            .unwrap()
+            .children()
+            .unwrap();
         println!("cell_to_children: {:?}", cells);
     }
 
     #[test]
     fn test_cell_kring() {
-        let cells = cell_kring(5256690695657226239, 3);
+        let cells = QuadBin::from_cell(5256690695657226239)
+            .unwrap()
+            .kring(3)
+            .unwrap();
         println!("cell_kring: {:?}", cells);
     }
 
     #[test]
     fn test_cell_siblings() {
-        let cells = cell_siblings(5256690695657226239);
+        let cells = QuadBin::from_cell(5256690695657226239)
+            .unwrap()
+            .siblings()
+            .unwrap();
         println!("cell_siblings: {:?}", cells);
     }
 

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::Metadata;
+// use rastertile_rs::Metadata;
 use arrow_schema::extension::ExtensionType;
 use arrow_schema::{ArrowError, DataType, Field};
 
@@ -78,7 +79,8 @@ impl ExtensionType for RasterFloat32Type {
     }
 
     fn deserialize_metadata(metadata: Option<&str>) -> Result<Self::Metadata, ArrowError> {
-        Ok(Arc::new(Metadata::deserialize(metadata)?))
+        let m = Metadata::deserialize(metadata).unwrap();
+        Ok(Arc::new(m))
     }
 
     fn supports_data_type(&self, _data_type: &DataType) -> Result<(), ArrowError> {
@@ -226,6 +228,14 @@ impl TryFrom<&Field> for RasterType {
         Self::from_extension_field(field)
     }
 }
+
+// impl TryFrom<&Field> for Metadata {
+//     type Error = ArrowError;
+
+//     fn try_from(value: &Field) -> Result<Self, Self::Error> {
+//         Self::deserialize(value.extension_type_metadata())
+//     }
+// }
 
 // #[cfg(test)]
 // mod test {

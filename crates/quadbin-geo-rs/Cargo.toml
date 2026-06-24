@@ -12,3 +12,4 @@ geojson = "1.0.0"
 quadbin-rs = { workspace = true }
 geo-rasterizer = { workspace = true }
 vaster = "0.1.0"
+thiserror = { workspace = true }

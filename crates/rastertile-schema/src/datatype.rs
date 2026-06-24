@@ -8,6 +8,8 @@ use arrow_schema::{DataType, Field};
 
 use crate::Metadata;
 
+// use rastertile_rs::Metadata;
+
 use crate::error::{RasterArrowError, RasterArrowResult};
 use crate::{ RasterType,RasterFloat32Type};
 

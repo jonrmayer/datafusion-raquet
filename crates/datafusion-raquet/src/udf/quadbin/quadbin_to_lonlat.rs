@@ -23,8 +23,8 @@ use datafusion::logical_expr::{
 
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
-// use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
-use quadbin_rs::cell_to_lonlat;
+
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToLonLat {
@@ -97,15 +97,7 @@ impl ScalarUDFImpl for QuadBinToLonLat {
     }
 }
 
-// fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-//     let lon = Field::new("lon", DataType::Float64, false);
-//     let lat = Field::new("lat", DataType::Float64, false);
 
-//     let fields = Fields::from(vec![lon, lat]);
-//     let lonlat = Field::new_struct("", fields, false);
-//     // let item_field = Arc::new(bbox.clone());
-//     Ok(Arc::new(lonlat))
-// }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
     let cells = arrays[0].as_primitive::<Int64Type>();
@@ -113,7 +105,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let mut lat_builder = Float64Builder::new();
 
     for cell in cells.iter() {
-        let lonlat = cell_to_lonlat(cell.unwrap() as u64);
+        let lonlat = QuadBin::from_cell(cell.unwrap() as u64)?.to_lonlat()?;
         lon_builder.append_value(lonlat.0);
         lat_builder.append_value(lonlat.1);
     }
@@ -131,18 +123,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     ];
     let nulls = None;
     let arr = StructArray::new(fields, arrays, nulls);
-    // let mut vcells: Vec<LonLat> = vec![];
-    // for cell in cells.iter() {
-    //     let lonlat = cell_to_lonlat(cell.unwrap() as u64);
-    //     let alonlat = LonLat::new(lonlat.0, lonlat.1);
-    //     vcells.push(alonlat);
-    // }
-    // let box_array: ArrayRef = vcells.try_into_arrow().unwrap();
-    // let struct_array = box_array
-    //     .as_any()
-    //     .downcast_ref::<arrow::array::StructArray>()
-    //     .unwrap();
-    // Ok(struct_array.clone())
+   
     Ok(arr)
 }
 

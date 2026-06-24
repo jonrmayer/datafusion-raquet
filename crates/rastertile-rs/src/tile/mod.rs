@@ -1,16 +1,20 @@
 mod array;
 mod data_type;
+mod error;
+
+
 
 pub use data_type::DataType;
 
 pub use array::{Array, TypedArray};
-
 
 use crate::RasterTileResult;
 
 use crate::{Compression, CompressionFormat};
 
 use rolling_stats::Stats;
+
+// use crate::core::RasterDataType;
 
 /// Statistics computed from a buffer
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -43,7 +47,7 @@ pub struct Tile {
 
     pub compressed_bytes: Vec<u8>,
     pub compression_method: CompressionFormat,
-    pub samples:usize,
+    pub samples: usize,
 }
 
 impl Tile {
@@ -57,7 +61,7 @@ impl Tile {
         self.y
     }
 
-     pub fn samples(&self) -> usize {
+    pub fn samples(&self) -> usize {
         self.samples
     }
 
@@ -77,15 +81,31 @@ impl Tile {
     ///
     /// Decoding is separate from data fetching so that sync and async operations do not block the
     /// same runtime.
-    pub fn decode(self) -> RasterTileResult<Array> {
+    pub fn decode(self) -> RasterTileResult<Array> {       
+        let decompressed = self.decompress().unwrap();
+
+        let shape = [self.samples(), self.x(), self.y()];
+        Array::try_new(decompressed, shape, self.data_type)
+    }
+
+    pub fn decompress(&self) -> RasterTileResult<Vec<u8>> {
         let compression = Compression {
             format: self.compression_method(),
         };
         let decoded = compression.decompress(self.compressed_bytes());
-
-        let shape = [self.samples(), self.x(), self.y()];
-        Array::try_new(decoded, shape, self.data_type)
+        Ok(decoded.unwrap())
     }
+    // pub fn get_pixel(&self, x: u64, y: u64) -> f64 {
+    //     let decompressed = self.decompress().unwrap();
+    //     let buffer = crate::RasterBuffer::new(
+    //         decompressed,
+    //         256,
+    //         256,
+    //         RasterDataType::Float32,
+    //         crate::NoDataValue::None,
+    //     );
+    //     buffer.unwrap().get_pixel(x, y).unwrap()
+    // }
 
     pub fn statistics(self) -> RasterTileResult<TileStatistics> {
         let a = self.decode().unwrap();
