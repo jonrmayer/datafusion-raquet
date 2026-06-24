@@ -16,6 +16,5 @@
 | `quadbin_sibling(cell)` | Sibling cells (same parent) | `LIST(UBIGINT)` |
 | `quadbin_kring(cell, k)` | Cells within k distance | `LIST(UBIGINT)` |
 | `QUADBIN_POLYFILL(geometry, resolution)` | Fill geometry with cells | `LIST(UBIGINT)` |
-<!-- | `QUADBIN_POLYFILL(geometry, resolution, mode)` | Fill with mode: center/intersects/contains | `LIST(UBIGINT)` | -->
 | `quadbin_to_wkt(cell)` | Cell as WKT POLYGON | `VARCHAR` |
 | `quadbin_to_geojson(cell)` | Cell as GeoJSON | `VARCHAR` |
