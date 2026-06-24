@@ -19,18 +19,9 @@ use datafusion_datasource::file_format::FileFormatFactory;
 use datafusion_datasource::file_scan_config::FileScanConfigBuilder;
 use datafusion_datasource_parquet::ParquetFormat;
 use datafusion_datasource_parquet::source::ParquetSource;
-// use geoarrow_schema::CoordType;
+
 use object_store::{ObjectMeta, ObjectStore};
-// use raquet::metadata::RaquetMetadata;
-// use raquet::reader::infer_geoarrow_schema;
 
-// use raquet_metadata::RaquetMetadataReader;
-
-// use parquet::arrow::arrow_reader::{ArrowReaderMetadata, ArrowReaderOptions};
-
-// use crate::raquet::format::source::RaquetSource;
-
-// use crate::raquet::RaquetFormatReader;
 use crate::RaquetMetadataReader;
 use crate::RaquetSource;
 

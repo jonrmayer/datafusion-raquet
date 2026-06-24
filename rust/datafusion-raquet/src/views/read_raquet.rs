@@ -16,15 +16,15 @@ use datafusion::common::{ScalarValue, plan_err};
 
 
 
-use datafusion_python_util::get_global_ctx;
+// use datafusion_python_util::get_global_ctx;
 
 
 
-pub fn read_raquet(// catalog_list: Arc<dyn CatalogProviderList>,
-    // options: &ConfigOptions,
-) -> Arc<dyn TableFunctionImpl + 'static> {
-    Arc::new(ReadRaquet::new())
-}
+// pub fn read_raquet(// catalog_list: Arc<dyn CatalogProviderList>,
+//     // options: &ConfigOptions,
+// ) -> Arc<dyn TableFunctionImpl + 'static> {
+//     Arc::new(ReadRaquet::new())
+// }
 
 #[derive(Debug, Clone)]
 pub struct ReadRaquet {
@@ -48,23 +48,23 @@ impl ReadRaquet {
     // }
 }
 
-impl TableFunctionImpl for ReadRaquet {
-    fn call(&self, args: &[Expr]) -> Result<Arc<dyn TableProvider>> {
-        let ctx = get_global_ctx().clone();
+// impl TableFunctionImpl for ReadRaquet {
+//     fn call(&self, args: &[Expr]) -> Result<Arc<dyn TableProvider>> {
+//         let ctx = get_global_ctx().clone();
 
-        // let state = ctx.state();
-        // let options = state.config_options();
-        // // state.catalog_list().
-        // // ctx.state().catalog_list()
-        let Some(Expr::Literal(ScalarValue::Utf8(Some(table_name)), _)) = args.first() else {
-            return plan_err!("read_raquet requires at least one string argument");
-        };
-        let table_provider = futures::executor::block_on(ctx.table_provider(table_name)).unwrap();
-        // .map_err(|e| e.context(format!("couldn't get table '{}'", table_ref.table)))?
-        // .ok_or_else(|| DataFusionError::Plan(format!("no such table {}", table_ref.schema)));
-        // let table_provider = ctx.table_provider(table_name).await.unwrap();
-        Ok(table_provider)
-    }
+//         // let state = ctx.state();
+//         // let options = state.config_options();
+//         // // state.catalog_list().
+//         // // ctx.state().catalog_list()
+//         let Some(Expr::Literal(ScalarValue::Utf8(Some(table_name)), _)) = args.first() else {
+//             return plan_err!("read_raquet requires at least one string argument");
+//         };
+//         let table_provider = futures::executor::block_on(ctx.table_provider(table_name)).unwrap();
+//         // .map_err(|e| e.context(format!("couldn't get table '{}'", table_ref.table)))?
+//         // .ok_or_else(|| DataFusionError::Plan(format!("no such table {}", table_ref.schema)));
+//         // let table_provider = ctx.table_provider(table_name).await.unwrap();
+//         Ok(table_provider)
+//     }
 
     // let table_ref = TableReference::from(table_name).resolve(
     //     &self.config_options().catalog.default_catalog,
@@ -94,7 +94,7 @@ impl TableFunctionImpl for ReadRaquet {
     // Ok(Arc::new(vt))
     // }
     // }
-}
+// }
 
 // #[async_trait]
 // impl TableProvider for ReadRaquetTableProvider {

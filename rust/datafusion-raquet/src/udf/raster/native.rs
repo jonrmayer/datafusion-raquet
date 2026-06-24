@@ -13,7 +13,7 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-use datafusion_sql::sqlparser::ast::DataType::Float32;
+// use datafusion_sql::sqlparser::ast::DataType::Float32;
 use rastertile_rs::{CompressionFormat, Operations};
 use rastertile_schema::Metadata;
 

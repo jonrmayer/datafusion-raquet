@@ -33,7 +33,8 @@ use datafusion::physical_plan::ExecutionPlan;
 use super::config::RaquetTableConfig;
 // use super::scanner::ZarrScan;
 use crate::tables::config::RaquetTableUrl;
-use datafusion::datasource::physical_plan::{FileScanConfigBuilder, ParquetSource};
+use datafusion::datasource::physical_plan::{FileScanConfigBuilder};
+use datafusion_datasource_parquet::source::ParquetSource;
 use datafusion::execution::object_store::ObjectStoreUrl;
 
 use datafusion::datasource::memory::DataSourceExec;

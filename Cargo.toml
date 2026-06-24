@@ -1,5 +1,7 @@
 [workspace]
-members = ["crates/datafusion-raquet","crates/rastertile-rs","crates/rastertile-schema","crates/quadbin-schema","crates/datafusion-raquet-python","crates/quadbin-rs","crates/quadbin-geo-rs", "crates/geo-rasterizer"]
+members = ["rust/datafusion-raquet","rust/rastertile-rs","rust/rastertile-schema","rust/quadbin-schema","rust/quadbin-rs","rust/quadbin-geo-rs", "rust/geo-rasterizer"]
+exclude = ["python"]
+
 resolver = "2"
 
 [workspace.package]
@@ -28,28 +30,28 @@ futures = "0.3"
 arrow = { version = "58" }
 arrow-array = { version = "58" }
 arrow-schema = { version = "58" }
-datafusion = { version = "53" }
-datafusion-common = { version = "53" }
+datafusion = { version = "53" ,default-features = false }
+# datafusion-common = { version = "53" }
 datafusion-sql = { version = "53" }
 datafusion-datasource = { version = "53", default-features = false }
 datafusion-datasource-parquet = "53"
-datafusion-python-util = { version = "53"}
+# datafusion-python-util = { version = "53"}
 
-datafusion-raquet = { path = "crates/datafusion-raquet", version = "0.1.0" }
+datafusion-raquet = { path = "rust/datafusion-raquet", version = "0.1.0" }
 
 
-geo-rasterizer =  { path = "crates/geo-rasterizer", version = "0.1.0" }
+geo-rasterizer =  { path = "rust/geo-rasterizer", version = "0.1.0" }
 
 parquet = { version = "58", default-features = false }
 
-quadbin-rs = { path = "crates/quadbin-rs", version = "0.1.0" }
-quadbin-geo-rs = { path = "crates/quadbin-geo-rs", version = "0.1.0" }
+quadbin-rs = { path = "rust/quadbin-rs", version = "0.1.0" }
+quadbin-geo-rs = { path = "rust/quadbin-geo-rs", version = "0.1.0" }
 
-rastertile-rs = { path = "crates/rastertile-rs", version = "0.1.0" }
+rastertile-rs = { path = "rust/rastertile-rs", version = "0.1.0" }
 
-rastertile-schema = { path = "crates/rastertile-schema", version = "0.1.0" }
+rastertile-schema = { path = "rust/rastertile-schema", version = "0.1.0" }
 
-quadbin-schema = { path = "crates/quadbin-schema", version = "0.1.0" }
+quadbin-schema = { path = "rust/quadbin-schema", version = "0.1.0" }
 
 tokio = { version = "1.9", features = ["rt", "macros", "net", "rt-multi-thread"] }
 

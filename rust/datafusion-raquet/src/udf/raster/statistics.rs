@@ -13,7 +13,7 @@ use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
     Volatility,
 };
-use datafusion_common::scalar::ScalarStructBuilder;
+
 
 use rastertile_schema::Metadata;
 
