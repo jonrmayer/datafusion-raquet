@@ -15,6 +15,18 @@
 | `quadbin_to_children(cell, resolution)` | Children at specific resolution | `LIST(UBIGINT)` |
 | `quadbin_sibling(cell)` | Sibling cells (same parent) | `LIST(UBIGINT)` |
 | `quadbin_kring(cell, k)` | Cells within k distance | `LIST(UBIGINT)` |
-| `QUADBIN_POLYFILL(geometry, resolution)` | Fill geometry with cells | `LIST(UBIGINT)` |
+| `quadbin_polyfill(wkt, resolution)` | Fill geometry from wkt with cells | `LIST(UBIGINT)` |
 | `quadbin_to_wkt(cell)` | Cell as WKT POLYGON | `VARCHAR` |
 | `quadbin_to_geojson(cell)` | Cell as GeoJSON | `VARCHAR` |
+
+
+### Raster TILE Functions
+
+| Function | Description | Return |
+|----------|-------------|--------|
+| `decompress_tile(band)` | Decompress band bytes | `[]byte` |
+| `decode_tile(band)` | Decode band bytes to []Float64 | `[]Float64` |
+| `native_tile(band)` | Decode band bytes to native data type eg []Int16 | `[]Native` |
+| `statistics_tile(band)` | Summary statistics | `STRUCT(valid_count, sum, mean, min, max, stddev)` |
+| `raquet_pixel(band,pixel_x,pixel_y)` | Pixel by x,y | `Float64` |
+

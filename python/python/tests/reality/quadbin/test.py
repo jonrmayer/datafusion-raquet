@@ -1,10 +1,18 @@
+
+import os
 import duckdb
 from datafusion import SessionConfig
 from pyarrow import Table
 from datafusion_raquet import RaquetSessionContext
-
-
+from dotenv import load_dotenv
+from pathlib import Path
 import time
+
+dotenv_path = Path('/home/jonrm/projects/git/datafusion-raquet/.env')
+RAQUET_DATA_HOME_DIR = os.getenv('RAQUET_DATA_HOME_DIR')
+
+
+
 
 
 def timer(func):
@@ -29,7 +37,7 @@ ctx = RaquetSessionContext(config=config)
 ctx.register_all_quadbin()
 ctx.register_raquet(
     "solar",
-    "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet",
+    "{}spain_solar_ghi.parquet".format(RAQUET_DATA_HOME_DIR),
 )
 
 sql = """
@@ -533,6 +541,8 @@ def performance_datafusion_quadbin_to_bbox():
 # performance_duckdb_quadbin_pixel_xy()
 # performance_datafusion_quadbin_pixel_xy()
 
-performance_duckdb_quadbin_to_bbox()
-performance_datafusion_quadbin_to_bbox()
+# performance_duckdb_quadbin_to_bbox()
+# performance_datafusion_quadbin_to_bbox()
+
+
 
