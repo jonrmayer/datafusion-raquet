@@ -12,7 +12,7 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-use rasterarrow_schema::{Metadata,RasterType};
+use rastertile_schema::{Metadata,RasterType};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct TestFromTile {

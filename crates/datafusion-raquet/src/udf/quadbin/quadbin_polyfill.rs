@@ -15,7 +15,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{cell_to_children, cell_to_children_resolution};
+use quadbin_rs::QuadBin;
 
 use quadbin_geo_rs::GeoCells;
 
@@ -101,40 +101,12 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
 
     for (wkt, resolution) in wkt_array.iter().zip(resolution_array.iter()) {
         let geocells =
-            GeoCells::new(wkt.unwrap().to_string(), resolution.unwrap() as i8).intersecting_cells();
+            GeoCells::new(wkt.unwrap().to_string(), resolution.unwrap() as i8).intersecting_cells()?;
         let bounding = UInt64Array::from(geocells);
 
         builder.append_value(&bounding);
     }
-    // for wkt in wkt_array.iter() {
-    //     GeoCells::new(wkt, resolution)
-    //     cell.unwrap()
-    //             // if let Some(cell) = cell {
-    //             //     let child_cells = cell_to_children(cell as u64);
-    //             //     let children = UInt64Array::from(child_cells);
-    //             //     builder.append_value(&children);
-    //             // }
-    //         }
-    // match resolution {
-    //     // Some(resolution) => {
-    //     //     for (cell, resolution) in cell.iter().zip(resolution.iter()) {
-    //     //         if let (Some(cell), Some(resolution)) = (cell, resolution) {
-    //     //             let child_cells = cell_to_children_resolution(cell as u64, resolution as u8);
-    //     //             let children = UInt64Array::from(child_cells);
-    //     //             builder.append_value(&children);
-    //     //         }
-    //     //     }
-    //     // }
-    //     None => {
-    //         for cell in cell.iter() {
-    //             if let Some(cell) = cell {
-    //                 let child_cells = cell_to_children(cell as u64);
-    //                 let children = UInt64Array::from(child_cells);
-    //                 builder.append_value(&children);
-    //             }
-    //         }
-    //     }
-    // };
+   
 
     let point_arr = builder.finish();
 

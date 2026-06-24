@@ -15,9 +15,9 @@ use datafusion::logical_expr::{
 };
 use datafusion_common::scalar::ScalarStructBuilder;
 
-use rasterarrow_schema::Metadata;
+use rastertile_schema::Metadata;
 
-use rastertile_rs::{CompressionFormat, NewDataType, RasterDataType, Tile, TileStatistics};
+use rastertile_rs::Operations;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct StatisticsTile {
@@ -44,16 +44,6 @@ impl StatisticsTile {
     fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
         Field::new(name, self.data_type(), nullable)
     }
-
-    // fn builders(&self) {
-    //     let b = vec![
-    //         Box::new(Float64Builder::new()),
-    //         Box::new(Float64Builder::new()),
-    //         Box::new(Float64Builder::new()),
-    //         Box::new(Float64Builder::new()),
-    //         Box::new(UInt64Builder::new()),
-    //     ];
-    // }
 }
 
 impl Default for StatisticsTile {
@@ -83,7 +73,6 @@ impl ScalarUDFImpl for StatisticsTile {
 
     fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
         Ok(Arc::new(self.to_field("", false)))
-        // Ok(Arc::new(Field::new("", DataType::UInt64, false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
@@ -106,41 +95,6 @@ impl ScalarUDFImpl for StatisticsTile {
     }
 }
 
-fn get_data_type_from_metadata(metadata: Metadata) -> Option<NewDataType> {
-    let data_type: Option<NewDataType> = match metadata.data_type() {
-        RasterDataType::UInt8 => Some(NewDataType::UInt8),
-        RasterDataType::Int8 => Some(NewDataType::Int8),
-        RasterDataType::UInt16 => Some(NewDataType::UInt16),
-        RasterDataType::Int16 => Some(NewDataType::Int16),
-        RasterDataType::UInt32 => Some(NewDataType::UInt32),
-        RasterDataType::Int32 => Some(NewDataType::Int32),
-        RasterDataType::UInt64 => Some(NewDataType::UInt64),
-        RasterDataType::Int64 => Some(NewDataType::Int64),
-        RasterDataType::Float32 => Some(NewDataType::Float32),
-        RasterDataType::Float64 => Some(NewDataType::Float64),
-    };
-    data_type
-}
-
-fn convert(metadata: Metadata, data: Option<&[u8]>) -> TileStatistics {
-     let samples = match metadata.clone().bands {
-        Some(bands) => bands.len(),
-        _ => 1,
-    };
-    let tile: Tile = Tile {
-        x: metadata.tile_size().clone(),
-        y: metadata.tile_size().clone(),
-        data_type: get_data_type_from_metadata(metadata.clone()),
-        compressed_bytes: data.unwrap().to_vec(),
-        compression_method: metadata.compression().clone(),
-        samples,
-    };
-
-    let ts = tile.statistics().unwrap();
-
-    ts
-}
-
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
     metadata: Metadata,
@@ -155,9 +109,9 @@ fn build_cell_array(
     let mut mean_builder = Float64Builder::new();
     let mut std_dev_builder = Float64Builder::new();
     let mut valid_count_builder = UInt64Builder::new();
-
+    let ops: Operations = Operations::new(metadata.inner());
     for input in in_binary.iter() {
-        let output = convert(metadata.clone(), input);
+        let output = ops.statistics(input)?;
         min_builder.append_value(output.min);
         max_builder.append_value(output.max);
         mean_builder.append_value(output.mean);
@@ -185,4 +139,33 @@ fn build_cell_array(
     let nulls = None;
     let arr = StructArray::new(fields, arrays, nulls);
     Ok(arr)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::RaquetTable;
+    use datafusion::prelude::{SessionConfig, SessionContext};
+
+    #[tokio::test]
+    async fn test_statistics_tile() {
+        let path =
+            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
+                .to_string();
+
+        let ctx =
+            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+
+        ctx.register_udf(StatisticsTile::default().into());
+        let t = RaquetTable::from_path(path).await;
+        let _ = ctx.register_table("solar", Arc::new(t));
+
+        let sql = "select statistics_tile(band_1) from solar where block = 5230520127799164927  ;";
+      
+
+        let df = ctx.sql(sql).await.unwrap();
+        // println!("{:?}", df.count().await);
+        df.show().await.unwrap();
+    }
 }

@@ -16,7 +16,13 @@ pub(crate) enum RaquetDataFusionError {
     DataFusion(#[from] DataFusionError),
 
     #[error(transparent)]
-    QuadBin(#[from] quadbin_rs::QuadbinError),
+    QuadBin(#[from] quadbin_rs::QuadBinError),
+
+     #[error(transparent)]
+    QuadBinGeo(#[from] quadbin_geo_rs::QuadBinGeoError),
+
+    #[error(transparent)]
+    RasterTile(#[from] rastertile_rs::OperationsError),
 }
 
 /// Crate-specific result type.
@@ -29,6 +35,8 @@ impl From<RaquetDataFusionError> for DataFusionError {
             RaquetDataFusionError::DataFusion(err) => err,
             // GeoDataFusionError::GeoArrow(err) => DataFusionError::External(Box::new(err)),
             RaquetDataFusionError::QuadBin(err) => DataFusionError::External(Box::new(err)),
+            RaquetDataFusionError::QuadBinGeo(err) => DataFusionError::External(Box::new(err)),
+            RaquetDataFusionError::RasterTile(err) => DataFusionError::External(Box::new(err)),
         }
     }
 }

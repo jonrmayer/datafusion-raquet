@@ -22,8 +22,8 @@ use datafusion::logical_expr::{
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
 // use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
-use quadbin_rs::{Tile, cell_to_tile, tile_to_bbox_wgs84};
 use quadbin_geo_rs::GeoFormats;
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToWKT {
@@ -95,8 +95,9 @@ fn build_wkt_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ColumnarValu
     let mut builder = StringViewBuilder::with_capacity(cells.len());
 
     for cell in cells.iter() {
-        let tile: Tile = cell_to_tile(cell.unwrap() as u64);
-        let bbox = tile_to_bbox_wgs84(tile);
+        let bbox = QuadBin::from_cell(cell.unwrap() as u64)?
+            .to_tile()?
+            .to_bbox_wgs84()?;
         let wkt = GeoFormats::new(bbox).to_wkt();
         builder.append_value(wkt);
     }

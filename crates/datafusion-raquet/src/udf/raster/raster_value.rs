@@ -17,7 +17,7 @@ use datafusion::logical_expr::{
 use datafusion_common::scalar::ScalarStructBuilder;
 use itertools::multizip;
 
-use rasterarrow_schema::Metadata;
+use rastertile_schema::Metadata;
 
 use rastertile_rs::{CompressionFormat, NewDataType, RasterDataType, Tile, TileStatistics};
 

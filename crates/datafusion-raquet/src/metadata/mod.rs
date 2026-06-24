@@ -17,7 +17,7 @@ use parquet::arrow::arrow_reader::{ArrowReaderMetadata, ArrowReaderOptions};
 use parquet::arrow::async_reader::ParquetObjectReader;
 use parquet::arrow::async_reader::ParquetRecordBatchStreamBuilder;
 
-use rastertile_rs::{BinaryType, CompressionFormat, RasterDataType};
+use rastertile_rs::{BinaryType, CompressionFormat, DataType as RasterDataType};
 
 use parquet::errors::Result;
 
@@ -30,13 +30,13 @@ use std::collections::HashMap;
 
 use arrow_schema::{Field, FieldRef, Schema, SchemaRef};
 
-use rasterarrow_schema::error::RasterArrowResult;
-use rasterarrow_schema::{Metadata as TileMetadata, RasterArrowType, RasterType};
+use rastertile_schema::error::RasterArrowResult;
+use rastertile_schema::{Metadata as TileMetadata, RasterArrowType, RasterType};
 
 use quadbin_schema::error::QuadbinArrowResult;
 use quadbin_schema::{Metadata as QMetadata, QuadbinArrowType, QuadbinType};
 
-use crate::metadata::format::BandInfo;
+use crate::metadata::format::{BandInfo, NoData};
 
 #[derive(Debug, Clone)]
 pub struct RaquetMetadataReader {
@@ -66,7 +66,7 @@ impl RaquetMetadataReader {
             .unwrap();
 
         let new_schema =
-            infer_rasterarrow_schema(&existing_schema, &raquet_metadata, &quadbin_metadata)
+            infer_rastertile_schema(&existing_schema, &raquet_metadata, &quadbin_metadata)
                 .unwrap();
         new_schema
     }
@@ -113,14 +113,15 @@ impl RaquetMetadataReader {
             .filter(|&x| *x.data_type() == arrow::datatypes::DataType::Binary)
             .collect::<Vec<_>>();
         let bands = raquet_format.bands().unwrap();
+        let no_data = raquet_format.get_no_data();
 
         if bands.len() == raster_columns.len() {
             let binary_type: BinaryType = BinaryType::Separated;
             for (_, band) in bands.iter().enumerate() {
                 let name = band.name.clone().unwrap();
-                let dtype = band.r#type.clone().unwrap();
+                let dtype = band.r#type.clone().unwrap();               
                 let rdt = RasterDataType::from_str(&dtype).unwrap();
-                let rcm = RaquetColumnMetadata::new(tile_size, rdt, compression, binary_type, None);
+                let rcm = RaquetColumnMetadata::new(tile_size, rdt,no_data.clone(), compression, binary_type, None);
                 columns.insert(name, rcm);
             }
         } else {
@@ -131,7 +132,7 @@ impl RaquetMetadataReader {
             let dtype = band.r#type.clone().unwrap();
             let rdt = RasterDataType::from_str(&dtype).unwrap();
             let rcm =
-                RaquetColumnMetadata::new(tile_size, rdt, compression, binary_type, Some(names));
+                RaquetColumnMetadata::new(tile_size, rdt,no_data, compression, binary_type, Some(names));
             columns.insert(name, rcm);
         }
 
@@ -223,6 +224,7 @@ pub struct RaquetColumnMetadata {
     pub tile_size: usize,
     pub binary_type: BinaryType,
     pub data_type: RasterDataType,
+    pub no_data: String,
     pub compression: CompressionFormat,
     pub bands: Option<Vec<String>>,
 }
@@ -231,6 +233,7 @@ impl RaquetColumnMetadata {
     pub fn new(
         tile_size: usize,
         data_type: RasterDataType,
+        no_data: String,
         compression: CompressionFormat,
         binary_type: BinaryType,
         bands: Option<Vec<String>>,
@@ -239,6 +242,7 @@ impl RaquetColumnMetadata {
             tile_size: tile_size,
             binary_type: binary_type,
             data_type: data_type,
+            no_data:no_data,
             compression: compression,
             bands: bands,
         }
@@ -251,6 +255,7 @@ impl From<RaquetColumnMetadata> for TileMetadata {
             value.tile_size,
             value.binary_type,
             value.data_type,
+            value.no_data,
             value.compression,
             value.bands,
         )
@@ -263,7 +268,7 @@ impl From<QuadbinColumnMetadata> for QMetadata {
     }
 }
 
-pub fn infer_rasterarrow_schema(
+pub fn infer_rastertile_schema(
     existing_schema: &Schema,
     raquet_metadata: &RaquetMetadata,
     quadbin_metadata: &QuadbinMetadata,

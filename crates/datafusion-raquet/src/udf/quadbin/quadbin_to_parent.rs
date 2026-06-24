@@ -19,7 +19,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{cell_to_parent, cell_to_parent_resolution};
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToParent {
@@ -102,7 +102,8 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
         Some(resolution) => {
             for (cell, resolution) in cell.iter().zip(resolution.iter()) {
                 if let (Some(cell), Some(resolution)) = (cell, resolution) {
-                    let parent = cell_to_parent_resolution(cell as u64, resolution as u8);
+                    let parent =
+                        QuadBin::from_cell(cell as u64)?.parent_resolution(resolution as u8)?;
                     builder.append_value(parent);
                 }
             }
@@ -110,7 +111,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
         None => {
             for cell in cell.iter() {
                 if let Some(cell) = cell {
-                    let parent = cell_to_parent(cell as u64);
+                    let parent = QuadBin::from_cell(cell as u64)?.parent()?;
                     builder.append_value(parent);
                 }
             }
@@ -123,8 +124,8 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
 }
 
 // #[cfg(test)]
-// mod tests {  
-//     use datafusion::prelude::SessionContext;  
+// mod tests {
+//     use datafusion::prelude::SessionContext;
 
 //     use super::*;
 
@@ -135,7 +136,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
 //         let sql = r#"SELECT quadbin_to_parent(5256690695657226239) cell;"#;
 //         println!("{:?}", sql);
 
-//         let df = ctx.sql(sql).await.unwrap();       
+//         let df = ctx.sql(sql).await.unwrap();
 //         let batches = df.collect().await.unwrap();
 //         let column = batches[0].column(0);
 //         // let string_arr = column.as_string_view();
@@ -152,7 +153,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
 //         let sql = r#"SELECT quadbin_to_parent(5256690695657226239,13) cell;"#;
 //         println!("{:?}", sql);
 
-//         let df = ctx.sql(sql).await.unwrap();       
+//         let df = ctx.sql(sql).await.unwrap();
 //         let batches = df.collect().await.unwrap();
 //         let column = batches[0].column(0);
 //         // let string_arr = column.as_string_view();

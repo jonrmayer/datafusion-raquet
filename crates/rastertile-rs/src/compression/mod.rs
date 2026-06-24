@@ -8,6 +8,8 @@ mod webp;
 
 use crate::CompressionFormat;
 
+pub use crate::compression::error::{CompressionResult,CompressionError};
+
 pub struct Compression {
     pub format: CompressionFormat,
 }
@@ -20,13 +22,13 @@ impl Compression {
         }
     }
     /// Decompress  data
-    pub fn decompress(&self, input: &[u8]) -> Vec<u8> {
+    pub fn decompress(&self, input: &[u8]) -> CompressionResult<Vec<u8>> {
         if input.is_empty() {
-            return Vec::new();
+            return  Ok(Vec::new())
         }
 
         match self.format {
-            CompressionFormat::None => input.to_vec(),
+            CompressionFormat::None => Ok(input.to_vec()),
             CompressionFormat::Gzip => gzip::decompress(input),
             CompressionFormat::Jpeg => jpeg::decompress(input),
             CompressionFormat::WebP => webp::decompress(input),

@@ -1,6 +1,6 @@
 from typing import Literal
 
-class TestFromTile:
+class DecompressTile:
     def __init__(self) -> None: ...
     def __datafusion_scalar_udf__(self) -> object: ...
 

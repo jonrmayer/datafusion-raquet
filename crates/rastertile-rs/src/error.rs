@@ -72,37 +72,42 @@
 // }
 
 
-use std::fmt::Debug;
+use std::error::Error;
+use std::{fmt, io, str, string};
 
 use thiserror::Error;
 
+// use crate::compression::CompressionError;
+use crate::operations::OperationsError;
+use crate::metadata::MetadataError;
+
 #[derive(Error, Debug)]
 pub enum RasterTileError {
-    // InvalidDirection(u8),
-    // InvalidCell(Option<u64>),
-    // InvalidResolution(u8),
-    // InvalidOffset(f64),
+    // /// An error during De/Compression.
+    // #[error(transparent)]
+    // CompressionError(#[from] CompressionError),
+
+    /// An error during Operations.
+    #[error(transparent)]
+    OperationsError(#[from] OperationsError),
+
+     /// An error during Metadata.
+    #[error(transparent)]
+    MetadataError(#[from] MetadataError),
+   
     /// General error.
     #[error("General error: {0}")]
     General(String),
 }
 
-// impl fmt::Display for RasterTileError {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         match self {
-//             RasterTileError::InvalidDirection(e) => write!(f, "invalid direction: {}", e),
-//             RasterTileError::InvalidCell(e) => write!(f, "invalid cell index: {:?}", e),
-//             RasterTileError::InvalidResolution(e) => write!(
-//                 f,
-//                 "Invalid resolution specified: {}. Accepted values are between 0 and 26, inclusive",
-//                 e
-//             ),
-//             RasterTileError::InvalidOffset(msg) => write!(f, "invalid offset: {}", msg),
-//         }
+// impl From<CompressionError> for OperationsError {
+//     fn from(err: CompressionError) -> OperationsError {
+//         OperationsError::UnsupportedError(err)
 //     }
 // }
 
-// impl Error for RasterTileError {}
+
+
 pub type RasterTileResult<T> = std::result::Result<T, RasterTileError>;
 
-// pub type RasterTileResult<T> = std::result::Result<T, RasterTileError>;
+

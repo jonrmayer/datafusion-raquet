@@ -14,7 +14,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::cell_kring;
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinKRing {
@@ -95,7 +95,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
     let mut builder = ListBuilder::new(values_builder);
     for (cell, k) in cell.iter().zip(k.iter()) {
         if let (Some(cell), Some(k)) = (cell, k) {
-            let child_cells = cell_kring(cell as u64, k as i32);
+            let child_cells =QuadBin::from_cell(cell as u64)?.kring(k as i32)?;
             let children = UInt64Array::from(child_cells);
             builder.append_value(&children);
         }

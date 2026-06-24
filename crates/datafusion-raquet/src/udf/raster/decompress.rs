@@ -2,9 +2,9 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
-use arrow_array::builder::{Float64Builder, ListBuilder};
-use arrow_array::{ArrayRef, BinaryArray,ListArray};
-use arrow_schema::{DataType, FieldRef, Field};
+use arrow_array::builder::GenericBinaryBuilder;
+use arrow_array::{ArrayRef, BinaryArray};
+use arrow_schema::{DataType, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
@@ -17,11 +17,11 @@ use rastertile_schema::{Metadata, RasterType};
 use rastertile_rs::{Compression, CompressionFormat, Operations};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
-pub struct DecodeTile {
+pub struct DecompressTile {
     signature: Signature,
 }
 
-impl DecodeTile {
+impl DecompressTile {
     pub fn new() -> Self {
         Self {
             signature: Signature::exact(vec![DataType::Binary], Volatility::Immutable),
@@ -29,7 +29,7 @@ impl DecodeTile {
     }
 }
 
-impl Default for DecodeTile {
+impl Default for DecompressTile {
     fn default() -> Self {
         Self::new()
     }
@@ -37,13 +37,13 @@ impl Default for DecodeTile {
 
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
-impl ScalarUDFImpl for DecodeTile {
+impl ScalarUDFImpl for DecompressTile {
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     fn name(&self) -> &str {
-        "decode_tile"
+        "decompress_tile"
     }
 
     fn signature(&self) -> &Signature {
@@ -70,7 +70,7 @@ impl ScalarUDFImpl for DecodeTile {
             Documentation::builder(
                 DOC_SECTION_OTHER,
                 "Return a decoded binary from an encoded binary.",
-                "decode_tile(tile)",
+                "decompress_tile(tile)",
             )
             .with_argument("tile", "tile value")
             .build()
@@ -78,37 +78,37 @@ impl ScalarUDFImpl for DecodeTile {
     }
 }
 
-fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    // let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
-    // // let new_metadata = Metadata::new(
-    // //     existing_metadata.tile_size,
-    // //     existing_metadata.binary_type,
-    // //     existing_metadata.data_type,
-    // //     CompressionFormat::None,
-    // //     existing_metadata.bands,
-    // // );
-
-     let list_field = Field::new_list_field(DataType::Float64, true);
-     let dt = DataType::List(Arc::new(list_field));
-    let out_field: Field = Field::new("", dt, true);
-
-    Ok(Arc::new(out_field))
+fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
+    let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
+    let new_metadata = Metadata::new(
+        existing_metadata.tile_size(),
+        existing_metadata.binary_type(),
+        existing_metadata.data_type(),
+        existing_metadata.no_data(),
+        CompressionFormat::None,
+        existing_metadata.bands(),
+    );
+    let metadata = Arc::new(new_metadata);
+    let output_type = RasterType::new(metadata);
+    Ok(Arc::new(output_type.to_field("", true)))
 }
+
 
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
     metadata: Metadata,
-) -> RaquetDataFusionResult<ListArray> {
+) -> RaquetDataFusionResult<BinaryArray> {
     let in_binary = arrays[0]
         .as_any()
         .downcast_ref::<BinaryArray>()
         .expect("cast failed");
-    let values_builder = Float64Builder::new();
-    let mut builder = ListBuilder::new(values_builder);
+
+    let mut builder = GenericBinaryBuilder::<i32>::new();
 
     let ops: Operations = Operations::new(metadata.inner());
+
     for input in in_binary.iter() {
-        let output = ops.decode(input)?;
+        let output = ops.decompress(input)?;
 
         builder.append_value(output);
     }
@@ -120,33 +120,28 @@ fn build_cell_array(
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use crate::RaquetTable;
+  
     use datafusion::prelude::{SessionConfig, SessionContext};
 
     #[tokio::test]
-    async fn test_native_interleaved_tile() {
+    async fn test_decompress_tile() {
         let path =
             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
                 .to_string();
 
-
         let ctx =
             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        ctx.register_udf(DecodeTile::default().into());
-        // ctx.register_udf(DecodeTile::default().into());
+        ctx.register_udf(DecompressTile::default().into());
         let t = RaquetTable::from_path(path).await;
 
         let _ = ctx.register_table("solar", Arc::new(t));
-        // let tci = ctx.table_provider("tci").await.unwrap();
+      
 
-        // let tci_schema = tci.schema();
-        // println!("{:?}", tci_schema);
-
-        let sql = "select decode_tile(band_1) from solar where block<>0   ;";
-        // let sql = "select count(*) from solar;";
+        let sql = r#"SELECT decompress_tile(band_1) from solar where block<>0  ;"#;
+        println!("{:?}", sql);
 
         let df = ctx.sql(sql).await.unwrap();
         println!("{:?}",df.count().await);

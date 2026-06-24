@@ -17,7 +17,7 @@ pub enum ColorInterp {
     Green,
     Blue,
     Alpha,
-//  Extended GDAL 3.5+
+    //  Extended GDAL 3.5+
     Pan,
     Coastal,
     Rededge,
@@ -73,7 +73,7 @@ pub struct Time {
     pub range: Option<Vec<i32>>,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RaquetFormat {
     pub file_format: Option<String>,
     pub version: Option<String>,
@@ -139,6 +139,22 @@ impl RaquetFormat {
         // if band_index < 0 || band_index >= self.band_info().len() {}
 
         compression
+    }
+
+    pub fn get_no_data(&self) -> String {
+        let bands = self.bands().unwrap().clone();
+        let nodata = match &bands[0].nodata {
+            Some(c) => Ok(c.clone()),
+            None => Err(MetadataError::InvalidMetadata("compression".to_string())),
+        }
+        .unwrap();
+
+        let nodata_value = match nodata {
+            NoData::String(val) => val,
+            NoData::Float(val) => val.to_string(),
+            NoData::Int(val) => val.to_string(),
+        };
+        nodata_value
     }
 }
 

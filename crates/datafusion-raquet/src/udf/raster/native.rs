@@ -3,11 +3,8 @@ use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 use arrow::array::GenericListBuilder;
-use arrow_array::builder::{Float32Builder, Float64Builder, ListBuilder, PrimitiveBuilder};
-use arrow_array::{
-    ArrayRef, BinaryArray, ListArray,
-    types::{Float32Type, Float64Type},
-};
+
+use arrow_array::{ArrayRef, BinaryArray, ListArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -17,9 +14,32 @@ use datafusion::logical_expr::{
 };
 
 use datafusion_sql::sqlparser::ast::DataType::Float32;
-use rasterarrow_schema::Metadata;
+use rastertile_rs::{CompressionFormat, Operations};
+use rastertile_schema::Metadata;
 
-use rastertile_rs::{CompressionFormat, NewDataType, RasterDataType, Tile, TypedArray};
+use rastertile_rs::DataType as RasterDataType;
+
+// use crate::udf::raster::{
+//     convert_list_array_i8,
+//     convert_list_array_f32
+// };
+
+use arrow_array::builder::{Int8Builder, UInt8Builder};
+use arrow_array::types::{Int8Type, UInt8Type};
+
+use arrow_array::builder::{Int16Builder, UInt16Builder};
+use arrow_array::types::{Int16Type, UInt16Type};
+
+use arrow_array::builder::{Int32Builder, UInt32Builder};
+use arrow_array::types::{Int32Type, UInt32Type};
+
+use arrow_array::builder::{Int64Builder, UInt64Builder};
+use arrow_array::types::{Int64Type, UInt64Type};
+
+use arrow_array::builder::{Float32Builder, Float64Builder};
+use arrow_array::types::{Float32Type, Float64Type};
+
+use arrow_array::builder::{ListBuilder, PrimitiveBuilder};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct NativeTile {
@@ -88,13 +108,13 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
 
     let list_field = match metadata.data_type() {
         RasterDataType::UInt8 => Some(Field::new_list_field(DataType::UInt8, true)),
-        // RasterDataType::Int8 => Some(NewDataType::Int8),
-        // RasterDataType::UInt16 => Some(NewDataType::UInt16),
-        // RasterDataType::Int16 => Some(NewDataType::Int16),
-        // RasterDataType::UInt32 => Some(NewDataType::UInt32),
-        // RasterDataType::Int32 => Some(NewDataType::Int32),
-        // RasterDataType::UInt64 => Some(NewDataType::UInt64),
-        // RasterDataType::Int64 => Some(NewDataType::Int64),
+        RasterDataType::Int8 => Some(Field::new_list_field(DataType::Int8, true)),
+        RasterDataType::UInt16 => Some(Field::new_list_field(DataType::UInt16, true)),
+        RasterDataType::Int16 => Some(Field::new_list_field(DataType::Int16, true)),
+        RasterDataType::UInt32 => Some(Field::new_list_field(DataType::UInt32, true)),
+        RasterDataType::Int32 => Some(Field::new_list_field(DataType::Int32, true)),
+        RasterDataType::UInt64 => Some(Field::new_list_field(DataType::UInt64, true)),
+        RasterDataType::Int64 => Some(Field::new_list_field(DataType::Int64, true)),
         RasterDataType::Float32 => Some(Field::new_list_field(DataType::Float32, true)),
         RasterDataType::Float64 => Some(Field::new_list_field(DataType::Float64, true)),
         _ => None,
@@ -114,63 +134,139 @@ fn build_cell_array(
         .as_any()
         .downcast_ref::<BinaryArray>()
         .expect("cast failed");
-
-    let out = match metadata.data_type() {
-        RasterDataType::UInt8 => Some(crate::udf::raster::convert_list_array_u8(
-            in_binary.clone(),
-            metadata,
-        )),
-        // RasterDataType::Int8 => Some(NewDataType::Int8),
-        // RasterDataType::UInt16 => Some(NewDataType::UInt16),
-        // RasterDataType::Int16 => Some(NewDataType::Int16),
-        // RasterDataType::UInt32 => Some(NewDataType::UInt32),
-        // RasterDataType::Int32 => Some(NewDataType::Int32),
-        // RasterDataType::UInt64 => Some(NewDataType::UInt64),
-        // RasterDataType::Int64 => Some(NewDataType::Int64),
-        RasterDataType::Float32 => Some(crate::udf::raster::convert_list_array_f32(
-            in_binary.clone(),
-            metadata,
-        )),
-        // RasterDataType::Float64 => Some(crate::udf::raster::convert_list_array_f64(
-        //     in_binary, metadata,
-        // )),
-        _ => None,
+    let ops: Operations = Operations::new(metadata.inner());
+    let out_array = match metadata.data_type() {
+        RasterDataType::Int8 => convert_list_array_i8(in_binary, ops)?.finish(),
+        RasterDataType::UInt8 => convert_list_array_u8(in_binary, ops)?.finish(),
+        RasterDataType::Int16 => convert_list_array_i16(in_binary, ops)?.finish(),
+        RasterDataType::UInt16 => convert_list_array_u16(in_binary, ops)?.finish(),
+        RasterDataType::Int32 => convert_list_array_i32(in_binary, ops)?.finish(),
+        RasterDataType::UInt32 => convert_list_array_u32(in_binary, ops)?.finish(),
+        RasterDataType::Int64 => convert_list_array_i64(in_binary, ops)?.finish(),
+        RasterDataType::UInt64 => convert_list_array_u64(in_binary, ops)?.finish(),
+        RasterDataType::Float32 => convert_list_array_f32(in_binary, ops)?.finish(),
+        RasterDataType::Float64 => convert_list_array_f64(in_binary, ops)?.finish(),
+        _ => todo!(),
     };
-    Ok(out.unwrap())
+
+    Ok(out_array)
 }
+
+#[macro_export]
+macro_rules! impl_convert_list_builder {
+    ($list_type:ident, $builder:ident,$decode:ident, $name:ident) => {
+        pub fn $name(
+            in_binary: &arrow_array::GenericByteArray<arrow::datatypes::GenericBinaryType<i32>>,
+            ops: Operations,
+        ) -> RaquetDataFusionResult<GenericListBuilder<i32, PrimitiveBuilder<$list_type>>> {
+            let values_builder = $builder::new();
+            let mut builder = ListBuilder::new(values_builder);
+
+            for input in in_binary.iter() {
+                let output = ops.$decode(input)?;
+                builder.append_value(output);
+            }
+
+            Ok(builder)
+        }
+    };
+}
+impl_convert_list_builder!(
+    Int8Type,
+    Int8Builder,
+    decode_native_i8,
+    convert_list_array_i8
+);
+impl_convert_list_builder!(
+    UInt8Type,
+    UInt8Builder,
+    decode_native_u8,
+    convert_list_array_u8
+);
+
+impl_convert_list_builder!(
+    Int16Type,
+    Int16Builder,
+    decode_native_i16,
+    convert_list_array_i16
+);
+impl_convert_list_builder!(
+    UInt16Type,
+    UInt16Builder,
+    decode_native_u16,
+    convert_list_array_u16
+);
+
+impl_convert_list_builder!(
+    Int32Type,
+    Int32Builder,
+    decode_native_i32,
+    convert_list_array_i32
+);
+impl_convert_list_builder!(
+    UInt32Type,
+    UInt32Builder,
+    decode_native_u32,
+    convert_list_array_u32
+);
+
+impl_convert_list_builder!(
+    Int64Type,
+    Int64Builder,
+    decode_native_i64,
+    convert_list_array_i64
+);
+impl_convert_list_builder!(
+    UInt64Type,
+    UInt64Builder,
+    decode_native_u64,
+    convert_list_array_u64
+);
+
+impl_convert_list_builder!(
+    Float32Type,
+    Float32Builder,
+    decode_native_f32,
+    convert_list_array_f32
+);
+impl_convert_list_builder!(
+    Float64Type,
+    Float64Builder,
+    decode_native_f64,
+    convert_list_array_f64
+);
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
     use crate::RaquetTable;
-    use crate::udf::raster::DecodeTile;
     use datafusion::prelude::{SessionConfig, SessionContext};
 
     #[tokio::test]
-    async fn test_native_interleaved_tile() {
+    async fn test_native_tile() {
         let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/tci_interleaved_gzip.parquet"
+            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
                 .to_string();
 
         let ctx =
             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
         ctx.register_udf(NativeTile::default().into());
-        ctx.register_udf(DecodeTile::default().into());
+        // ctx.register_udf(DecodeTile::default().into());
         let t = RaquetTable::from_path(path).await;
 
-        let _ = ctx.register_table("tci", Arc::new(t));
+        let _ = ctx.register_table("solar", Arc::new(t));
         // let tci = ctx.table_provider("tci").await.unwrap();
 
         // let tci_schema = tci.schema();
         // println!("{:?}", tci_schema);
 
-        let sql = "select array_length(native_tile(pixels),1) from tci where block<>0 limit 1 ;";
+        let sql = "select native_tile(band_1) from solar where block<>0  ;";
         // let sql = "select count(*) from solar;";
 
         let df = ctx.sql(sql).await.unwrap();
-        // println!("{:?}",df.count().await);
-        df.show().await.unwrap();
+        println!("{:?}", df.count().await);
+        // df.show().await.unwrap();
     }
 }

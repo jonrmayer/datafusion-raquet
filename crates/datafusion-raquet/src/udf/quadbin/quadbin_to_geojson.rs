@@ -7,8 +7,6 @@ use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
 use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
-
-
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
@@ -19,8 +17,7 @@ use quadbin_geo_rs::GeoFormats;
 
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
-
-use quadbin_rs::{Tile, cell_to_tile, tile_to_bbox_wgs84};
+use quadbin_rs::{QuadBin, Tile};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToGeoJSON {
@@ -66,7 +63,6 @@ impl ScalarUDFImpl for QuadBinToGeoJSON {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
         let cell_arr = build_geojson_array(arrays)?;
-        // let array_ref: ArrayRef = Arc::new(cell_arr);
         Ok(cell_arr)
     }
 
@@ -92,8 +88,9 @@ fn build_geojson_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<Columnar
     let mut builder = StringViewBuilder::with_capacity(cells.len());
 
     for cell in cells.iter() {
-        let tile: Tile = cell_to_tile(cell.unwrap() as u64);
-        let bbox = tile_to_bbox_wgs84(tile);
+        let bbox = QuadBin::from_cell(cell.unwrap() as u64)?
+            .to_tile()?
+            .to_bbox_wgs84()?;
         let geojson = GeoFormats::new(bbox).to_geojson();
         builder.append_value(geojson);
     }
@@ -114,10 +111,7 @@ mod tests {
         let sql = r#"SELECT quadbin_to_geojson(5256690695657226239) ;"#;
         println!("{:?}", sql);
 
-
-         let df = ctx.sql(sql).await.unwrap();
+        let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();
     }
-
-    
 }

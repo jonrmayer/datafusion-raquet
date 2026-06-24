@@ -5,7 +5,8 @@ use serde_json::Value;
 use std::str::FromStr;
 use std::usize;
 
-use rastertile_rs::{BinaryType, CompressionFormat, RasterDataType};
+use rastertile_rs::Metadata as InnerMetadata;
+use rastertile_rs::{BinaryType, CompressionFormat, DataType};
 
 /// GeoArrow extension metadata.
 ///
@@ -18,11 +19,12 @@ use rastertile_rs::{BinaryType, CompressionFormat, RasterDataType};
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Metadata {
     // #[serde(flatten)]
-    pub tile_size: usize,
-    pub binary_type: BinaryType,
-    pub data_type: RasterDataType,
-    pub compression: CompressionFormat,
-    pub bands: Option<Vec<String>>,
+    // pub tile_size: usize,
+    // pub binary_type: BinaryType,
+    // pub data_type: RasterDataType,
+    // pub compression: CompressionFormat,
+    // pub bands: Option<Vec<String>>,
+    pub inner: InnerMetadata,
 }
 
 impl Metadata {
@@ -30,46 +32,52 @@ impl Metadata {
     pub fn new(
         tile_size: usize,
         binary_type: BinaryType,
-        data_type: RasterDataType,
+        data_type: DataType,
+        no_data: String,
         compression: CompressionFormat,
         bands: Option<Vec<String>>,
     ) -> Self {
-        Self {
+        let inner = InnerMetadata::new(
             tile_size,
             binary_type,
             data_type,
+            no_data,
             compression,
             bands,
-        }
+        );
+        Self { inner }
     }
 
-     pub fn bands(&self) -> Vec<String> {
-        match &self.bands {
-            Some(a) => a.clone(),
-            None => todo!()
-            
-        }
-        
+    pub fn inner(&self) -> InnerMetadata {
+        self.inner.clone()
+    }
+
+    pub fn bands(&self) -> Option<Vec<String>> {
+        self.inner().bands()
     }
 
     /// Expose the underlying tile_size.
-    pub fn tile_size(&self) -> &usize {
-        &self.tile_size
+    pub fn tile_size(&self) -> usize {
+        self.inner().tile_size()
     }
 
     /// Expose the underlying binary_type
-    pub fn binary_type(&self) -> &BinaryType {
-        &self.binary_type
+    pub fn binary_type(&self) -> BinaryType {
+        self.inner().binary_type()
     }
 
     /// Expose the underlying binary_type
-    pub fn data_type(&self) -> &RasterDataType {
-        &self.data_type
+    pub fn data_type(&self) -> DataType {
+        self.inner().data_type()
+    }
+
+    pub fn no_data(&self) -> String {
+        self.inner().no_data()
     }
 
     /// Expose the underlying binary_type
-    pub fn compression(&self) -> &CompressionFormat {
-        &self.compression
+    pub fn compression(&self) -> CompressionFormat {
+        self.inner().compression()
     }
 
     pub fn to_json_value(&self) -> Value {
