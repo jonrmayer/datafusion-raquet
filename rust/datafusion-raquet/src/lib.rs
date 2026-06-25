@@ -78,3 +78,11 @@ pub use tables::raquet::RaquetTable;
 //         // df.show().await.unwrap();
 //     }
 // }
+
+pub fn register(session_context: &datafusion::prelude::SessionContext) {
+    crate::udf::quadbin::register(session_context);
+
+    crate::udf::raster::register(session_context);
+
+   
+}

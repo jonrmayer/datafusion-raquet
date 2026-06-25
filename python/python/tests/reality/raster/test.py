@@ -114,4 +114,4 @@ def duckdb_raster_stats():
 
 
 # duckdb_raster_stats()
-# datafusion_raster_stats()
+datafusion_raster_stats()
