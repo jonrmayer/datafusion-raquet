@@ -47,6 +47,7 @@ futures = { workspace = true }
 
 url = { workspace = true }
 itertools = "0.15.0"
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [dev-dependencies]
 tokio = { version = "1.9", features = ["rt", "macros", "net", "rt-multi-thread"] }

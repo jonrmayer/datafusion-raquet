@@ -30,3 +30,9 @@
 | `statistics_tile(band)` | Summary statistics | `STRUCT(valid_count, sum, mean, min, max, stddev)` |
 | `raquet_pixel(band,pixel_x,pixel_y)` | Pixel by x,y | `Float64` |
 
+### read_raquet* Functions (File I/O)
+
+| Function | Description |
+|----------|-------------|
+| `read_raquet(table_name)` | Read all data rows |
+| `read_raquet_metadata(table_name)` | Read metadata row only |

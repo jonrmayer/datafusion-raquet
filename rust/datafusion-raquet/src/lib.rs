@@ -11,7 +11,7 @@ pub use format::source::RaquetSource;
 pub use metadata::RaquetMetadataReader;
 
 pub use tables::raquet::RaquetTable;
-pub use views::read_raquet_metadata;
+// pub use views::read_raquet_metadata;
 
 // pub use udf::raster::{NativeTile, StatisticsTile};
 
@@ -84,6 +84,8 @@ pub fn register(session_context: &datafusion::prelude::SessionContext) {
     crate::udf::quadbin::register(session_context);
 
     crate::udf::raster::register(session_context);
+
+    crate::views::register(session_context);
 
    
 }
