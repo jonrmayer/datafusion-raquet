@@ -47,10 +47,6 @@ impl Default for QuadBinToWKT {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToWKT {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_to_wkt"
     }
@@ -69,7 +65,6 @@ impl ScalarUDFImpl for QuadBinToWKT {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
         let cell_arr = build_wkt_array(arrays)?;
-        // let array_ref: ArrayRef = Arc::new(cell_arr);
         Ok(cell_arr)
     }
 
@@ -120,27 +115,5 @@ mod tests {
 
         let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();
-        // let batches = df.collect().await.unwrap();
-        // let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
-
-        // let val = column.as_list(0).value(0);
-        // println!("{:?}", val);
-    }
-
-    #[tokio::test]
-    async fn test_quadbin_to_parent_resolution() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToWKT::default().into());
-        let sql = r#"SELECT quadbin_to_children(5256690695657226239,13) cell;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
-
-        let val = column.as_primitive::<UInt64Type>().value(0);
-        println!("{:?}", val);
     }
 }

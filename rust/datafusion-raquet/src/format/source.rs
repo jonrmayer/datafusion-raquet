@@ -35,9 +35,7 @@ impl FileSource for RaquetSource {
             .create_file_opener(object_store, base_config, partition)
     }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+
 
     fn with_batch_size(&self, batch_size: usize) -> Arc<dyn FileSource> {
         self.inner.with_batch_size(batch_size)
@@ -74,7 +72,7 @@ impl FileSource for RaquetSource {
         let projected_parquet_source = self.inner.try_pushdown_projection(projection)?;
         if let Some(dyn_file_source) = projected_parquet_source {
             let inner = dyn_file_source
-                .as_any()
+                // .as_any()
                 .downcast_ref::<ParquetSource>()
                 .unwrap();
             Ok(Some(Arc::new(RaquetSource {

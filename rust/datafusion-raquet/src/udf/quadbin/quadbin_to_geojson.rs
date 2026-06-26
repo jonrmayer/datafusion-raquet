@@ -1,11 +1,10 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::StringViewBuilder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
-use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
-use arrow_schema::{DataType, Field, FieldRef, Fields};
+use arrow_array::types::{Int64Type, };
+use arrow_array::{ ArrayRef, };
+use arrow_schema::{DataType, Field, FieldRef, };
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -15,9 +14,9 @@ use datafusion::logical_expr::{
 };
 use quadbin_geo_rs::GeoFormats;
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::{ RaquetDataFusionResult};
 
-use quadbin_rs::{QuadBin, Tile};
+use quadbin_rs::{QuadBin, };
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToGeoJSON {
@@ -41,10 +40,6 @@ impl Default for QuadBinToGeoJSON {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToGeoJSON {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_to_geojson"
     }

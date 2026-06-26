@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
@@ -13,16 +12,10 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-// use datafusion_sql::sqlparser::ast::DataType::Float32;
-use rastertile_rs::{CompressionFormat, Operations};
+use rastertile_rs::Operations;
 use rastertile_schema::Metadata;
 
 use rastertile_rs::DataType as RasterDataType;
-
-// use crate::udf::raster::{
-//     convert_list_array_i8,
-//     convert_list_array_f32
-// };
 
 use arrow_array::builder::{Int8Builder, UInt8Builder};
 use arrow_array::types::{Int8Type, UInt8Type};
@@ -63,10 +56,6 @@ impl Default for NativeTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for NativeTile {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "native_tile"
     }

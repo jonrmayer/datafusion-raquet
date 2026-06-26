@@ -1,25 +1,21 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
-use arrow_array::builder::{
-    ArrayBuilder, Float64Builder, Int8Builder, ListBuilder, StructBuilder, UInt64Builder,Int32Builder,
-};
+use arrow_array::builder::Int32Builder;
 use arrow_array::cast::AsArray;
 use arrow_array::types::{Float64Type, Int64Type};
-use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
+use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-    TypeSignature, Volatility,
+     Volatility,
 };
 
 use itertools::multizip;
 
 use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
-
 
 use quadbin_rs::lonlat_to_pixel;
 
@@ -63,10 +59,6 @@ impl Default for QuadBinToPixelXY {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToPixelXY {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_pixel_xy"
     }
@@ -104,10 +96,6 @@ impl ScalarUDFImpl for QuadBinToPixelXY {
         }))
     }
 }
-
-
-
-
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
     let lon = arrays[0].as_primitive::<Float64Type>();
@@ -152,16 +140,12 @@ mod tests {
 
     use super::*;
 
-
-
     #[tokio::test]
     async fn test_quadbin_pixel_xy() {
         let ctx = SessionContext::new();
         ctx.register_udf(QuadBinToPixelXY::default().into());
         let sql = r#"SELECT quadbin_pixel_xy(0.0, 0.0, 4, 256) pixel;"#;
         println!("{:?}", sql);
-
-
 
         let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();

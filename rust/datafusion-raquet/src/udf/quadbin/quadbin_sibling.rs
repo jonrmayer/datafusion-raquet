@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
@@ -9,7 +8,8 @@ use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
-    ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature, Volatility,
+    ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
+    Volatility,
 };
 
 use crate::error::RaquetDataFusionResult;
@@ -38,10 +38,6 @@ impl Default for QuadBinToSibling {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToSibling {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_sibling"
     }
@@ -98,43 +94,3 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
 
     Ok(point_arr)
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use datafusion::prelude::SessionContext;
-
-//     use super::*;
-
-//     #[tokio::test]
-//     async fn test_quadbin_to_children() {
-//         let ctx = SessionContext::new();
-//         ctx.register_udf(QuadBinToSibling::default().into());
-//         let sql = r#"SELECT quadbin_sibling(cast(5256690695657226239 as bigint)) cell;"#;
-//         println!("{:?}", sql);
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         // df.show();
-//         let batches = df.collect().await.unwrap();
-//         let column = batches[0].column(0);
-//         // // let string_arr = column.as_string_view();
-
-//         // let val = column.as_list(0).value(0);
-//         // println!("{:?}", val);
-//     }
-
-//     #[tokio::test]
-//     async fn test_quadbin_to_parent_resolution() {
-//         let ctx = SessionContext::new();
-//         ctx.register_udf(QuadBinToSibling::default().into());
-//         let sql = r#"SELECT quadbin_to_children(5256690695657226239,13) cell;"#;
-//         println!("{:?}", sql);
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         let batches = df.collect().await.unwrap();
-//         let column = batches[0].column(0);
-//         // let string_arr = column.as_string_view();
-
-//         let val = column.as_primitive::<UInt64Type>().value(0);
-//         println!("{:?}", val);
-//     }
-// }

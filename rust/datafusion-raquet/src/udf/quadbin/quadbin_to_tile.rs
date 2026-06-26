@@ -1,11 +1,10 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::Int64Builder;
 use arrow_array::cast::AsArray;
 use arrow_array::types::Int64Type;
-use arrow_array::{ArrayRef, UInt64Array,StructArray};
-use arrow_schema::{DataType, Field, FieldRef,Fields};
+use arrow_array::{ArrayRef, StructArray};
+use arrow_schema::{DataType, Field, FieldRef, Fields};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
@@ -15,7 +14,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{QuadBin};
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToTile {
@@ -50,10 +49,6 @@ impl Default for QuadBinToTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToTile {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_to_tile"
     }
@@ -97,7 +92,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let mut z_builder = Int64Builder::new();
 
     for cell in cells.iter() {
-        let tile =QuadBin::from_cell(cell.unwrap() as u64)?.to_tile()?;
+        let tile = QuadBin::from_cell(cell.unwrap() as u64)?.to_tile()?;
         x_builder.append_value(tile.x as i64);
         y_builder.append_value(tile.y as i64);
         z_builder.append_value(tile.z as i64);
@@ -122,7 +117,6 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     Ok(arr)
 }
 
-
 #[cfg(test)]
 mod tests {
     use datafusion::prelude::SessionContext;
@@ -136,10 +130,7 @@ mod tests {
         let sql = r#"SELECT quadbin_to_tile(5256690695657226239) ;"#;
         println!("{:?}", sql);
 
-
-         let df = ctx.sql(sql).await.unwrap();
+        let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();
     }
-
-    
 }

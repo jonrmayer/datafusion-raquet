@@ -1,12 +1,11 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{
-    ArrayBuilder, Float64Builder, ListBuilder, StructBuilder, UInt64Builder,
+     Float64Builder,
 };
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
-use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
+use arrow_array::types::{Int64Type, };
+use arrow_array::{ ArrayRef,  StructArray, };
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
 
@@ -18,7 +17,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::{ RaquetDataFusionResult};
 
 
 use quadbin_rs::QuadBin;
@@ -51,10 +50,6 @@ impl Default for QuadBinToBBOXWGS84 {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToBBOXWGS84 {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_to_bbox_wgs84"
     }
@@ -166,11 +161,7 @@ mod tests {
 
         let df = ctx.sql(sql).await.unwrap();
        df.show().await.unwrap();
-        // let column = batches[0].column(0);
-        // // let string_arr = column.as_string_view();
 
-        // let val = column.as_list(0).value(0);
-        // println!("{:?}", val);
     }
 
    

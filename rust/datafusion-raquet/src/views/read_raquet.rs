@@ -26,18 +26,18 @@ use datafusion::common::{ScalarValue, plan_err};
 //     Arc::new(ReadRaquet::new())
 // }
 
-#[derive(Debug, Clone)]
-pub struct ReadRaquet {
-    // catalog_list: Option<Arc<dyn CatalogProviderList>>,
-    // config_options: Option<ConfigOptions>,
-}
-impl ReadRaquet {
-    pub fn new() -> Self {
-        Self {
-            // catalog_list: None,
-            // config_options: None,
-        }
-    }
+// #[derive(Debug, Clone)]
+// pub struct ReadRaquet {
+//     catalog_list: Option<Arc<dyn CatalogProviderList>>,
+//     config_options: Option<ConfigOptions>,
+// }
+// impl ReadRaquet {
+//     pub fn new() -> Self {
+//         Self {
+//             // catalog_list: None,
+//             // config_options: None,
+//         }
+//     }
 
     // pub fn catalog_list(&self) -> Arc<dyn CatalogProviderList> {
     //     self.catalog_list.clone().unwrap()
@@ -46,7 +46,7 @@ impl ReadRaquet {
     // pub fn config_options(&self) -> ConfigOptions {
     //     self.config_options.clone().unwrap()
     // }
-}
+// }
 
 // impl TableFunctionImpl for ReadRaquet {
 //     fn call(&self, args: &[Expr]) -> Result<Arc<dyn TableProvider>> {

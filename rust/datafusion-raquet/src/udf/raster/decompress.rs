@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
@@ -14,7 +13,7 @@ use datafusion::logical_expr::{
 
 use rastertile_schema::{Metadata, RasterType};
 
-use rastertile_rs::{Compression, CompressionFormat, Operations};
+use rastertile_rs::{CompressionFormat, Operations};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct DecompressTile {
@@ -38,9 +37,6 @@ impl Default for DecompressTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for DecompressTile {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 
     fn name(&self) -> &str {
         "decompress_tile"

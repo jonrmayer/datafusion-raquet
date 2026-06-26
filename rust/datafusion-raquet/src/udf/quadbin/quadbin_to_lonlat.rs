@@ -1,18 +1,10 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
-use arrow_array::builder::{
-    ArrayBuilder, Float64Builder, ListBuilder, StructBuilder, UInt64Builder,
-};
+use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
-use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
+use arrow_array::types::Int64Type;
+use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
-
-// use arrow_convert::{
-//     ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
-//     serialize::TryIntoArrow,
-// };
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -21,8 +13,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
-
+use crate::error::RaquetDataFusionResult;
 
 use quadbin_rs::QuadBin;
 
@@ -58,10 +49,6 @@ impl Default for QuadBinToLonLat {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToLonLat {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_to_lonlat"
     }
@@ -97,8 +84,6 @@ impl ScalarUDFImpl for QuadBinToLonLat {
     }
 }
 
-
-
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
     let cells = arrays[0].as_primitive::<Int64Type>();
     let mut lon_builder = Float64Builder::new();
@@ -123,50 +108,6 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     ];
     let nulls = None;
     let arr = StructArray::new(fields, arrays, nulls);
-   
+
     Ok(arr)
-}
-
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_to_lonlat() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToLonLat::default().into());
-        let sql = r#"SELECT quadbin_to_lonlat(5256690695657226239) ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        // df.show();
-        let batches = df.collect().await.unwrap();
-        let output_batch = &batches[0];
-        let output_schema = output_batch.schema();
-        println!("{:?}", output_schema);
-        let output_field = output_schema.field(0);
-
-        let output_column = output_batch.column(0);
-        let point_arr = output_column.as_struct();
-        println!("{:?}", point_arr);
-       
-    }
-
-    #[tokio::test]
-    async fn test_quadbin_to_parent_resolution() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToLonLat::default().into());
-        let sql = r#"SELECT quadbin_to_children(5256690695657226239,13) cell;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        let batches = df.collect().await.unwrap();
-        let column = batches[0].column(0);
-        // let string_arr = column.as_string_view();
-
-        let val = column.as_primitive::<UInt64Type>().value(0);
-        println!("{:?}", val);
-    }
 }

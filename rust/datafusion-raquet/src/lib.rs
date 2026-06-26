@@ -11,6 +11,7 @@ pub use format::source::RaquetSource;
 pub use metadata::RaquetMetadataReader;
 
 pub use tables::raquet::RaquetTable;
+pub use views::read_raquet_metadata;
 
 // pub use udf::raster::{NativeTile, StatisticsTile};
 

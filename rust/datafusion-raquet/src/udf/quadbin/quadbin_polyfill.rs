@@ -1,21 +1,18 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
-use arrow_array::cast::{AsArray, as_primitive_array, as_string_array};
-use arrow_array::types::{Int64Type, Utf8Type};
+use arrow_array::cast::{ as_primitive_array, as_string_array};
+
 use arrow_array::{ArrayRef, Int64Array, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-    TypeSignature, Volatility,
+     Volatility,
 };
 
 use crate::error::RaquetDataFusionResult;
-
-use quadbin_rs::QuadBin;
 
 use quadbin_geo_rs::GeoCells;
 
@@ -44,9 +41,6 @@ impl Default for QuadBinPolyFill {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinPolyFill {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 
     fn name(&self) -> &str {
         "quadbin_polyfill"

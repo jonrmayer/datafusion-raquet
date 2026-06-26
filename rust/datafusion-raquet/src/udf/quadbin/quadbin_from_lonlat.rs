@@ -42,10 +42,6 @@ impl Default for QuadBinFromLonLat {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinFromLonLat {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_from_lonlat"
     }
@@ -96,39 +92,11 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
 
     for ((lon, lat), resolution) in lon.iter().zip(lat.iter()).zip(resolution.iter()) {
         // let tile: Tile = Tile::new(x.unwrap() as u32, y.unwrap() as u32, z.unwrap() as i8).unwrap();
-        let cell = QuadBin::from_lonlat(lon.unwrap(), lat.unwrap(), resolution.unwrap() as i8)?.cell();
+        let cell =
+            QuadBin::from_lonlat(lon.unwrap(), lat.unwrap(), resolution.unwrap() as i8)?.cell();
         builder.append_value(cell);
     }
     let point_arr = builder.finish();
 
     Ok(point_arr)
 }
-
-// #[cfg(test)]
-// mod tests {
-
-//     use datafusion::prelude::SessionContext;
-
-//     use super::*;
-
-//     #[tokio::test]
-//     async fn test_quadbin_from_tile() {
-//         let ctx = SessionContext::new();
-//         ctx.register_udf(QuadBinFromLonLat::default().into());
-
-//         let sql = r#"SELECT quadbin_from_lonlat(0.0, 0.0, 5);"#;
-//         println!("{:?}", sql);
-
-//         let df = ctx.sql(sql).await.unwrap();
-
-//         let schema = df.schema().clone();
-//         let batches = df.collect().await.unwrap();
-//         let column = batches[0].column(0);
-//         // let string_arr = column.as_string_view();
-
-//         let val = column.as_primitive::<UInt64Type>().value(0);
-//         println!("{:?}", val);
-
-     
-//     }
-// }

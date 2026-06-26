@@ -1,12 +1,11 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{
-    ArrayBuilder, Float64Builder, ListBuilder, StructBuilder, UInt64Builder,
+     Float64Builder, 
 };
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
-use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
+use arrow_array::types::{Int64Type, };
+use arrow_array::{ ArrayRef,  StructArray, };
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
 
@@ -18,7 +17,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::{RaquetDataFusionResult};
 
 
 use quadbin_rs::QuadBin;
@@ -51,9 +50,6 @@ impl Default for QuadBinToBBOX {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToBBOX {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 
     fn name(&self) -> &str {
         "quadbin_to_bbox"
@@ -134,19 +130,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     ];
     let nulls = None;
     let arr = StructArray::new(fields, arrays, nulls);
-    // let mut vcells: Vec<Abbox> = vec![];
-    // for cell in cells.iter() {
-    //     let tile: Tile = cell_to_tile(cell.unwrap() as u64);
-    //     let bbox_wgs84 = tile_to_bbox_wgs84(tile);
-    //     let abox: Abbox = Abbox::new(bbox_wgs84);
-    //     vcells.push(abox);
-    // }
-    // let box_array: ArrayRef = vcells.try_into_arrow().unwrap();
-    // let struct_array = box_array
-    //     .as_any()
-    //     .downcast_ref::<arrow::array::StructArray>()
-    //     .unwrap();
-    // Ok(struct_array.clone())
+   
      Ok(arr)
 }
 
@@ -165,11 +149,7 @@ mod tests {
 
         let df = ctx.sql(sql).await.unwrap();
        df.show().await.unwrap();
-        // let column = batches[0].column(0);
-        // // let string_arr = column.as_string_view();
-
-        // let val = column.as_list(0).value(0);
-        // println!("{:?}", val);
+      
     }
 
    

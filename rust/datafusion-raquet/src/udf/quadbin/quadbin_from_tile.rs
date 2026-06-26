@@ -1,6 +1,4 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
-
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
 use arrow_array::types::Int64Type;
@@ -13,10 +11,9 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-
 use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{Tile};
+use quadbin_rs::Tile;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinFromTile {
@@ -43,10 +40,6 @@ impl Default for QuadBinFromTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinFromTile {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "quadbin_from_tile"
     }
@@ -65,7 +58,7 @@ impl ScalarUDFImpl for QuadBinFromTile {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
         let cell_arr = build_cell_array(arrays)?;
-        let array_ref: ArrayRef = Arc::new(cell_arr);       
+        let array_ref: ArrayRef = Arc::new(cell_arr);
         Ok(ColumnarValue::Array(array_ref))
     }
 
@@ -88,8 +81,6 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
     Ok(Arc::new(Field::new("", DataType::UInt64, false)))
 }
 
-
-
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array> {
     let x = arrays[0].as_primitive::<Int64Type>();
     let y = arrays[1].as_primitive::<Int64Type>();
@@ -98,55 +89,11 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
     let mut builder = UInt64Builder::with_capacity(x.len());
 
     for ((x, y), z) in x.iter().zip(y.iter()).zip(z.iter()) {
-        
-        let cell = Tile::from_xyz(x.unwrap() as u32, y.unwrap() as u32, z.unwrap() as u8)?.to_cell()?;
+        let cell =
+            Tile::from_xyz(x.unwrap() as u32, y.unwrap() as u32, z.unwrap() as u8)?.to_cell()?;
         builder.append_value(cell);
     }
     let point_arr = builder.finish();
 
     Ok(point_arr)
 }
-
-
-// #[cfg(test)]
-// mod tests {
-    
-//     use datafusion::prelude::SessionContext;
-   
-//     use super::*;
-
-//     #[tokio::test]
-//     async fn test_quadbin_from_tile() {
-//         let ctx = SessionContext::new();
-//         ctx.register_udf(QuadBinFromTile::default().into());
-
-//         let sql = r#"SELECT quadbin_from_tile(0, 0, 0);"#;
-//         println!("{:?}", sql);
-
-//         let df = ctx.sql(sql).await.unwrap();
-
-//         let schema = df.schema().clone();
-//         let batches = df.collect().await.unwrap();
-//         let column = batches[0].column(0);
-//         // let string_arr = column.as_string_view();
-        
-//         let val = column.as_primitive::<UInt64Type>().value(0);
-//         println!("{:?}", val);
-
-//         // let rect_array = GeometryArray::try_from((column.as_ref(), schema.field(0))).unwrap();
-//         // let rect = rect_array.value(0).unwrap();
-//         // let poly = match rect.as_type() {
-//         //     geo_traits::GeometryType::Polygon(poly) => Some(poly),
-//         //     _ => None,
-//         // }
-//         // .unwrap();
-
-//         // let b = rect.into()
-//         // println!("{:?}", poly);
-
-//         // assert!(relative_eq!(rect.min().x(), 112.55836486816406));
-//         // assert!(relative_eq!(rect.min().y(), 37.83236503601074));
-//         // assert!(relative_eq!(rect.max().x(), 112.5584077835083));
-//         // assert!(relative_eq!(rect.max().y(), 37.83240795135498));
-//     }
-// }

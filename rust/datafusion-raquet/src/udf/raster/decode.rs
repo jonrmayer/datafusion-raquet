@@ -1,10 +1,9 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::{Float64Builder, ListBuilder};
-use arrow_array::{ArrayRef, BinaryArray,ListArray};
-use arrow_schema::{DataType, FieldRef, Field};
+use arrow_array::{ArrayRef, BinaryArray, ListArray};
+use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
@@ -12,9 +11,9 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-use rastertile_schema::{Metadata, RasterType};
+use rastertile_schema::Metadata;
 
-use rastertile_rs::{Compression, CompressionFormat, Operations};
+use rastertile_rs::Operations;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct DecodeTile {
@@ -38,10 +37,6 @@ impl Default for DecodeTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for DecodeTile {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "decode_tile"
     }
@@ -79,17 +74,8 @@ impl ScalarUDFImpl for DecodeTile {
 }
 
 fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    // let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
-    // // let new_metadata = Metadata::new(
-    // //     existing_metadata.tile_size,
-    // //     existing_metadata.binary_type,
-    // //     existing_metadata.data_type,
-    // //     CompressionFormat::None,
-    // //     existing_metadata.bands,
-    // // );
-
-     let list_field = Field::new_list_field(DataType::Float64, true);
-     let dt = DataType::List(Arc::new(list_field));
+    let list_field = Field::new_list_field(DataType::Float64, true);
+    let dt = DataType::List(Arc::new(list_field));
     let out_field: Field = Field::new("", dt, true);
 
     Ok(Arc::new(out_field))
@@ -131,7 +117,6 @@ mod tests {
             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
                 .to_string();
 
-
         let ctx =
             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
@@ -149,7 +134,7 @@ mod tests {
         // let sql = "select count(*) from solar;";
 
         let df = ctx.sql(sql).await.unwrap();
-        println!("{:?}",df.count().await);
+        println!("{:?}", df.count().await);
         // df.show().await.unwrap();
     }
 }

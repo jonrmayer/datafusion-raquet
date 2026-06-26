@@ -1,12 +1,11 @@
-use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
-use arrow::datatypes::{Fields, Int8Type};
-use arrow_array::builder::{Float64Builder, UInt64Builder};
-use arrow_array::cast::{AsArray, as_primitive_array, as_string_array};
+
+use arrow_array::builder::{Float64Builder, };
+use arrow_array::cast::{AsArray, };
 use arrow_array::types::Int64Type;
-use arrow_array::{ArrayRef, BinaryArray, Float64Array, PrimitiveArray, StructArray};
+use arrow_array::{ArrayRef, BinaryArray, Float64Array, };
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -19,11 +18,8 @@ use itertools::multizip;
 
 use rastertile_schema::Metadata;
 
-use rastertile_rs::{CompressionFormat, Operations};
+use rastertile_rs::{ Operations};
 
-use quadbin_geo_rs::wkt_to_lonlat;
-
-// use crate::udf::raster::utils::{convert_f32,get_tile,get_pixel};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct RaquetPixel {
@@ -39,30 +35,6 @@ impl RaquetPixel {
             ),
         }
     }
-
-    // fn data_type(&self) -> DataType {
-    //     let values_fields = vec![
-    //         Field::new("min", DataType::Float64, false),
-    //         Field::new("max", DataType::Float64, false),
-    //         Field::new("mean", DataType::Float64, false),
-    //         Field::new("std_dev", DataType::Float64, false),
-    //         Field::new("valid_count", DataType::UInt64, false),
-    //     ];
-    //     DataType::Struct(values_fields.into())
-    // }
-    // fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
-    //     Field::new(name, self.data_type(), nullable)
-    // }
-
-    // fn builders(&self) {
-    //     let b = vec![
-    //         Box::new(Float64Builder::new()),
-    //         Box::new(Float64Builder::new()),
-    //         Box::new(Float64Builder::new()),
-    //         Box::new(Float64Builder::new()),
-    //         Box::new(UInt64Builder::new()),
-    //     ];
-    // }
 }
 
 impl Default for RaquetPixel {
@@ -74,10 +46,6 @@ impl Default for RaquetPixel {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for RaquetPixel {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn name(&self) -> &str {
         "raquet_pixel"
     }
@@ -90,8 +58,7 @@ impl ScalarUDFImpl for RaquetPixel {
         Err(DataFusionError::Internal("return_type".to_string()))
     }
 
-    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
-        // Ok(Arc::new(self.to_field("", false)))
+    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {       
         Ok(Arc::new(Field::new("", DataType::Float64, false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -141,8 +108,7 @@ fn build_cell_array(
     Ok(point_arr)
 }
 #[cfg(test)]
-mod tests {
-    // use datafusion::prelude::SessionContext;
+mod tests {  
 
     use super::*;
     use crate::RaquetTable;
