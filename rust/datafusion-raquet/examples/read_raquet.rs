@@ -1,7 +1,6 @@
 use datafusion::prelude::*;
 use datafusion_raquet::*;
 use std::sync::Arc;
-use std::time::SystemTime;
 use tokio::time::{Duration, Instant};
 
 pub async fn time_async<F, O>(f: F) -> (O, Duration)

@@ -1,5 +1,5 @@
-use geo::{BoundingRect, Geometry, Rect, coord};
-use geojson::GeoJson;
+use geo::{ Geometry, Rect, coord};
+
 use quadbin_rs::Bbox;
 use wkt::ToWkt;
 

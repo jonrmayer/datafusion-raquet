@@ -31,12 +31,12 @@ pub use array::{Array, TypedArray};
 pub use error::{OperationsError, OperationsResult};
 
 use crate::Compression;
-use crate::DataType;
+
 use crate::Metadata;
 
-use ndarray::Array3;
+// use ndarray::Array3;
 
-use nd_array::NdArray;
+// use nd_array::NdArray;
 
 use rolling_stats::Stats;
 

@@ -2,7 +2,7 @@ use arrow_schema::{ArrowError, Field};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use std::str::FromStr;
+
 use std::usize;
 
 use rastertile_rs::Metadata as InnerMetadata;

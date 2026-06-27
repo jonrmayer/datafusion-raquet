@@ -14,7 +14,7 @@ use geo::{
 
 use ndarray::Array2;
 use ndarray::s;
-use num_traits::{Float, Num, NumCast};
+use num_traits::{ Num, NumCast};
 use thiserror::Error;
 
 mod line;

@@ -14,7 +14,7 @@ pub struct TileStatistics {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
     use crate::operations::utils::no_data;
 
     #[test]

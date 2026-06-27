@@ -33,7 +33,7 @@ use arrow_schema::{Field, FieldRef, Schema, SchemaRef};
 use rastertile_schema::error::RasterArrowResult;
 use rastertile_schema::{Metadata as TileMetadata, RasterArrowType, RasterType};
 
-use quadbin_schema::error::QuadbinArrowResult;
+
 use quadbin_schema::{Metadata as QMetadata, QuadbinArrowType, QuadbinType};
 
 use crate::metadata::format::{BandInfo, NoData};

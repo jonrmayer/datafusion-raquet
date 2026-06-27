@@ -7,11 +7,10 @@ mod transforms;
 
 mod base;
 
-use geo::geometry::Point;
-use geo::map_coords::MapCoords;
-use geo::{BoundingRect, Geometry};
-use quadbin_rs::{QuadBin, Tile};
-use std::cmp;
+
+use geo::{ Geometry};
+use quadbin_rs::{ Tile};
+
 use wkt::TryFromWkt;
 
 use crate::tiles::GeoTiles;

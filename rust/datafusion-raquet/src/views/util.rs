@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use datafusion::catalog::TableProvider;
 
-use datafusion::error::{DataFusionError, Result};
 use datafusion_sql::ResolvedTableReference;
 
 use datafusion::execution::SessionState;

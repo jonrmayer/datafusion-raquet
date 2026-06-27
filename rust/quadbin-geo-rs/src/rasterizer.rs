@@ -1,6 +1,6 @@
 use crate::transforms::transform_tile_to_local_coord;
-use euclid::{Transform2D, UnknownUnit};
-use geo::map_coords::MapCoords;
+// use euclid::{Transform2D, UnknownUnit};
+
 use geo::{BoundingRect, Geometry};
 use geo_rasterizer::{MergeAlgorithm, Rasterizer};
 use vaster::*;

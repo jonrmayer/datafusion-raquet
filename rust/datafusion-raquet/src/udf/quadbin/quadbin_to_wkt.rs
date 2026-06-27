@@ -1,11 +1,11 @@
-use std::any::Any;
+
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::StringViewBuilder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, UInt8Type, UInt32Type, UInt64Type};
-use arrow_array::{Array, ArrayRef, GenericListArray, ListArray, StructArray, UInt64Array};
-use arrow_schema::{DataType, Field, FieldRef, Fields};
+use arrow_array::types::{Int64Type, };
+use arrow_array::{ ArrayRef,};
+use arrow_schema::{DataType, Field, FieldRef, };
 
 // use arrow_convert::{
 //     ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
@@ -16,10 +16,10 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-    TypeSignature, Volatility,
+     Volatility,
 };
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::{ RaquetDataFusionResult};
 
 // use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
 use quadbin_geo_rs::GeoFormats;

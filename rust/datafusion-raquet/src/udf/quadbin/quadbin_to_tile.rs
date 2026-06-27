@@ -61,7 +61,7 @@ impl ScalarUDFImpl for QuadBinToTile {
         Err(DataFusionError::Internal("return_type".to_string()))
     }
 
-    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
         Ok(Arc::new(self.to_field("", false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
