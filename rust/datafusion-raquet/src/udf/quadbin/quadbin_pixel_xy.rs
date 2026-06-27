@@ -19,6 +19,7 @@ use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 
 use quadbin_rs::lonlat_to_pixel;
 
+
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToPixelXY {
     signature: Signature,

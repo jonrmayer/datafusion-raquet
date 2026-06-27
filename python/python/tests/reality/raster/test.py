@@ -1,7 +1,7 @@
 import duckdb
-from datafusion import SessionConfig
+# from datafusion import SessionConfig
 from pyarrow import Table
-from datafusion_raquet import RaquetSessionContext
+# from datafusion_raquet import RaquetSessionContext
 from dotenv import load_dotenv
 from pathlib import Path
 import os
@@ -23,40 +23,40 @@ def timer(func):
     total = 0
     return wrapper
 
-config = SessionConfig().with_information_schema(True)
+# config = SessionConfig().with_information_schema(True)
 
-ctx = RaquetSessionContext(config=config)
-ctx.register_all_quadbin()
-ctx.register_rastertile()
-ctx.register_raquet(
-    "solar",
-   "{}spain_solar_ghi.parquet".format(RAQUET_DATA_HOME_DIR),
-)
+# ctx = RaquetSessionContext(config=config)
+# ctx.register_all_quadbin()
+# ctx.register_rastertile()
+# ctx.register_raquet(
+#     "solar",
+#    "{}spain_solar_ghi.parquet".format(RAQUET_DATA_HOME_DIR),
+# )
 
-ctx.register_raquet(
-    "tci",
-    "{}tci_interleaved_gzip.parquet".format(RAQUET_DATA_HOME_DIR),
-)
+# ctx.register_raquet(
+#     "tci",
+#     "{}tci_interleaved_gzip.parquet".format(RAQUET_DATA_HOME_DIR),
+# )
+# con = duckdb.connect(database = ":memory:")
+# sql = """
+# LOAD raquet;
+# """
+# duckdb.sql(sql)
 
-sql = """
-LOAD raquet;
-"""
-duckdb.sql(sql)
 
+# @timer
+# def datafusion_pixel_count():
+#     sql = """
+#     with data as (
+#     SELECT block,native_tile(band_1) as native from solar where block<>0 
+#     limit 1500
+#     ),
+#     out as ( select array_length(native,1) l from data)
 
-@timer
-def datafusion_pixel_count():
-    sql = """
-    with data as (
-    SELECT block,native_tile(band_1) as native from solar where block<>0 
-    limit 1500
-    ),
-    out as ( select array_length(native,1) l from data)
-
-    select sum(l) total_pixels from out
-    """
-    # decoded = ctx.sql(sql)
-    ctx.sql(sql).show()
+#     select sum(l) total_pixels from out
+#     """
+#     # decoded = ctx.sql(sql)
+#     ctx.sql(sql).show()
 
 @timer
 def duckdb_pixel_count():
@@ -76,19 +76,19 @@ def duckdb_pixel_count():
     duckdb.sql(sql).show()
 
 
-@timer
-def datafusion_raster_stats():
-    sql = """
-    with data as (
-    SELECT block,statistics_tile(band_1) as stats from solar where block<>0    
+# @timer
+# def datafusion_raster_stats():
+#     sql = """
+#     with data as (
+#     SELECT block,statistics_tile(band_1) as stats from solar where block<>0    
    
-    ),
-     out as (select block,unnest(stats) l from data)
+#     ),
+#      out as (select block,unnest(stats) l from data)
 
-    select count(*) from out
-    """
-    # decoded = ctx.sql(sql)
-    ctx.sql(sql).show()
+#     select count(*) from out
+#     """
+#     # decoded = ctx.sql(sql)
+#     ctx.sql(sql).show()
 
 @timer
 def duckdb_raster_stats():
@@ -109,9 +109,24 @@ def duckdb_raster_stats():
 
 
 
+@timer
+def duckdb_read_raquet_at():
+
+    sql = """
+    LOAD raquet;
+    select 
+
+
+    block,ST_RasterValue(block, band_1, ST_Point(-3.7038, 40.4168), metadata) AS red
+   
+    FROM read_raquet_at('/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet', -3.7038, 40.4168);
+
+    """
+    duckdb.sql(sql).show()
+
 # duckdb_pixel_count()
 # datafusion_pixel_count()
 
 
 # duckdb_raster_stats()
-datafusion_raster_stats()
+duckdb_read_raquet_at()

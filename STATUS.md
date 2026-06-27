@@ -29,6 +29,7 @@
 | `native_tile(band)` | Decode band bytes to native data type eg []Int16 | `[]Native` |
 | `statistics_tile(band)` | Summary statistics | `STRUCT(valid_count, sum, mean, min, max, stddev)` |
 | `raquet_pixel(band,pixel_x,pixel_y)` | Pixel by x,y | `Float64` |
+| `raquet_value(block,band,wkt)` | Pixel Value by WKT | `Float64` |
 
 ### read_raquet* Functions (File I/O)
 
@@ -36,3 +37,4 @@
 |----------|-------------|
 | `read_raquet(table_name)` | Read all data rows |
 | `read_raquet_metadata(table_name)` | Read metadata row only |
+| `read_raquet_at(table_name,wkt)` | Fetch tiles intersecting with POINT/POLYGON WKT |

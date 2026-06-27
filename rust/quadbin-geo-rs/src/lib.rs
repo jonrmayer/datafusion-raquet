@@ -7,9 +7,8 @@ mod transforms;
 
 mod base;
 
-
-use geo::{ Geometry};
-use quadbin_rs::{ Tile};
+use geo::Geometry;
+use quadbin_rs::Tile;
 
 use wkt::TryFromWkt;
 
@@ -45,6 +44,15 @@ impl GeoCells {
         self.geo.clone()
     }
 
+    pub fn lonlat(&self) -> (f64, f64) {
+        let out = match self.geo().geom() {
+            Geometry::Point(p) => Some((p.x(), p.y())),
+            _ => None,
+        };
+
+        out.unwrap()
+    }
+
     pub fn bounding_cells(&self) -> QuadBinGeoResult<Vec<u64>> {
         let mut result: Vec<u64> = Vec::new();
         let gt = GeoTiles::new(self.geo());
@@ -70,10 +78,21 @@ impl GeoCells {
         let tile_geom =
             transforms::transform_latlon_to_tile_coord(self.geo().geom(), self.geo().resolution());
 
-        let georast = rasterizer::GeoRasterizer::new(tile_geom);
+        let pixels = match tile_geom {
+            Geometry::Point(p) => Some(vec![(p.x(), p.y())]),
+            Geometry::Polygon(poly) => {
+                let geo = Geometry::Polygon(poly);
+                let georast = rasterizer::GeoRasterizer::new(geo);
 
-        let pixels = georast.intersecting();
+                let out = georast.intersecting();
+                Some(out)
+            }
+
+            _ => None,
+        };
+
         result = pixels
+            .unwrap()
             .iter()
             .map(|p| {
                 let new_tile = Tile {

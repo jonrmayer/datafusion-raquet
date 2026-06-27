@@ -1,7 +1,7 @@
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
-use arrow_array::cast::{ as_primitive_array, as_string_array};
+use arrow_array::cast::{as_primitive_array, as_string_array};
 
 use arrow_array::{ArrayRef, Int64Array, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
@@ -9,7 +9,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-     Volatility,
+    Volatility,
 };
 
 use crate::error::RaquetDataFusionResult;
@@ -41,7 +41,6 @@ impl Default for QuadBinPolyFill {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinPolyFill {
-
     fn name(&self) -> &str {
         "quadbin_polyfill"
     }
@@ -94,13 +93,12 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
     let mut builder = ListBuilder::new(values_builder);
 
     for (wkt, resolution) in wkt_array.iter().zip(resolution_array.iter()) {
-        let geocells =
-            GeoCells::new(wkt.unwrap().to_string(), resolution.unwrap() as i8).intersecting_cells()?;
+        let geocells = GeoCells::new(wkt.unwrap().to_string(), resolution.unwrap() as i8)
+            .intersecting_cells()?;
         let bounding = UInt64Array::from(geocells);
 
         builder.append_value(&bounding);
     }
-   
 
     let point_arr = builder.finish();
 
