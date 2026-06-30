@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -29,6 +28,7 @@ use datafusion::error::{DataFusionError, Result as DfResult};
 use datafusion::logical_expr::utils::conjunction;
 use datafusion::logical_expr::{CreateExternalTable, Expr, TableProviderFilterPushDown};
 use datafusion::physical_plan::ExecutionPlan;
+use object_store::ObjectMeta;
 
 use super::config::RaquetTableConfig;
 use crate::tables::config::RaquetTableUrl;
@@ -78,6 +78,26 @@ impl RaquetTable {
             .unwrap();
         PartitionedFile::new_from_meta(object_meta)
     }
+
+    pub async fn get_object_meta(&self) -> ObjectMeta {
+        let (_store, object_meta) = self
+            .table_config()
+            .get_table_url()
+            .get_store_location()
+            .await
+            .unwrap();
+        object_meta
+    }
+
+    pub async fn get_object_store_url(&self) -> ObjectStoreUrl {
+        let object_url = self
+            .table_config()
+            .get_table_url()
+            .get_object_store_url()
+            .await
+            .unwrap();
+        object_url
+    }
 }
 
 #[async_trait]
@@ -118,18 +138,17 @@ impl TableProvider for RaquetTable {
             // that always evaluates to true we can pass to the index
             .unwrap_or_else(|| datafusion::physical_expr::expressions::lit(true));
 
-        let object_store_url = ObjectStoreUrl::parse("file://")?;
+        let object_store_url = self.get_object_store_url().await;
+        let object_meta = self.get_object_meta().await;
 
         let source = Arc::new(ParquetSource::new(self.schema()).with_predicate(predicate));
 
-        let mut file_scan_config_builder = FileScanConfigBuilder::new(object_store_url, source)
-            .with_projection_indices(projection.cloned())?
-            .with_limit(limit);
-        let partitioned_file = self.get_partitioned_file().await;
-        file_scan_config_builder = file_scan_config_builder.with_file(partitioned_file);
-
+        let scan_config_builder = FileScanConfigBuilder::new(object_store_url, source)
+            .with_file(PartitionedFile::new_from_meta(object_meta.clone()))
+            .with_limit(limit)
+            .with_projection(projection.cloned());
         Ok(DataSourceExec::from_data_source(
-            file_scan_config_builder.build(),
+            scan_config_builder.build(),
         ))
     }
 }
@@ -179,5 +198,27 @@ impl TableProviderFactory for RaquetTableFactory {
         let raquet_config = RaquetTableConfig::new(table_url, schema);
         let table_provider = RaquetTable::new(raquet_config);
         Ok(Arc::new(table_provider))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_https() {
+        let path_or_url =
+            "https://storage.googleapis.com/raquet_demo_data/spain_solar_ghi.parquet".to_string();
+        let rt = RaquetTable::from_path(path_or_url).await;
+
+        println!("{:?}", rt.table_config());
+    }
+    #[tokio::test]
+    async fn test_local() {
+        let path_or_url = "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet".to_string();
+        let rt = RaquetTable::from_path(path_or_url).await;
+
+        println!("{:?}", rt.table_config());
     }
 }

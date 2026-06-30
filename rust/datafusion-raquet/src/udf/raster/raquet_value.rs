@@ -5,7 +5,7 @@ use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
 use arrow_array::cast::as_string_array;
-use arrow_array::types::Int64Type;
+use arrow_array::types::UInt64Type;
 use arrow_array::{ArrayRef, BinaryArray, Float64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -36,7 +36,7 @@ impl RaquetValue {
     pub fn new() -> Self {
         Self {
             signature: Signature::exact(
-                vec![DataType::Int64, DataType::Binary, DataType::Utf8],
+                vec![DataType::UInt64, DataType::Binary, DataType::Utf8],
                 Volatility::Immutable,
             ),
         }
@@ -80,7 +80,7 @@ impl ScalarUDFImpl for RaquetValue {
         Some(DOCUMENTATION.get_or_init(|| {
             Documentation::builder(
                 DOC_SECTION_OTHER,
-                "Return a decoded binary from an encoded binary.",
+                "Return a decoded binary   an encoded binary.",
                 "raquet_pixel(band,pixel_x,pixel_y)",
             )
             .with_argument("band", "band value")
@@ -106,7 +106,7 @@ fn build_cell_array(
     qmetadata: QMetadata,
     rmetadata: RMetadata,
 ) -> RaquetDataFusionResult<Float64Array> {
-    let cell_array = arrays[0].as_primitive::<Int64Type>();
+    let cell_array = arrays[0].as_primitive::<UInt64Type>();
     let binary_array = arrays[1]
         .as_any()
         .downcast_ref::<BinaryArray>()
@@ -141,32 +141,34 @@ mod tests {
     use super::*;
     use crate::RaquetTable;
     use crate::udf::quadbin::QuadBinToPixelXY;
-    use crate::views::ReadRaquetAt;
+    use crate::views::{ReadRaquet,ReadRaquetAt};
     use datafusion::prelude::{SessionConfig, SessionContext};
 
     #[tokio::test]
-    async fn test_raquet_pixel() {
+     async fn test_raquet_pixel() {
         let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
+            "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
                 .to_string();
 
         let ctx =
             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
         ctx.register_udf(RaquetValue::default().into());
-        ctx.register_udf(QuadBinToPixelXY::default().into());
+        // ctx.register_udf(QuadBinToPixelXY::default().into());
         ctx.register_udtf("read_raquet_at", Arc::new(ReadRaquetAt {}));
+        ctx.register_udtf("read_raquet", Arc::new(ReadRaquet {}));
         let t = RaquetTable::from_path(path).await;
 
         let _ = ctx.register_table("solar", Arc::new(t));
         // -19.6875,
         // 26.4312280645064
+        //  let sql = r#"select raquet_value(r.block,r.band_1,'POINT(-3.7038 40.4168)') val   read_raquet_at('solar','POINT(-3.7038 40.4168)') r "#;
 
-        let sql = r#"select raquet_value(cast(block as bigint),band_1,'POINT(-3.7038 40.4168)') p from solar where block = 5229757908543078399"#;
+        let sql = r#"select raquet_value(block,band_1,'POINT(-3.7038 40.4168)') val from read_raquet_at('solar','POINT(-3.7038 40.4168)') "#;
         println!("{:?}", sql);
 
         let df = ctx.sql(sql).await.unwrap();
          df.clone().show().await.unwrap();
-        println!("{:?}", df.count().await);
+        // println!("{:?}", df.count().await);
     }
 }

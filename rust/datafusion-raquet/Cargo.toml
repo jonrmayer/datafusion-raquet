@@ -18,7 +18,7 @@ datafusion-sql = { workspace = true }
 
 
 
-object_store = "0.13"
+object_store = { version = "0.13.2", default-features = true, features = ["http"]}
 
 parquet = { workspace = true,features = [
     "arrow",

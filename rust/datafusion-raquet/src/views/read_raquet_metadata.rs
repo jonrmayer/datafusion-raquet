@@ -41,12 +41,14 @@ impl TableFunctionImpl for ReadRaquetMetadata {
             &config_options.catalog.default_catalog,
             &config_options.catalog.default_schema,
         );
-        let Some(table_provider) = block_in_place(|| {
-            Handle::current().block_on(resolve_table_provider(state, &table_ref))
-        })?
-        else {
-            todo!()
-        };
+        // let Some(table_provider) = block_in_place(|| {
+        //     Handle::current().block_on(resolve_table_provider(state, &table_ref))
+        // })?
+        // else {
+        //     todo!()
+        // };
+         let table_provider = resolve_table_provider(state, &table_ref)?;
+
         let table_schema = table_provider.schema();
         let filtered_columns = table_schema
             .fields()

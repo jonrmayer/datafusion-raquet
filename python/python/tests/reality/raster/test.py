@@ -17,7 +17,7 @@ def timer(func):
         result = func(*args, **kwargs)
         duration = time.time() - start
         total += duration
-        print(f"Execution time: {func.__name__} Execution time: {duration}   Total: {total}")
+        print(f"Execution time: {func.__name__} Execution time: {duration*1000}   Total: {total}")
         return result
 
     total = 0
@@ -107,19 +107,76 @@ def duckdb_raster_stats():
     """
     duckdb.sql(sql).show()
 
-
-
 @timer
-def duckdb_read_raquet_at():
+def duckdb_setup():
 
     sql = """
+    PRAGMA disable_object_cache;
+    INSTALL httpfs;
+    INSTALL raquet;
+    LOAD httpfs;
     LOAD raquet;
-    select 
+    """
+    duckdb.sql(sql)
+
+@timer
+def duckdb_read_raquet_metadata():
+
+    sql = """
+    --INSTALL httpfs;
+    --LOAD httpfs;
+    LOAD raquet;
+    select * from read_raquet_metadata('https://storage.googleapis.com/raquet_demo_data/spain_solar_ghi.parquet');
 
 
-    block,ST_RasterValue(block, band_1, ST_Point(-3.7038, 40.4168), metadata) AS red
+   -- block,ST_RasterValue(block, band_1, ST_Point(-3.7038, 40.4168), metadata) AS red
+   
+   -- FROM read_raquet_at('/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet', -3.7038, 40.4168);
+
+    """
+    duckdb.sql(sql).show()
+
+@timer
+def duckdb_remote_read_raquet_at():
+
+    sql = """
+    select
+    ST_RasterValue(block, band_1, ST_Point(-3.7038, 40.4168), metadata) AS red
+   
+    FROM read_raquet_at('https://storage.googleapis.com/raquet_demo_data/spain_solar_ghi.parquet', -3.7038, 40.4168);
+
+    """
+    duckdb.sql(sql).show()
+
+@timer
+def duckdb_local_read_raquet_at():
+
+    sql = """
+    select
+    ST_RasterValue(block, band_1, ST_Point(-3.7038, 40.4168), metadata) AS red
    
     FROM read_raquet_at('/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet', -3.7038, 40.4168);
+
+    """
+    duckdb.sql(sql).show()
+
+@timer
+def duckdb_multiple_read_raquet_at():
+
+    sql = """ 
+    with test as 
+        (
+        select unnest(generate_series(1,10,1)) as output
+        ),
+    result as 
+        (
+        select 
+        test.output,
+        rr.block
+        FROM read_raquet_at('https://storage.googleapis.com/raquet_demo_data/spain_solar_ghi.parquet', -3.7038, 40.4168) rr, test    
+        )
+
+        select * from result
 
     """
     duckdb.sql(sql).show()
@@ -129,4 +186,10 @@ def duckdb_read_raquet_at():
 
 
 # duckdb_raster_stats()
-duckdb_read_raquet_at()
+
+duckdb_setup()
+# duckdb_multiple_read_raquet_at()
+duckdb_local_read_raquet_at()
+
+# duckdb.sql(sql).show()
+# duckdb_read_raquet_at()

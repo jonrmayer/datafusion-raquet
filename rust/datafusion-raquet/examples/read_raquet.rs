@@ -33,10 +33,11 @@ pub async fn test_read_raquet() -> Vec<arrow_array::RecordBatch> {
     
     let sql = r###"
 
-    select * from read_raquet('solar');
+    select * from read_raquet('solar') limit 1;
     "###;
 
     let df = ctx.sql(sql).await.unwrap();
+    df.clone().show().await;
     df.collect().await.unwrap()
 }
 #[tokio::main]

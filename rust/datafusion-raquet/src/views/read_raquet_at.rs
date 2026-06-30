@@ -63,12 +63,28 @@ impl TableFunctionImpl for ReadRaquetAt {
             &config_options.catalog.default_catalog,
             &config_options.catalog.default_schema,
         );
-        let Some(table_provider) = block_in_place(|| {
-            Handle::current().block_on(resolve_table_provider(state, &table_ref))
-        })?
-        else {
-            todo!()
-        };
+
+        let table_provider = resolve_table_provider(state, &table_ref)?;
+
+        
+        // let table_provider = Handle::current().block_on(async {
+        //     let table = table_ref.table.as_ref();
+        //     let schema = state.schema_for_ref(table_ref.clone()).unwrap();
+        //     let table_provider = schema.table(&table).await.unwrap().unwrap();
+        //     table_provider
+        // });
+        //  let Some(table_provider) = block_in_place(|| {
+        //     Handle::current().block_on(resolve_table_provider(state, &table_ref))
+        // })?
+        // else {
+        //     todo!()
+        // };
+        // let Some(table_provider) = spawn_blocking(move || {
+        //     Handle::current().block_on(resolve_table_provider(state, &table_ref))
+        // })?
+        // else {
+        //     todo!()
+        // };
         let table_schema = table_provider.schema();
         let block_metadata =
             Metadata::try_from(table_schema.field_with_name("block")?.as_ref()).unwrap_or_default();

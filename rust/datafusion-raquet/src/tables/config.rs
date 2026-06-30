@@ -18,13 +18,17 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use object_store::http::HttpBuilder;
+use url::Url;
+
 use arrow_schema::{Fields, Schema, SchemaRef};
 use datafusion::datasource::listing::ListingTableUrl;
 use datafusion::error::{DataFusionError, Result as DfResult};
 use object_store::path::Path;
 
+use datafusion::execution::object_store::ObjectStoreUrl;
 use object_store::local::LocalFileSystem;
-use object_store::{ObjectMeta, ObjectStore, ObjectStoreExt};
+use object_store::{ClientOptions, ObjectMeta, ObjectStore, ObjectStoreExt, parse_url_opts};
 
 use crate::RaquetMetadataReader;
 
@@ -83,6 +87,29 @@ pub(crate) enum RaquetTableUrl {
 }
 
 impl RaquetTableUrl {
+    pub(crate) async fn get_object_store_url(&self) -> DfResult<ObjectStoreUrl> {
+        match self {
+            Self::RaquetStore(table_url) => match table_url.scheme() {
+                "file" => {
+                    let object_store_url = ObjectStoreUrl::parse("file://")?;
+                    Ok(object_store_url)
+                }
+                "http" | "https" => {
+                    let object_store_url = ObjectStoreUrl::parse("https://storage.googleapis.com")?;
+                    Ok(object_store_url)
+                }
+                _ => Err(DataFusionError::Execution(format!(
+                    "Unsupported table url scheme {} for raquet store",
+                    table_url.scheme()
+                ))),
+                // let url = Url::parse(table_url.get_url().as_str()).unwrap();
+                // let object_store_url =
+                //     ObjectStoreUrl::parse(url.origin().ascii_serialization()).unwrap();
+
+                // Ok(object_store_url)
+            },
+        }
+    }
     pub(crate) async fn get_store_location(&self) -> DfResult<(Arc<dyn ObjectStore>, ObjectMeta)> {
         match self {
             Self::RaquetStore(table_url) => match table_url.scheme() {
@@ -94,13 +121,31 @@ impl RaquetTableUrl {
                     let meta = object_store.head(&location).await.unwrap();
                     Ok((object_store, meta))
                 }
-                // "s3" => {
-                //     let store = AmazonS3Builder::from_env()
-                //         .with_url(table_url.get_url().as_str())
-                //         .build()?;
-                //     let store = AsyncObjectStore::new(store);
-                //     Ok((Arc::new(store), Some(table_url.prefix().to_string())))
-                // }
+                "http" | "https" => {
+                    let url = Url::parse(table_url.get_url().as_str()).unwrap();
+                    let base_url = format!("{}/{}", url.scheme(), url.domain().unwrap());
+                    let location = Path::from("/".to_owned() + table_url.prefix().as_ref());
+                    let options = ClientOptions::new().with_allow_http(true);
+                    let object_store_url =
+                        ObjectStoreUrl::parse(url.origin().ascii_serialization()).unwrap();
+
+                    let storage_container = HttpBuilder::new()
+                        .with_url(object_store_url.as_str())
+                        .with_client_options(options)
+                        .build()
+                        .unwrap();
+                    let object_store: Arc<dyn ObjectStore> = Arc::new(storage_container);
+                    // let location = Path::from("path/to/blob.parquet");
+
+                    // let options = [("allow_http", "true")];
+                    // let (box_store, location) = parse_url_opts(&url, options)?;
+
+                    // let object_store: Arc<dyn ObjectStore> = Arc::from(box_store);
+                    let meta = object_store.head(&location).await?;
+
+                    Ok((object_store, meta))
+                }
+
                 _ => Err(DataFusionError::Execution(format!(
                     "Unsupported table url scheme {} for raquet store",
                     table_url.scheme()
@@ -117,35 +162,46 @@ impl RaquetTableUrl {
     }
 }
 
-// #[cfg(test)]
-// mod zarr_config_tests {
-//     use super::*;
-//     #[cfg(feature = "icechunk")]
-//     use crate::test_utils::get_local_icechunk_repo;
-//     use crate::test_utils::get_local_zarr_store;
+#[cfg(test)]
+mod tests {
 
-//     #[tokio::test]
-//     async fn schema_inference_tests() {
-//         // local zarr directory.
-//         let (wrapper, schema) = get_local_zarr_store(true, 0.0, "data_for_config_dir").await;
-//         let path = wrapper.get_store_path();
+    use super::*;
 
-//         let table_url = ListingTableUrl::parse(path).unwrap();
-//         let zarr_table_url = ZarrTableUrl::ZarrStore(table_url);
-//         let inferred_schema = zarr_table_url.infer_schema().await.unwrap();
-//         assert_eq!(inferred_schema, schema);
+    #[tokio::test]
+    async fn test() {
+        let path_or_url = "https://storage.googleapis.com/raquet_demo_data/spain_solar_ghi.parquet";
+        let table_url = ListingTableUrl::parse(path_or_url).unwrap();
+        let raquet_url = RaquetTableUrl::RaquetStore(table_url);
+        let lt = raquet_url.get_object_store_url().await.unwrap();
+         let schema = raquet_url.infer_schema().await.unwrap();
+        let table_config = RaquetTableConfig::new(raquet_url, schema);
 
-//         // local icechunk repo.
-//         #[cfg(feature = "icechunk")]
-//         {
-//             let (wrapper, schema) =
-//                 get_local_icechunk_repo(true, 0.0, "data_for_config_repo").await;
-//             let path = wrapper.get_store_path();
+        // let url = Url::parse(lt.get_url().as_str()).unwrap();
+        // let base_url = format!("{}/{}", url.scheme(), url.domain().unwrap());
 
-//             let table_url = ListingTableUrl::parse(path).unwrap();
-//             let zarr_table_url = ZarrTableUrl::IcechunkRepo(table_url);
-//             let inferred_schema = zarr_table_url.infer_schema().await.unwrap();
-//             assert_eq!(inferred_schema, schema);
-//         }
-//     }
-// }
+       println!("{:?} {:?}", table_config, lt);
+    }
+
+    #[tokio::test]
+    async fn test_https() {
+        let path_or_url = "https://storage.googleapis.com/raquet_demo_data/spain_solar_ghi.parquet";
+        let table_url = ListingTableUrl::parse(path_or_url).unwrap();
+        let raquet_url = RaquetTableUrl::RaquetStore(table_url);
+        let schema = raquet_url.infer_schema().await.unwrap();
+        let table_config = RaquetTableConfig::new(raquet_url, schema);
+
+        println!("{:?}", table_config);
+    }
+    #[tokio::test]
+    async fn test_local() {
+        let path_or_url = "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet";
+        let table_url = ListingTableUrl::parse(path_or_url).unwrap();
+        let raquet_url = RaquetTableUrl::RaquetStore(table_url);
+        let lt = raquet_url.get_object_store_url().await.unwrap();
+        let schema = raquet_url.infer_schema().await.unwrap();
+
+        let table_config = RaquetTableConfig::new(raquet_url, schema);
+
+        println!("{:?} {:?}", table_config, lt);
+    }
+}

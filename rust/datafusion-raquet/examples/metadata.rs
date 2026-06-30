@@ -1,7 +1,12 @@
 use datafusion::prelude::*;
 use datafusion_raquet::*;
+
+use datafusion::execution::object_store::ObjectStoreUrl;
+use object_store::ClientOptions;
+use object_store::http::{HttpBuilder, HttpStore};
 use std::sync::Arc;
 use tokio::time::{Duration, Instant};
+use url::Url;
 
 pub async fn time_async<F, O>(f: F) -> (O, Duration)
 where
@@ -14,11 +19,23 @@ where
 }
 
 pub async fn setup() -> SessionContext {
-    let path = "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-        .to_string();
+    let path =
+        "https://storage.googleapis.com/raquet_demo_data/spain_solar_ghi.parquet".to_string();
+    let url = Url::parse("https://storage.googleapis.com").unwrap();
+    let options = ClientOptions::new().with_allow_http(true);
+    let object_store_url = ObjectStoreUrl::parse(url.origin().ascii_serialization()).unwrap();
+    //  let path = "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet".to_string();
+    let storage_container = HttpBuilder::new()
+        .with_url(object_store_url.as_str())
+        .with_client_options(options)
+        .build()
+        .unwrap();
 
     let mut ctx =
         SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+
+    ctx.runtime_env()
+        .register_object_store(&url, Arc::new(storage_container));
 
     datafusion_raquet::register(&mut ctx);
 
@@ -28,20 +45,21 @@ pub async fn setup() -> SessionContext {
     ctx
 }
 
-pub async fn test_metadata() -> Vec<arrow_array::RecordBatch> {
-    let ctx = setup().await;
-    
+pub async fn test_metadata(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
     let sql = r###"
 
     select * from read_raquet_metadata('solar');
     "###;
 
     let df = ctx.sql(sql).await.unwrap();
+
     df.collect().await.unwrap()
 }
 #[tokio::main]
 async fn main() {
-    let (out, duration) = time_async(test_metadata()).await;
-    println!("{:?} {:?}",out.len(), duration);
-   
+    let (ctx, duration) = time_async(setup()).await;
+    println!("setup {:?}", duration);
+
+    let (_rb, duration) = time_async(test_metadata(ctx)).await;
+    println!("metadata {:?}", duration);
 }
