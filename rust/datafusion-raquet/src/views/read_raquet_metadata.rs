@@ -18,7 +18,6 @@ use datafusion::common::{ScalarValue, plan_err};
 use datafusion::datasource::provider_as_source;
 
 use datafusion::logical_expr::{LogicalPlanBuilder, col, lit};
-use tokio::{runtime::Handle, task::block_in_place};
 
 use crate::views::util::resolve_table_provider;
 
@@ -41,13 +40,8 @@ impl TableFunctionImpl for ReadRaquetMetadata {
             &config_options.catalog.default_catalog,
             &config_options.catalog.default_schema,
         );
-        // let Some(table_provider) = block_in_place(|| {
-        //     Handle::current().block_on(resolve_table_provider(state, &table_ref))
-        // })?
-        // else {
-        //     todo!()
-        // };
-         let table_provider = resolve_table_provider(state, &table_ref)?;
+
+        let table_provider = resolve_table_provider(state, &table_ref)?;
 
         let table_schema = table_provider.schema();
         let filtered_columns = table_schema

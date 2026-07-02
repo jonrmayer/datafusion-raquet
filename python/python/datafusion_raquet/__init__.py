@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from datafusion import SessionContext,udf
+from datafusion import SessionContext,udf, udtf
 
 from ._internal import *
 from ._internal import ___version
 
-from datafusion_raquet.table_providers import RaquetTable
+
+
 
 __version__: str = ___version()
 
@@ -19,13 +20,21 @@ class RaquetSessionContext(SessionContext):
     """SessionContext with convenience methods for Raquet tables."""
 
     def register_raquet(self, name: str, path: str) -> None:
+        from . import table_providers
         """Register a Raquet store as a table.
 
         Args:
             name: Table name to register
             path: Path to the Raquet store (local path or s3:// URL)
         """
-        self.register_table(name, RaquetTable(path))
+        self.register_table(name, table_providers.RaquetTable(path))
+
+    def register_views(self) -> None:
+        from . import view_tables
+        table_func = view_tables.ReadRaquetView()
+        table_udtf = udtf(table_func, "read_raquet")
+       
+        self.register_udtf(table_udtf)
 
     def register_rastertile(self) -> None:
         """
@@ -65,4 +74,4 @@ class RaquetSessionContext(SessionContext):
   
 
 
-__all__ = ["RaquetSessionContext", "RaquetTable"]
+__all__ = ["RaquetSessionContext"]

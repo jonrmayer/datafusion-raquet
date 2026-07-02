@@ -81,26 +81,16 @@ impl ScalarUDFImpl for RaquetValue {
             Documentation::builder(
                 DOC_SECTION_OTHER,
                 "Return a decoded binary   an encoded binary.",
-                "raquet_pixel(band,pixel_x,pixel_y)",
+                "raquet_value(block,band_1,'POINT(-3.7038 40.4168)')",
             )
+            .with_argument("block", "block value")
             .with_argument("band", "band value")
-            .with_argument("pixel_x", "pixel_x value")
-            .with_argument("pixel_y", "pixel_y value")
+            .with_argument("wkt", "wkt value")
             .build()
         }))
     }
 }
-// fn geocells(metadata: QMetadata, wkt: &String) -> RaquetDataFusionResult<Expr> {
-//     let resolution = metadata.max_zoom().clone();
-//     let geolist = GeoCells::new(wkt.clone(), resolution as i8)
-//         .intersecting_cells()?
-//         .iter()
-//         .map(|x| lit(*x))
-//         .collect();
-//     let expr = col("block").in_list(geolist, false);
 
-//     Ok(expr)
-// }
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
     qmetadata: QMetadata,
@@ -117,7 +107,7 @@ fn build_cell_array(
     let mut out_builder = Float64Builder::new();
     let ops: Operations = Operations::new(rmetadata.inner());
 
-    for (cell, binary, wkt) in multizip((cell_array, binary_array, wkt_array)) {
+    for (_cell, binary, wkt) in multizip((cell_array, binary_array, wkt_array)) {
         let lonlat = wkt_to_lonlat(wkt.unwrap().to_string());
        
         let pixel = lonlat_to_pixel(
@@ -140,7 +130,7 @@ mod tests {
 
     use super::*;
     use crate::RaquetTable;
-    use crate::udf::quadbin::QuadBinToPixelXY;
+
     use crate::views::{ReadRaquet,ReadRaquetAt};
     use datafusion::prelude::{SessionConfig, SessionContext};
 

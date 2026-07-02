@@ -1,6 +1,7 @@
 mod table_providers;
 mod udf;
 mod utils;
+mod view_tables;
 
 pub use crate::utils::get_tokio_runtime;
 
@@ -53,6 +54,13 @@ fn _internal(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     py.import(intern!(py, "sys"))?
         .getattr(intern!(py, "modules"))?
         .set_item("datafusion_raquet.table_providers", table_providers_mod)?;
+
+    let views_mod = wrap_pymodule!(view_tables::view_tables)(py);
+    m.add_submodule(views_mod.bind(py))?;
+    py.import(intern!(py, "sys"))?
+        .getattr(intern!(py, "modules"))?
+        .set_item("datafusion_raquet.view_tables", views_mod)?;
+
 
     Ok(())
 }

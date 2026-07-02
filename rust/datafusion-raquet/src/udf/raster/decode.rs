@@ -121,20 +121,14 @@ mod tests {
             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
         ctx.register_udf(DecodeTile::default().into());
-        // ctx.register_udf(DecodeTile::default().into());
+        
         let t = RaquetTable::from_path(path).await;
 
-        let _ = ctx.register_table("solar", Arc::new(t));
-        // let tci = ctx.table_provider("tci").await.unwrap();
-
-        // let tci_schema = tci.schema();
-        // println!("{:?}", tci_schema);
+        let _ = ctx.register_table("solar", Arc::new(t));      
 
         let sql = "select decode_tile(band_1) from solar where block<>0   ;";
-        // let sql = "select count(*) from solar;";
-
         let df = ctx.sql(sql).await.unwrap();
         println!("{:?}", df.count().await);
-        // df.show().await.unwrap();
+      
     }
 }

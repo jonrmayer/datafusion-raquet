@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 from pathlib import Path
 import time
 
-dotenv_path = Path('/home/jonrm/projects/git/datafusion-raquet/.env')
-RAQUET_DATA_HOME_DIR = os.getenv('RAQUET_DATA_HOME_DIR')
+# dotenv_path = Path('/home/jonrm/projects/git/datafusion-raquet/.env')
+# RAQUET_DATA_HOME_DIR = os.getenv('RAQUET_DATA_HOME_DIR')
 
 
 
@@ -37,7 +37,7 @@ ctx = RaquetSessionContext(config=config)
 ctx.register_all_quadbin()
 ctx.register_raquet(
     "solar",
-    "{}spain_solar_ghi.parquet".format(RAQUET_DATA_HOME_DIR),
+    "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet",
 )
 
 sql = """
@@ -504,7 +504,7 @@ def performance_duckdb_quadbin_to_bbox():
     sql = """ 
     with test as 
     (
-    select unnest(generate_series(1,1000,1)) as output
+    select unnest(generate_series(1,1000000,1)) as output
     ),
     result as 
     (
@@ -523,7 +523,7 @@ def performance_datafusion_quadbin_to_bbox():
 
     with test as 
     (
-    select unnest(generate_series(1,1000)) as output
+    select unnest(generate_series(1,1000000)) as output
     ),
     test_input as (
     select output,0.0 a, 0.0 b, 4 c, 256 d from test
@@ -541,8 +541,8 @@ def performance_datafusion_quadbin_to_bbox():
 # performance_duckdb_quadbin_pixel_xy()
 # performance_datafusion_quadbin_pixel_xy()
 
-# performance_duckdb_quadbin_to_bbox()
-# performance_datafusion_quadbin_to_bbox()
+performance_duckdb_quadbin_to_bbox()
+performance_datafusion_quadbin_to_bbox()
 
 
 
