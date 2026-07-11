@@ -1,5 +1,6 @@
 
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use arrow_array::builder::StringViewBuilder;
 use arrow_array::cast::AsArray;
@@ -47,6 +48,9 @@ impl Default for QuadBinToWKT {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToWKT {
+      fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_to_wkt"
     }

@@ -1,5 +1,5 @@
 use std::sync::{Arc, OnceLock};
-
+use std::any::Any;
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
 use arrow_array::types::Int64Type;
@@ -44,6 +44,9 @@ impl Default for QuadBinToParent {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToParent {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_to_parent"
     }

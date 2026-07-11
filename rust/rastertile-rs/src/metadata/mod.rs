@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use std::fmt;
 use std::str::FromStr;
 use std::usize;
 
@@ -18,7 +19,28 @@ pub enum BinaryType {
     Interleaved,
 }
 
+impl fmt::Display for BinaryType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BinaryType::Separated => write!(f, "Separated"),
+            BinaryType::Interleaved => write!(f, "Interleaved"),
+        }
+    }
+}
 
+impl FromStr for BinaryType {
+    type Err = MetadataError;
+    fn from_str(s: &str) -> MetadataResult<Self> {
+        let parser: Option<BinaryType> = match s {
+            "Separated" => Some(BinaryType::Separated),
+            "Interleaved" => Some(BinaryType::Interleaved),
+
+            _ => todo!(),
+        };
+
+        Ok(parser.unwrap())
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
 pub enum CompressionFormat {
@@ -31,6 +53,17 @@ pub enum CompressionFormat {
     Jpeg,
     /// WebP format
     WebP,
+}
+
+impl fmt::Display for CompressionFormat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CompressionFormat::Gzip => write!(f, "gzip"),
+            CompressionFormat::Jpeg => write!(f, "jpeg"),
+            CompressionFormat::WebP => write!(f, "webp"),
+            CompressionFormat::None => write!(f, "none"),
+        }
+    }
 }
 
 impl FromStr for CompressionFormat {
@@ -47,7 +80,6 @@ impl FromStr for CompressionFormat {
     }
 }
 
-
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Metadata {
     pub tile_size: usize,
@@ -62,9 +94,9 @@ impl Metadata {
     /// Creates a new [`Metadata`] object.
     pub fn new(
         tile_size: usize,
-        binary_type: BinaryType,       
+        binary_type: BinaryType,
         data_type: DataType,
-         no_data: String,
+        no_data: String,
         compression: CompressionFormat,
         bands: Option<Vec<String>>,
     ) -> Self {
@@ -74,6 +106,23 @@ impl Metadata {
             data_type,
             no_data,
             compression,
+            bands,
+        }
+    }
+    pub fn new_from_strings(
+        tile_size_str: String,
+        binary_type_str: String,
+        data_type_str: String,
+        no_data: String,
+        compression_str: String,
+        bands: Option<Vec<String>>,
+    ) -> Self {
+        Self {
+            tile_size: tile_size_str.parse().expect("Could not convert"),
+            binary_type: BinaryType::from_str(&binary_type_str).unwrap(),
+            data_type: DataType::from_str(&data_type_str).unwrap(),
+            no_data,
+            compression: CompressionFormat::from_str(&compression_str).unwrap(),
             bands,
         }
     }

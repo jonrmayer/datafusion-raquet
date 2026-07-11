@@ -1,4 +1,5 @@
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use arrow_array::builder::Int32Builder;
 use arrow_array::cast::AsArray;
@@ -60,6 +61,9 @@ impl Default for QuadBinToPixelXY {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToPixelXY {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_pixel_xy"
     }

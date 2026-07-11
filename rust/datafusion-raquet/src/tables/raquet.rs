@@ -17,6 +17,7 @@
 
 use std::fmt::Debug;
 use std::sync::Arc;
+use std::any::Any;
 
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
@@ -102,6 +103,9 @@ impl RaquetTable {
 
 #[async_trait]
 impl TableProvider for RaquetTable {
+        fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn schema(&self) -> SchemaRef {
         self.table_config.get_schema_ref()
     }

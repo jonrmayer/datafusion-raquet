@@ -1,4 +1,5 @@
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
@@ -40,6 +41,9 @@ impl Default for QuadBinKRing {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinKRing {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn name(&self) -> &str {
         "quadbin_kring"

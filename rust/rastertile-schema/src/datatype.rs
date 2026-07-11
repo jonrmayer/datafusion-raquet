@@ -8,10 +8,8 @@ use arrow_schema::{DataType, Field};
 
 use crate::Metadata;
 
-// use rastertile_rs::Metadata;
-
 use crate::error::{RasterArrowError, RasterArrowResult};
-use crate::{ RasterType,RasterFloat32Type};
+use crate::{ RasterType};
 
 /// Geospatial data types supported by GeoArrow.
 ///
@@ -30,7 +28,7 @@ pub enum RasterArrowType {
     /// A Raster stored in a `BinaryViewArray`.
     RasterView(RasterType),
 
-    RasterF32(RasterFloat32Type),
+  
 }
 
 impl From<RasterArrowType> for DataType {
@@ -43,8 +41,7 @@ impl RasterArrowType {
     /// Returns the [Metadata] contained within this type.
     pub fn metadata(&self) -> &Arc<Metadata> {
         use RasterArrowType::*;
-        match self {
-            RasterF32(t) => t.metadata(),
+        match self {           
             Raster(t) | LargeRaster(t) | RasterView(t)  => t.metadata(),
            
         }
@@ -70,7 +67,7 @@ impl RasterArrowType {
             Raster(_) => DataType::Binary,
             LargeRaster(_) => DataType::LargeBinary,
             RasterView(_) => DataType::BinaryView,
-            RasterF32(t) => t.data_type(),
+            
         }
     }
 
@@ -82,7 +79,7 @@ impl RasterArrowType {
             Raster(t) | LargeRaster(t) | RasterView(t) => {
                 Field::new(name, self.to_data_type(), nullable).with_extension_type(t.clone())
             },
-            RasterF32(t) => t.to_field(name, nullable)
+           
            
         }
     }
@@ -97,7 +94,7 @@ impl RasterArrowType {
             Raster(t) => Raster(t.with_metadata(meta)),
             LargeRaster(t) => LargeRaster(t.with_metadata(meta)),
             RasterView(t) => RasterView(t.with_metadata(meta)),
-            RasterF32(t) => RasterF32(t.with_metadata(meta)),
+           
           
         }
     }
@@ -114,11 +111,8 @@ impl RasterArrowType {
             ))?;
 
         use RasterArrowType::*;
-        let data_type = match extension_name {
-            RasterFloat32Type::NAME => RasterF32(field.try_extension_type()?),
-
-            RasterType::NAME => match field.data_type() {
-                
+        let data_type = match extension_name {           
+            RasterType::NAME => match field.data_type() {                
                 DataType::Binary => Raster(field.try_extension_type()?),
                 DataType::LargeBinary => LargeRaster(field.try_extension_type()?),
                 DataType::BinaryView => RasterView(field.try_extension_type()?),
@@ -161,17 +155,16 @@ impl RasterArrowType {
 }
 
 
-macro_rules! impl_into_geoarrowtype {
-    ($source_type:ident, $variant:expr) => {
-        impl From<$source_type> for RasterArrowType {
-            fn from(value: $source_type) -> Self {
-                $variant(value)
-            }
-        }
-    };
-}
+// macro_rules! impl_into_geoarrowtype {
+//     ($source_type:ident, $variant:expr) => {
+//         impl From<$source_type> for RasterArrowType {
+//             fn from(value: $source_type) -> Self {
+//                 $variant(value)
+//             }
+//         }
+//     };
+// }
 
-impl_into_geoarrowtype!(RasterFloat32Type, RasterArrowType::RasterF32);
 
 impl TryFrom<&Field> for RasterArrowType {
     type Error = RasterArrowError;

@@ -1,5 +1,5 @@
 use std::sync::{Arc, OnceLock};
-
+use std::any::Any;
 use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
 use arrow_array::types::Int64Type;
@@ -45,6 +45,10 @@ impl Default for QuadBinToBBOXMercator {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToBBOXMercator {
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_to_bbox_mercator"
     }

@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use std::fmt;
 use std::str::FromStr;
 
 mod error;
 
-pub use error::{DataTypeResult,DataTypeError};
+pub use error::{DataTypeError, DataTypeResult};
 
 /// Supported numeric data types for array elements.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -42,6 +43,24 @@ impl DataType {
             DataType::UInt16 | DataType::Int16 => 2,
             DataType::UInt32 | DataType::Int32 | DataType::Float32 => 4,
             DataType::UInt64 | DataType::Int64 | DataType::Float64 => 8,
+        }
+    }
+}
+
+impl fmt::Display for DataType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            DataType::UInt8 => write!(f, "uint8"),
+            DataType::Int8 => write!(f, "int8"),
+            DataType::UInt16 => write!(f, "uint16"),
+            DataType::Int16 => write!(f, "int16"),
+            DataType::UInt32 => write!(f, "uint32"),
+            DataType::Int32 => write!(f, "int32"),
+            DataType::UInt64 => write!(f, "uint64"),
+            DataType::Int64 => write!(f, "int64"),
+            DataType::Float32 => write!(f, "float32"),
+            DataType::Float64 => write!(f, "float64"),
+            DataType::Bool => write!(f, "bool"),
         }
     }
 }

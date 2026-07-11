@@ -1,4 +1,5 @@
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use arrow_array::builder::UInt8Builder;
 use arrow_array::cast::AsArray;
@@ -38,6 +39,10 @@ impl Default for QuadBinResolution {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinResolution {
+
+        fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_resolution"
     }

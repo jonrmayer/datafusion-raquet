@@ -6,110 +6,111 @@ use arrow_schema::extension::ExtensionType;
 use arrow_schema::{ArrowError, DataType, Field};
 
 use crate::error::{RasterArrowError, RasterArrowResult};
+use crate::RasterArrowType;
 
-macro_rules! define_basic_type {
-    (
-        $(#[$($attrss:meta)*])*
-        $struct_name:ident
-    ) => {
-        $(#[$($attrss)*])*
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-        pub struct $struct_name {
-            metadata: Arc<Metadata>,
-        }
+// macro_rules! define_basic_type {
+//     (
+//         $(#[$($attrss:meta)*])*
+//         $struct_name:ident
+//     ) => {
+//         $(#[$($attrss)*])*
+//         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+//         pub struct $struct_name {
+//             metadata: Arc<Metadata>,
+//         }
 
-        impl $struct_name {
-            /// Construct a new type from parts.
-            pub fn new( metadata: Arc<Metadata>) -> Self {
-                Self {
-                    metadata,
-                }
-            }
+//         impl $struct_name {
+//             /// Construct a new type from parts.
+//             pub fn new( metadata: Arc<Metadata>) -> Self {
+//                 Self {
+//                     metadata,
+//                 }
+//             }
 
 
-            /// Change the underlying [`Metadata`]
-            pub fn with_metadata(self, metadata: Arc<Metadata>) -> Self {
-                Self { metadata, ..self }
-            }
+//             /// Change the underlying [`Metadata`]
+//             pub fn with_metadata(self, metadata: Arc<Metadata>) -> Self {
+//                 Self { metadata, ..self }
+//             }
 
-            /// Retrieve the underlying [`Metadata`]
-            pub fn metadata(&self) -> &Arc<Metadata> {
-                &self.metadata
-            }
+//             /// Retrieve the underlying [`Metadata`]
+//             pub fn metadata(&self) -> &Arc<Metadata> {
+//                 &self.metadata
+//             }
 
-            /// Convert this type to a [`Field`], retaining extension metadata.
-            pub fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
-                Field::new(name, self.data_type(), nullable).with_extension_type(self.clone())
-            }
+//             /// Convert this type to a [`Field`], retaining extension metadata.
+//             pub fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
+//                 Field::new(name, self.data_type(), nullable).with_extension_type(self.clone())
+//             }
 
-            /// Extract into components
-            pub fn into_inner(self) -> Arc<Metadata> {
-                ( self.metadata)
-            }
-        }
-    };
-}
+//             /// Extract into components
+//             pub fn into_inner(self) -> Arc<Metadata> {
+//                 ( self.metadata)
+//             }
+//         }
+//     };
+// }
 
-define_basic_type!(
-    /// A GeoArrow Point type.
-    ///
-    /// Refer to the [GeoArrow
-    /// specification](https://github.com/geoarrow/geoarrow/blob/main/format.md#point).
-    RasterFloat32Type
-);
+// define_basic_type!(
+//     /// A GeoArrow Point type.
+//     ///
+//     /// Refer to the [GeoArrow
+//     /// specification](https://github.com/geoarrow/geoarrow/blob/main/format.md#point).
+//     RasterFloat32Type
+// );
 
-impl RasterFloat32Type {
-    pub fn data_type(&self) -> DataType {
-        let values_field = Field::new("", DataType::Float32, false);
-        DataType::List(Arc::new(values_field))
-    }
-}
+// impl RasterFloat32Type {
+//     pub fn data_type(&self) -> DataType {
+//         let values_field = Field::new("", DataType::Float32, false);
+//         DataType::List(Arc::new(values_field))
+//     }
+// }
 
-impl ExtensionType for RasterFloat32Type {
-    const NAME: &'static str = "rasterarrow.f32";
+// impl ExtensionType for RasterFloat32Type {
+//     const NAME: &'static str = "rasterarrow.f32";
 
-    type Metadata = Arc<Metadata>;
+//     type Metadata = Arc<Metadata>;
 
-    fn metadata(&self) -> &Self::Metadata {
-        self.metadata()
-    }
+//     fn metadata(&self) -> &Self::Metadata {
+//         self.metadata()
+//     }
 
-    fn serialize_metadata(&self) -> Option<String> {
-        self.metadata.serialize()
-    }
+//     fn serialize_metadata(&self) -> Option<String> {
+//         self.metadata.serialize()
+//     }
 
-    fn deserialize_metadata(metadata: Option<&str>) -> Result<Self::Metadata, ArrowError> {
-        let m = Metadata::deserialize(metadata).unwrap();
-        Ok(Arc::new(m))
-    }
+//     fn deserialize_metadata(metadata: Option<&str>) -> Result<Self::Metadata, ArrowError> {
+//         let m = Metadata::deserialize(metadata).unwrap();
+//         Ok(Arc::new(m))
+//     }
 
-    fn supports_data_type(&self, _data_type: &DataType) -> Result<(), ArrowError> {
-        // let (coord_type, dim) = parse_point(data_type)?;
-        // if coord_type != self.coord_type {
-        //     return Err(ArrowError::SchemaError(format!(
-        //         "Expected coordinate type {:?}, but got {:?}",
-        //         self.coord_type, coord_type
-        //     )));
-        // }
-        // if dim != self.dim {
-        //     return Err(ArrowError::SchemaError(format!(
-        //         "Expected dimension {:?}, but got {:?}",
-        //         self.dim, dim
-        //     )));
-        // }
-        Ok(())
-    }
+//     fn supports_data_type(&self, _data_type: &DataType) -> Result<(), ArrowError> {
+//         // let (coord_type, dim) = parse_point(data_type)?;
+//         // if coord_type != self.coord_type {
+//         //     return Err(ArrowError::SchemaError(format!(
+//         //         "Expected coordinate type {:?}, but got {:?}",
+//         //         self.coord_type, coord_type
+//         //     )));
+//         // }
+//         // if dim != self.dim {
+//         //     return Err(ArrowError::SchemaError(format!(
+//         //         "Expected dimension {:?}, but got {:?}",
+//         //         self.dim, dim
+//         //     )));
+//         // }
+//         Ok(())
+//     }
 
-    fn try_new(_data_type: &DataType, metadata: Self::Metadata) -> Result<Self, ArrowError> {
-        // match data_type {
+//     fn try_new(_data_type: &DataType, metadata: Self::Metadata) -> Result<Self, ArrowError> {
+//         // match data_type {
 
-        // }
-        Ok(Self {
+//         // }
+//         Ok(Self {
            
-            metadata,
-        })
-    }
-}
+//             metadata,
+//         })
+//     }
+// }
 
 // use crate::metadata::Metadata;
 /// A GeoArrow WKB type.
@@ -136,50 +137,52 @@ impl RasterType {
         &self.metadata
     }
 
-    pub fn to_data_type(&self) -> DataType {
-        DataType::Binary
-    }
+    // pub fn to_data_type(&self) -> DataType {
+    //     use RasterArrowType::*;
+    //     match &Self { metadata: () }
+    //     DataType::Binary
+    // }
 
-    pub fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
-        Field::new(name, self.to_data_type(), nullable).with_extension_type(self.clone())
-    }
+    // pub fn to_field<N: Into<String>>(&self, name: N, nullable: bool) -> Field {
+    //     Field::new(name, self.to_data_type(), nullable).with_extension_type(self.clone())
+    // }
 
-    pub fn from_extension_field(field: &Field) -> RasterArrowResult<Self> {
-        let extension_name = field.extension_type_name().ok_or(RasterArrowError::InvalidGeoArrow(
-                "Expected rasterarrow extension metadata, but found none, and `require_rasterarrow_metadata` is `true`.".to_string(),
-            ))?;
+    // pub fn from_extension_field(field: &Field) -> RasterArrowResult<Self> {
+    //     let extension_name = field.extension_type_name().ok_or(RasterArrowError::InvalidGeoArrow(
+    //             "Expected rasterarrow extension metadata, but found none, and `require_rasterarrow_metadata` is `true`.".to_string(),
+    //         ))?;
 
-        let data_type = match extension_name {
-            RasterType::NAME => match field.data_type() {
-                DataType::BinaryView => field.try_extension_type()?,
-                _ => {
-                    return Err(RasterArrowError::InvalidGeoArrow(format!(
-                        "Expected binary type for a field with extension name 'geoarrow.wkb', got '{}'",
-                        field.data_type()
-                    )));
-                }
-            },
-            name => {
-                return Err(RasterArrowError::InvalidGeoArrow(format!(
-                    "Expected a GeoArrow extension name, got an Arrow extension type with name: '{name}'.",
-                )));
-            }
-        };
-        Ok(data_type)
-    }
+    //     let data_type = match extension_name {
+    //         RasterType::NAME => match field.data_type() {
+    //             DataType::BinaryView => field.try_extension_type()?,
+    //             _ => {
+    //                 return Err(RasterArrowError::InvalidGeoArrow(format!(
+    //                     "Expected binary type for a field with extension name 'geoarrow.wkb', got '{}'",
+    //                     field.data_type()
+    //                 )));
+    //             }
+    //         },
+    //         name => {
+    //             return Err(RasterArrowError::InvalidGeoArrow(format!(
+    //                 "Expected a GeoArrow extension name, got an Arrow extension type with name: '{name}'.",
+    //             )));
+    //         }
+    //     };
+    //     Ok(data_type)
+    // }
 
-    pub fn from_arrow_field(field: &Field) -> RasterArrowResult<Self> {
-        if let Ok(geo_type) = Self::from_extension_field(field) {
-            Ok(geo_type)
-        } else {
-            let metadata = Arc::new(Metadata::try_from(field)?);
-            let data_type = match field.data_type() {
-                DataType::BinaryView => RasterType::new(metadata),
-                _ => return Err(RasterArrowError::InvalidGeoArrow("Only FixedSizeList, Struct, Binary, LargeBinary, BinaryView, String, LargeString, and StringView arrays are unambigously typed for a GeoArrow type and can be used without extension metadata.\nEnsure your array input has GeoArrow metadata.".to_string())),
-             };
-            Ok(data_type)
-        }
-    }
+    // pub fn from_arrow_field(field: &Field) -> RasterArrowResult<Self> {
+    //     if let Ok(geo_type) = Self::from_extension_field(field) {
+    //         Ok(geo_type)
+    //     } else {
+    //         let metadata = Arc::new(Metadata::try_from(field)?);
+    //         let data_type = match field.data_type() {
+    //             DataType::BinaryView => RasterType::new(metadata),
+    //             _ => return Err(RasterArrowError::InvalidGeoArrow("Only FixedSizeList, Struct, Binary, LargeBinary, BinaryView, String, LargeString, and StringView arrays are unambigously typed for a GeoArrow type and can be used without extension metadata.\nEnsure your array input has GeoArrow metadata.".to_string())),
+    //          };
+    //         Ok(data_type)
+    //     }
+    // }
 }
 
 impl ExtensionType for RasterType {
@@ -215,19 +218,19 @@ impl ExtensionType for RasterType {
     }
 }
 
-impl From<RasterType> for DataType {
-    fn from(value: RasterType) -> Self {
-        value.to_data_type()
-    }
-}
+// impl From<RasterType> for DataType {
+//     fn from(value: RasterType) -> Self {
+//         value.to_data_type()
+//     }
+// }
 
-impl TryFrom<&Field> for RasterType {
-    type Error = RasterArrowError;
+// impl TryFrom<&Field> for RasterType {
+//     type Error = RasterArrowError;
 
-    fn try_from(field: &Field) -> RasterArrowResult<Self> {
-        Self::from_extension_field(field)
-    }
-}
+//     fn try_from(field: &Field) -> RasterArrowResult<Self> {
+//         Self::from_extension_field(field)
+//     }
+// }
 
 // impl TryFrom<&Field> for Metadata {
 //     type Error = ArrowError;

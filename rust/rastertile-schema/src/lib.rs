@@ -12,6 +12,6 @@ mod r#type;
 
 pub use metadata::{Metadata};
 
-pub use r#type::{RasterType,RasterFloat32Type};
+pub use r#type::{RasterType};
 
 pub use datatype::RasterArrowType;

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::UInt64Builder;
@@ -41,6 +42,9 @@ impl Default for QuadBinFromLonLat {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinFromLonLat {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_from_lonlat"
     }

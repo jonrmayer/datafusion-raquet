@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -45,6 +46,9 @@ impl RaquetFormatFactory {
 }
 
 impl FileFormatFactory for RaquetFormatFactory {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn create(
         &self,
         state: &dyn Session,
@@ -73,8 +77,6 @@ impl FileFormatFactory for RaquetFormatFactory {
     fn default(&self) -> Arc<dyn FileFormat> {
         Arc::new(RaquetFormat::default())
     }
-
-   
 }
 
 impl GetExt for RaquetFormatFactory {
@@ -124,7 +126,10 @@ impl RaquetFormat {
 
 #[async_trait]
 impl FileFormat for RaquetFormat {
-   
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn get_ext(&self) -> String {
         self.inner.get_ext()
     }
@@ -170,7 +175,7 @@ impl FileFormat for RaquetFormat {
         conf: FileScanConfig,
     ) -> Result<Arc<dyn ExecutionPlan>> {
         let source = conf.file_source().clone();
-        let geoparquet_source = source.downcast_ref::<RaquetSource>().unwrap();
+        let geoparquet_source = source.as_any().downcast_ref::<RaquetSource>().unwrap();
         let parquet_source = &geoparquet_source.inner;
 
         let file_scan_config_builder =
@@ -194,7 +199,7 @@ impl FileFormat for RaquetFormat {
         let parquet_source = self.inner.file_source(table_schema);
         // safe to do unwrap here because the inner type is ParquetSource for sure
         let inner = parquet_source
-           
+            .as_any()
             .downcast_ref::<ParquetSource>()
             .unwrap();
         Arc::new(RaquetSource {

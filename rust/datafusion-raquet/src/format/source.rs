@@ -1,5 +1,6 @@
 use std::fmt::Formatter;
 use std::sync::Arc;
+use std::any::Any;
 
 use datafusion::config::ConfigOptions;
 use datafusion::datasource::physical_plan::{FileScanConfig, FileSource};
@@ -24,6 +25,9 @@ impl From<RaquetSource> for Arc<dyn FileSource> {
 }
 
 impl FileSource for RaquetSource {
+     fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn create_file_opener(
         &self,
         object_store: Arc<dyn object_store::ObjectStore>,
@@ -71,7 +75,7 @@ impl FileSource for RaquetSource {
         let projected_parquet_source = self.inner.try_pushdown_projection(projection)?;
         if let Some(dyn_file_source) = projected_parquet_source {
             let inner = dyn_file_source
-                // .as_any()
+                .as_any()
                 .downcast_ref::<ParquetSource>()
                 .unwrap();
             Ok(Some(Arc::new(RaquetSource {

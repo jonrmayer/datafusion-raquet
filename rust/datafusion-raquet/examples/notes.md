@@ -7,3 +7,8 @@ cargo run --release --package datafusion-raquet --example read_raquet
 cargo run --release --package datafusion-raquet --example read_raquet_metadata
 
 cargo run --release --package datafusion-raquet --example read_raquet_at
+
+cargo run --release --package datafusion-raquet --example quadbin
+cargo run --release --package datafusion-raquet --example tile
+
+cargo run --release --package datafusion-raquet --example read_parquet

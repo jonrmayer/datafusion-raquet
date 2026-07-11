@@ -86,6 +86,6 @@ async fn test_remote() {
 #[tokio::main]
 async fn main() {
    test_local().await;
-   test_remote().await;
+//    test_remote().await;
    
 }
