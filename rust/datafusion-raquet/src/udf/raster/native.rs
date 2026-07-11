@@ -1,4 +1,5 @@
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use crate::error::RaquetDataFusionResult;
 use arrow::array::GenericListBuilder;
@@ -56,6 +57,9 @@ impl Default for NativeTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for NativeTile {
+         fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "native_tile"
     }

@@ -1,10 +1,10 @@
-use std::sync::{Arc, OnceLock};
-
 use crate::error::RaquetDataFusionResult;
 use arrow::datatypes::Fields;
 use arrow_array::builder::{Float64Builder, UInt64Builder};
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
-use arrow_array::{ArrayRef, BinaryArray,  StructArray};
+use arrow_array::{ArrayRef, BinaryArray, StructArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -12,7 +12,6 @@ use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
     Volatility,
 };
-
 
 use rastertile_schema::Metadata;
 
@@ -54,6 +53,9 @@ impl Default for StatisticsTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for StatisticsTile {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "statistics_tile"
     }
@@ -157,7 +159,6 @@ mod tests {
         let _ = ctx.register_table("solar", Arc::new(t));
 
         let sql = "select statistics_tile(band_1) from solar where block = 5230520127799164927  ;";
-      
 
         let df = ctx.sql(sql).await.unwrap();
         // println!("{:?}", df.count().await);

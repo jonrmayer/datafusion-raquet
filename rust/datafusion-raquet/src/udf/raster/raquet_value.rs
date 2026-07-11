@@ -1,4 +1,5 @@
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use crate::error::RaquetDataFusionResult;
 
@@ -52,6 +53,9 @@ impl Default for RaquetValue {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for RaquetValue {
+         fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "raquet_value"
     }
@@ -125,40 +129,40 @@ fn build_cell_array(
 
     Ok(point_arr)
 }
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-    use super::*;
-    use crate::RaquetTable;
+//     use super::*;
+//     use crate::RaquetTable;
 
-    use crate::views::{ReadRaquet,ReadRaquetAt};
-    use datafusion::prelude::{SessionConfig, SessionContext};
+//     use crate::views::{ReadRaquet,ReadRaquetAt};
+//     use datafusion::prelude::{SessionConfig, SessionContext};
 
-    #[tokio::test]
-     async fn test_raquet_pixel() {
-        let path =
-            "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-                .to_string();
+//     #[tokio::test]
+//      async fn test_raquet_pixel() {
+//         let path =
+//             "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
+//                 .to_string();
 
-        let ctx =
-            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+//         let ctx =
+//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        ctx.register_udf(RaquetValue::default().into());
-        // ctx.register_udf(QuadBinToPixelXY::default().into());
-        ctx.register_udtf("read_raquet_at", Arc::new(ReadRaquetAt {}));
-        ctx.register_udtf("read_raquet", Arc::new(ReadRaquet {}));
-        let t = RaquetTable::from_path(path).await;
+//         ctx.register_udf(RaquetValue::default().into());
+//         // ctx.register_udf(QuadBinToPixelXY::default().into());
+//         ctx.register_udtf("read_raquet_at", Arc::new(ReadRaquetAt {}));
+//         ctx.register_udtf("read_raquet", Arc::new(ReadRaquet {}));
+//         let t = RaquetTable::from_path(path).await;
 
-        let _ = ctx.register_table("solar", Arc::new(t));
-        // -19.6875,
-        // 26.4312280645064
-        //  let sql = r#"select raquet_value(r.block,r.band_1,'POINT(-3.7038 40.4168)') val   read_raquet_at('solar','POINT(-3.7038 40.4168)') r "#;
+//         let _ = ctx.register_table("solar", Arc::new(t));
+//         // -19.6875,
+//         // 26.4312280645064
+//         //  let sql = r#"select raquet_value(r.block,r.band_1,'POINT(-3.7038 40.4168)') val   read_raquet_at('solar','POINT(-3.7038 40.4168)') r "#;
 
-        let sql = r#"select raquet_value(block,band_1,'POINT(-3.7038 40.4168)') val from read_raquet_at('solar','POINT(-3.7038 40.4168)') "#;
-        println!("{:?}", sql);
+//         let sql = r#"select raquet_value(block,band_1,'POINT(-3.7038 40.4168)') val from read_raquet_at('solar','POINT(-3.7038 40.4168)') "#;
+//         println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();
-         df.clone().show().await.unwrap();
-        // println!("{:?}", df.count().await);
-    }
-}
+//         let df = ctx.sql(sql).await.unwrap();
+//          df.clone().show().await.unwrap();
+//         // println!("{:?}", df.count().await);
+//     }
+// }

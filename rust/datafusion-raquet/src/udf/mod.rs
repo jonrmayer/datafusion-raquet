@@ -1,4 +1,4 @@
 pub mod quadbin;
-// pub mod raster;
+pub mod raster;
 
-// pub mod general;
+pub mod general;

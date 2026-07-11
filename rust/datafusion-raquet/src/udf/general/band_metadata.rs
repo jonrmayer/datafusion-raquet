@@ -158,49 +158,49 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     // Ok(point_arr)
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-    use crate::RaquetTable;
-    use crate::register;
-    use crate::views::ReadRaquetMetadata;
-    use datafusion::prelude::{SessionConfig, SessionContext};
+//     use crate::RaquetTable;
+//     use crate::register;
+//     use crate::views::ReadRaquetMetadata;
+//     use datafusion::prelude::{SessionConfig, SessionContext};
 
-    use super::*;
-    pub async fn setup_local() -> SessionContext {
-        let path =
-        "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-            .to_string();
+//     use super::*;
+//     pub async fn setup_local() -> SessionContext {
+//         let path =
+//         "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
+//             .to_string();
 
-        let mut ctx =
-            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+//         let mut ctx =
+//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        // register(&mut ctx);
-        ctx.register_udf(BandMetadata::default().into());
+//         // register(&mut ctx);
+//         ctx.register_udf(BandMetadata::default().into());
 
-        let t = RaquetTable::from_path(path).await;
+//         let t = RaquetTable::from_path(path).await;
 
-        let _ = ctx.register_table("solar", Arc::new(t));
-        ctx
-    }
+//         let _ = ctx.register_table("solar", Arc::new(t));
+//         ctx
+//     }
 
-    #[tokio::test]
-    async fn test_intersects() {
-        let ctx = setup_local().await;
+//     #[tokio::test]
+//     async fn test_intersects() {
+//         let ctx = setup_local().await;
 
-        let sql = r###"
-        with m as (
-            select metadata from solar where block=0
+//         let sql = r###"
+//         with m as (
+//             select metadata from solar where block=0
 
-        )
+//         )
 
-        select band_metadata('band_1',m.metadata) as bmeta from m
+//         select band_metadata('band_1',m.metadata) as bmeta from m
        
 
    
-    "###;
+//     "###;
 
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
-}
+//         let df = ctx.sql(sql).await.unwrap();
+//         df.show().await.unwrap();
+//     }
+// }

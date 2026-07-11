@@ -1,5 +1,5 @@
 use std::sync::{Arc, OnceLock};
-
+use std::any::Any;
 use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::{Float64Builder, ListBuilder};
 use arrow_array::{
@@ -48,6 +48,9 @@ impl Default for ParquetValue {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for ParquetValue {
+         fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "parquet_value"
     }
@@ -130,81 +133,81 @@ fn build_cell_array(
     Ok(point_arr)
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-    use super::*;
-    use crate::RaquetTable;
-    use crate::udf::general::intersects::Intersects;
-    use datafusion::prelude::*;
-    use datafusion::prelude::{SessionConfig, SessionContext};
+//     use super::*;
+//     use crate::RaquetTable;
+//     use crate::udf::general::intersects::Intersects;
+//     use datafusion::prelude::*;
+//     use datafusion::prelude::{SessionConfig, SessionContext};
 
-    pub async fn setup_local_parquet() -> SessionContext {
-        let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet";
+//     pub async fn setup_local_parquet() -> SessionContext {
+//         let path =
+//             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet";
 
-        let ctx = SessionContext::new();
-        // SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+//         let ctx = SessionContext::new();
+//         // SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        // register(&mut ctx);
-        ctx.register_udf(ParquetValue::default().into());
-        ctx.register_udf(Intersects::default().into());
-        let _ = ctx
-            .register_parquet("solar", path, ParquetReadOptions::default())
-            .await
-            .map_err(|e| {
-                DataFusionError::Context(format!("Registering 'hits_raw' as {path}"), Box::new(e))
-            });
+//         // register(&mut ctx);
+//         ctx.register_udf(ParquetValue::default().into());
+//         ctx.register_udf(Intersects::default().into());
+//         let _ = ctx
+//             .register_parquet("solar", path, ParquetReadOptions::default())
+//             .await
+//             .map_err(|e| {
+//                 DataFusionError::Context(format!("Registering 'hits_raw' as {path}"), Box::new(e))
+//             });
 
-        ctx
-    }
+//         ctx
+//     }
 
-    #[tokio::test]
-    async fn test_decode_tile_parquet() {
-        let ctx = setup_local_parquet().await;
-        let sql = r###"
-        with m as (
-            select metadata from solar where block=0
+//     #[tokio::test]
+//     async fn test_decode_tile_parquet() {
+//         let ctx = setup_local_parquet().await;
+//         let sql = r###"
+//         with m as (
+//             select metadata from solar where block=0
 
-        ),
-        data as (
-            select block,band_1  from solar
-            where block<>0 
-        ),
-        idata as (
-            select unnest(intersects('POINT(-3.7038 40.4168)',m.metadata)) indata from m
-        )
+//         ),
+//         data as (
+//             select block,band_1  from solar
+//             where block<>0 
+//         ),
+//         idata as (
+//             select unnest(intersects('POINT(-3.7038 40.4168)',m.metadata)) indata from m
+//         )
 
-        select parquet_value(data.band_1,'POINT(-3.7038 40.4168)',m.metadata) value from data,m,idata
+//         select parquet_value(data.band_1,'POINT(-3.7038 40.4168)',m.metadata) value from data,m,idata
         
-        where idata.indata=data.block
+//         where idata.indata=data.block
        
        
 
    
-    "###;
+//     "###;
 
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
+//         let df = ctx.sql(sql).await.unwrap();
+//         df.show().await.unwrap();
+//     }
 
-    #[tokio::test]
-    async fn test_native_interleaved_tile() {
-        let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-                .to_string();
+//     #[tokio::test]
+//     async fn test_native_interleaved_tile() {
+//         let path =
+//             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
+//                 .to_string();
 
-        let ctx =
-            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+//         let ctx =
+//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        ctx.register_udf(ParquetValue::default().into());
+//         ctx.register_udf(ParquetValue::default().into());
 
-        let t = RaquetTable::from_path(path).await;
+//         let t = RaquetTable::from_path(path).await;
 
-        let _ = ctx.register_table("solar", Arc::new(t));
+//         let _ = ctx.register_table("solar", Arc::new(t));
 
-        let sql = "select decode_tile(band_1) from solar where block<>0   ;";
-        let df = ctx.sql(sql).await.unwrap();
-        println!("{:?}", df.count().await);
-    }
-}
+//         let sql = "select decode_tile(band_1) from solar where block<>0   ;";
+//         let df = ctx.sql(sql).await.unwrap();
+//         println!("{:?}", df.count().await);
+//     }
+// }

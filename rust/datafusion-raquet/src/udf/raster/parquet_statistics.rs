@@ -1,4 +1,5 @@
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use crate::error::RaquetDataFusionResult;
 use arrow::datatypes::Fields;
@@ -57,6 +58,9 @@ impl Default for ParquetStatisticsTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for ParquetStatisticsTile {
+         fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "parquet_statistics_tile"
     }

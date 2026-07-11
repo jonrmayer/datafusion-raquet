@@ -1,4 +1,5 @@
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use crate::error::RaquetDataFusionResult;
 
@@ -46,6 +47,9 @@ impl Default for RaquetPixel {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for RaquetPixel {
+         fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "raquet_pixel"
     }

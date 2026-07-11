@@ -13,10 +13,10 @@ mod parquet_decode;
 mod parquet_value;
 mod raquet_value;
 
+mod cast_raquet;
 mod parquet_statistics;
 mod raquet_pixel;
 mod statistics;
-mod cast_raquet;
 // mod test;
 
 mod utils;
@@ -44,5 +44,5 @@ pub fn register(session_context: &datafusion::prelude::SessionContext) {
     session_context.register_udf(RaquetPixel::default().into());
     session_context.register_udf(RaquetValue::default().into());
     session_context.register_udf(ParquetValue::default().into());
-     session_context.register_udf(CastRaquet::default().into());
+    session_context.register_udf(CastRaquet::default().into());
 }

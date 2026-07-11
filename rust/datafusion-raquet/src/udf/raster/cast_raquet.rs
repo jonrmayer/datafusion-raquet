@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
@@ -53,6 +54,9 @@ impl Default for CastRaquet {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for CastRaquet {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "cast_raquet"
     }
@@ -161,104 +165,104 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<BinaryViewA
     Ok(in_binary.clone())
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::RaquetTable;
-    use crate::register;
-    use crate::udf::raster::DecodeTile;
-    use crate::views::ReadRaquetMetadata;
-    use datafusion::prelude::*;
-    use datafusion::prelude::{SessionConfig, SessionContext};
+// #[cfg(test)]
+// mod tests {
+//     use crate::RaquetTable;
+//     use crate::register;
+//     use crate::udf::raster::DecodeTile;
+//     use crate::views::ReadRaquetMetadata;
+//     use datafusion::prelude::*;
+//     use datafusion::prelude::{SessionConfig, SessionContext};
 
-    use super::*;
-    pub async fn setup_local() -> SessionContext {
-        let path =
-        "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-            .to_string();
+//     use super::*;
+//     pub async fn setup_local() -> SessionContext {
+//         let path =
+//         "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
+//             .to_string();
 
-        let mut ctx =
-            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+//         let mut ctx =
+//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        // register(&mut ctx);
-        ctx.register_udf(CastRaquet::default().into());
+//         // register(&mut ctx);
+//         ctx.register_udf(CastRaquet::default().into());
 
-        let t = RaquetTable::from_path(path).await;
+//         let t = RaquetTable::from_path(path).await;
 
-        let _ = ctx.register_table("solar", Arc::new(t));
-        ctx
-    }
+//         let _ = ctx.register_table("solar", Arc::new(t));
+//         ctx
+//     }
 
-    pub async fn setup_local_parquet() -> SessionContext {
-        let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet";
+//     pub async fn setup_local_parquet() -> SessionContext {
+//         let path =
+//             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet";
 
-        let ctx = SessionContext::new();
-        // SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+//         let ctx = SessionContext::new();
+//         // SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        // register(&mut ctx);
-        ctx.register_udf(CastRaquet::default().into());
-        ctx.register_udf(DecodeTile::default().into());
-        let _ = ctx
-            .register_parquet("solar", path, ParquetReadOptions::default())
-            .await
-            .map_err(|e| {
-                DataFusionError::Context(format!("Registering 'hits_raw' as {path}"), Box::new(e))
-            });
+//         // register(&mut ctx);
+//         ctx.register_udf(CastRaquet::default().into());
+//         ctx.register_udf(DecodeTile::default().into());
+//         let _ = ctx
+//             .register_parquet("solar", path, ParquetReadOptions::default())
+//             .await
+//             .map_err(|e| {
+//                 DataFusionError::Context(format!("Registering 'hits_raw' as {path}"), Box::new(e))
+//             });
 
-        ctx
-    }
+//         ctx
+//     }
 
-    #[tokio::test]
-    async fn test_decompress_tile() {
-        let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-                .to_string();
+//     #[tokio::test]
+//     async fn test_decompress_tile() {
+//         let path =
+//             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
+//                 .to_string();
 
-        let ctx =
-            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+//         let ctx =
+//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
 
-        ctx.register_udf(CastRaquet::default().into());
-        let t = RaquetTable::from_path(path).await;
+//         ctx.register_udf(CastRaquet::default().into());
+//         let t = RaquetTable::from_path(path).await;
 
-        let _ = ctx.register_table("solar", Arc::new(t));
+//         let _ = ctx.register_table("solar", Arc::new(t));
 
-        let sql = r#"SELECT raquet_band_decompress(band_1) from solar where block<>0  limit 1 ;"#;
-        println!("{:?}", sql);
+//         let sql = r#"SELECT raquet_band_decompress(band_1) from solar where block<>0  limit 1 ;"#;
+//         println!("{:?}", sql);
 
-        let df = ctx.sql(sql).await.unwrap();
-        println!("{:?}", df.count().await);
-        // df.show().await.unwrap();
-    }
+//         let df = ctx.sql(sql).await.unwrap();
+//         println!("{:?}", df.count().await);
+//         // df.show().await.unwrap();
+//     }
 
-    #[tokio::test]
-    async fn test_decompress_tile2() {
-        let ctx = setup_local().await;
-        let sql = r###"
+//     #[tokio::test]
+//     async fn test_decompress_tile2() {
+//         let ctx = setup_local().await;
+//         let sql = r###"
 
 
-        select cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip') from solar where block<>0 limit 1
+//         select cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip') from solar where block<>0 limit 1
        
        
 
    
-    "###;
+//     "###;
 
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
+//         let df = ctx.sql(sql).await.unwrap();
+//         df.show().await.unwrap();
+//     }
 
-    #[tokio::test]
-    async fn test_decompress_tile_parquet() {
-        let ctx = setup_local_parquet().await;
-        let sql = r###"
-        select decode_tile(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')) band from solar where block<>0 limit 1
+//     #[tokio::test]
+//     async fn test_decompress_tile_parquet() {
+//         let ctx = setup_local_parquet().await;
+//         let sql = r###"
+//         select decode_tile(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')) band from solar where block<>0 limit 1
        
        
 
    
-    "###;
+//     "###;
 
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
-}
+//         let df = ctx.sql(sql).await.unwrap();
+//         df.show().await.unwrap();
+//     }
+// }

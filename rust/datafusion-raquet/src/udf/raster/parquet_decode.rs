@@ -1,4 +1,5 @@
 use std::sync::{Arc, OnceLock};
+use std::any::Any;
 
 use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::{Float64Builder, ListBuilder};
@@ -41,6 +42,9 @@ impl Default for ParquetDecodeTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for ParquetDecodeTile {
+         fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "parquet_decode_tile"
     }
