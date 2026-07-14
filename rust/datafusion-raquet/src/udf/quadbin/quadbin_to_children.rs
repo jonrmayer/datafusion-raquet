@@ -3,7 +3,7 @@ use std::any::Any;
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::{UInt64Type,Int64Type};
 use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -27,8 +27,8 @@ impl QuadBinToChildren {
         Self {
             signature: Signature::one_of(
                 vec![
-                    TypeSignature::Exact(vec![DataType::Int64]),
-                    TypeSignature::Exact(vec![DataType::Int64, DataType::Int64]),
+                    TypeSignature::Exact(vec![DataType::UInt64]),
+                    TypeSignature::Exact(vec![DataType::UInt64, DataType::Int64]),
                 ],
                 Volatility::Immutable,
             ),
@@ -95,7 +95,7 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> {
-    let cell = arrays[0].as_primitive::<Int64Type>();
+    let cell = arrays[0].as_primitive::<UInt64Type>();
     let resolution = arrays.get(1).map(|arr| arr.as_primitive::<Int64Type>());
     let values_builder = UInt64Builder::new();
 
@@ -104,7 +104,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
         Some(resolution) => {
             for (cell, resolution) in cell.iter().zip(resolution.iter()) {
                 if let (Some(cell), Some(resolution)) = (cell, resolution) {
-                    let child_cells = QuadBin::from_cell(cell as u64)?.children_resolution(resolution as u8)?;
+                    let child_cells = QuadBin::from_cell(cell )?.children_resolution(resolution as u8)?;
                     let children = UInt64Array::from(child_cells);
                     builder.append_value(&children);
                 }

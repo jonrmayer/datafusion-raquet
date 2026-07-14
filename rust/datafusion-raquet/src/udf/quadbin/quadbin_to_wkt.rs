@@ -1,28 +1,21 @@
-
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
+use arrow_array::ArrayRef;
 use arrow_array::builder::StringViewBuilder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, };
-use arrow_array::{ ArrayRef,};
-use arrow_schema::{DataType, Field, FieldRef, };
-
-// use arrow_convert::{
-//     ArrowDeserialize, ArrowField, ArrowSerialize, deserialize::TryIntoCollection,
-//     serialize::TryIntoArrow,
-// };
+use arrow_array::types::UInt64Type;
+use arrow_schema::{DataType, Field, FieldRef};
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-     Volatility,
+    Volatility,
 };
 
-use crate::error::{ RaquetDataFusionResult};
+use crate::error::RaquetDataFusionResult;
 
-// use crate::udf::quadbin::converter::{Abbox, LonLat, Pixel};
 use quadbin_geo_rs::GeoFormats;
 use quadbin_rs::QuadBin;
 
@@ -34,7 +27,7 @@ pub struct QuadBinToWKT {
 impl QuadBinToWKT {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::UInt64], Volatility::Immutable),
         }
     }
 }
@@ -48,7 +41,7 @@ impl Default for QuadBinToWKT {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToWKT {
-      fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn name(&self) -> &str {
@@ -90,7 +83,7 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_wkt_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ColumnarValue> {
-    let cells = arrays[0].as_primitive::<Int64Type>();
+    let cells = arrays[0].as_primitive::<UInt64Type>();
     let mut builder = StringViewBuilder::with_capacity(cells.len());
 
     for cell in cells.iter() {
@@ -102,22 +95,4 @@ fn build_wkt_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ColumnarValu
     }
 
     Ok(ColumnarValue::Array(Arc::new(builder.finish())))
-}
-
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_to_children() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToWKT::default().into());
-        let sql = r#"SELECT quadbin_to_wkt(5202642732031410175) ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
 }

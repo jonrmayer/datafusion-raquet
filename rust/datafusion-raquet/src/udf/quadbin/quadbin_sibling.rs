@@ -3,7 +3,7 @@ use std::any::Any;
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::{UInt64Type};
 use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -25,7 +25,7 @@ pub struct QuadBinToSibling {
 impl QuadBinToSibling {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::UInt64], Volatility::Immutable),
         }
     }
 }
@@ -83,13 +83,13 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> {
-    let cell = arrays[0].as_primitive::<Int64Type>();
+    let cell = arrays[0].as_primitive::<UInt64Type>();
 
     let values_builder = UInt64Builder::new();
 
     let mut builder = ListBuilder::new(values_builder);
     for cell in cell.iter() {
-        let cell_siblings = QuadBin::from_cell(cell.unwrap() as u64)?.siblings()?;
+        let cell_siblings = QuadBin::from_cell(cell.unwrap())?.siblings()?;
         let siblings = UInt64Array::from(cell_siblings);
         builder.append_value(&siblings);
     }

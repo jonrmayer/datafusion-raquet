@@ -4,18 +4,20 @@ use arrow_array::builder::{Float64Builder, UInt64Builder};
 use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
-use arrow_array::{ArrayRef, BinaryArray, StructArray};
+use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray, StructArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-    Volatility,
+    TypeSignature, Volatility,
 };
 
 use rastertile_schema::Metadata;
 
 use rastertile_rs::Operations;
+
+use crate::udf::raster::utils::has_extension;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct StatisticsTile {
@@ -25,7 +27,14 @@ pub struct StatisticsTile {
 impl StatisticsTile {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Binary], Volatility::Immutable),
+            signature: Signature::one_of(
+                vec![
+                    TypeSignature::Exact(vec![DataType::Binary]),
+                    TypeSignature::Exact(vec![DataType::LargeBinary]),
+                    TypeSignature::Exact(vec![DataType::BinaryView]),
+                ],
+                Volatility::Immutable,
+            ),
         }
     }
 
@@ -57,7 +66,7 @@ impl ScalarUDFImpl for StatisticsTile {
         self
     }
     fn name(&self) -> &str {
-        "statistics_tile"
+        "raquet_band_statistics"
     }
 
     fn signature(&self) -> &Signature {
@@ -72,21 +81,29 @@ impl ScalarUDFImpl for StatisticsTile {
         Ok(Arc::new(self.to_field("", false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
+        let binary_field = &args.arg_fields[0];
+        let binary_type = binary_field.data_type();
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        let cell_arr = build_cell_array(arrays, existing_metadata)?;
-        let array_ref: ArrayRef = Arc::new(cell_arr);
-        Ok(ColumnarValue::Array(array_ref))
+
+        match has_extension(binary_field.as_ref()) {
+            true => {
+                let column_metadata = Metadata::try_from(binary_field.as_ref()).unwrap_or_default();
+                let struct_array = build_cell_array(arrays, binary_type, column_metadata)?;
+
+                Ok(ColumnarValue::Array(Arc::new(struct_array)))
+            }
+            false => Err(DataFusionError::Internal("invoke_with_args".to_string())),
+        }
     }
 
     fn documentation(&self) -> Option<&Documentation> {
         Some(DOCUMENTATION.get_or_init(|| {
             Documentation::builder(
                 DOC_SECTION_OTHER,
-                "Return a decoded binary from an encoded binary.",
-                "decode_tile(tile)",
+                "Return a statistics struct from a band.",
+                "raquet_band_statistics(band)",
             )
-            .with_argument("tile", "tile value")
+            .with_argument("band", "band value")
             .build()
         }))
     }
@@ -94,26 +111,63 @@ impl ScalarUDFImpl for StatisticsTile {
 
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
-    metadata: Metadata,
+    binary_type: &DataType,
+    column_metadata: Metadata,
 ) -> RaquetDataFusionResult<StructArray> {
-    let in_binary = arrays[0]
-        .as_any()
-        .downcast_ref::<BinaryArray>()
-        .expect("cast failed");
-
     let mut min_builder = Float64Builder::new();
     let mut max_builder = Float64Builder::new();
     let mut mean_builder = Float64Builder::new();
     let mut std_dev_builder = Float64Builder::new();
     let mut valid_count_builder = UInt64Builder::new();
-    let ops: Operations = Operations::new(metadata.inner());
-    for input in in_binary.iter() {
-        let output = ops.statistics(input)?;
-        min_builder.append_value(output.min);
-        max_builder.append_value(output.max);
-        mean_builder.append_value(output.mean);
-        std_dev_builder.append_value(output.std_dev);
-        valid_count_builder.append_value(output.valid_count);
+
+    match binary_type {
+        DataType::Binary => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<BinaryArray>()
+                .expect("cast failed");
+            let ops: Operations = Operations::new(column_metadata.inner());
+            for input in in_binary.iter() {
+                let output = ops.statistics(input)?;
+                min_builder.append_value(output.min);
+                max_builder.append_value(output.max);
+                mean_builder.append_value(output.mean);
+                std_dev_builder.append_value(output.std_dev);
+                valid_count_builder.append_value(output.valid_count);
+            }
+        }
+        DataType::BinaryView => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<BinaryViewArray>()
+                .expect("cast failed");
+            let ops: Operations = Operations::new(column_metadata.inner());
+            for input in in_binary.iter() {
+                let output = ops.statistics(input)?;
+                min_builder.append_value(output.min);
+                max_builder.append_value(output.max);
+                mean_builder.append_value(output.mean);
+                std_dev_builder.append_value(output.std_dev);
+                valid_count_builder.append_value(output.valid_count);
+            }
+        }
+        DataType::LargeBinary => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<LargeBinaryArray>()
+                .expect("cast failed");
+            let ops: Operations = Operations::new(column_metadata.inner());
+            for input in in_binary.iter() {
+                let output = ops.statistics(input)?;
+                min_builder.append_value(output.min);
+                max_builder.append_value(output.max);
+                mean_builder.append_value(output.mean);
+                std_dev_builder.append_value(output.std_dev);
+                valid_count_builder.append_value(output.valid_count);
+            }
+        }
+
+        _ => unreachable!(),
     }
 
     let values_fields = vec![
@@ -136,32 +190,4 @@ fn build_cell_array(
     let nulls = None;
     let arr = StructArray::new(fields, arrays, nulls);
     Ok(arr)
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    use crate::RaquetTable;
-    use datafusion::prelude::{SessionConfig, SessionContext};
-
-    #[tokio::test]
-    async fn test_statistics_tile() {
-        let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-                .to_string();
-
-        let ctx =
-            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-        ctx.register_udf(StatisticsTile::default().into());
-        let t = RaquetTable::from_path(path).await;
-        let _ = ctx.register_table("solar", Arc::new(t));
-
-        let sql = "select statistics_tile(band_1) from solar where block = 5230520127799164927  ;";
-
-        let df = ctx.sql(sql).await.unwrap();
-        // println!("{:?}", df.count().await);
-        df.show().await.unwrap();
-    }
 }

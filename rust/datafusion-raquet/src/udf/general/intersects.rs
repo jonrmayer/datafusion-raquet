@@ -4,7 +4,7 @@ use std::any::Any;
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::as_string_array;
 
-use arrow_array::{ArrayRef, Int64Array, ListArray, UInt64Array};
+use arrow_array::{ArrayRef,  ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -15,7 +15,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use crate::{raquet_format_from_str, raquet_quadbin_metadata};
+use crate::{ raquet_quadbin_metadata};
 
 use quadbin_geo_rs::GeoCells;
 
@@ -110,54 +110,3 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
 
     Ok(point_arr)
 }
-
-// #[cfg(test)]
-// mod tests {
-
-//     use crate::RaquetTable;
-//     use crate::register;
-//     use crate::views::ReadRaquetMetadata;
-//     use datafusion::prelude::{SessionConfig, SessionContext};
-
-//     use super::*;
-//     pub async fn setup_local() -> SessionContext {
-//         let path =
-//         "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-//             .to_string();
-
-//         let mut ctx =
-//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-//         // register(&mut ctx);
-//         ctx.register_udf(Intersects::default().into());
-
-//         let t = RaquetTable::from_path(path).await;
-
-//         let _ = ctx.register_table("solar", Arc::new(t));
-//         ctx
-//     }
-
-//     #[tokio::test]
-//     async fn test_intersects() {
-//         let ctx = setup_local().await;
-
-//         let sql = r###"
-//         with m as (
-//             select metadata from solar where block=0
-
-//         ),
-//         data as (
-//             select unnest(intersects('POINT(-3.7038 40.4168)',m.metadata)) indata from m
-//         )
-
-//         select solar.block from data,solar
-//         where data.indata=solar.block
-       
-
-   
-//     "###;
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         df.show().await.unwrap();
-//     }
-// }

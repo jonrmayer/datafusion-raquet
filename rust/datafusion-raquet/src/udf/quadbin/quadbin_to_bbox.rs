@@ -5,7 +5,7 @@ use arrow_array::builder::{
      Float64Builder, 
 };
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, };
+use arrow_array::types::{UInt64Type };
 use arrow_array::{ ArrayRef,  StructArray, };
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
@@ -33,8 +33,8 @@ impl QuadBinToBBOX {
         Self {
             signature: Signature::one_of(
                 vec![
-                    TypeSignature::Exact(vec![DataType::Int64]),
-                    TypeSignature::Exact(vec![DataType::Int64, DataType::Int64]),
+                    TypeSignature::Exact(vec![DataType::UInt64]),
+                    TypeSignature::Exact(vec![DataType::UInt64, DataType::Int64]),
                 ],
                 Volatility::Immutable,
             ),
@@ -104,7 +104,7 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
-    let cells = arrays[0].as_primitive::<Int64Type>();
+    let cells = arrays[0].as_primitive::<UInt64Type>();
     let mut xmin_builder = Float64Builder::new();
     let mut ymin_builder = Float64Builder::new();
     let mut xmax_builder = Float64Builder::new();

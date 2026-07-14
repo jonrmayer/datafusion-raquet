@@ -2,7 +2,7 @@ use std::sync::{Arc, OnceLock};
 use std::any::Any;
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::{UInt64Type,Int64Type};
 use arrow_array::{ArrayRef, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -26,8 +26,8 @@ impl QuadBinToParent {
         Self {
             signature: Signature::one_of(
                 vec![
-                    TypeSignature::Exact(vec![DataType::Int64]),
-                    TypeSignature::Exact(vec![DataType::Int64, DataType::Int64]),
+                    TypeSignature::Exact(vec![DataType::UInt64]),
+                    TypeSignature::Exact(vec![DataType::UInt64, DataType::Int64]),
                 ],
                 Volatility::Immutable,
             ),
@@ -88,7 +88,7 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array> {
-    let cell = arrays[0].as_primitive::<Int64Type>();
+    let cell = arrays[0].as_primitive::<UInt64Type>();
     let resolution = arrays.get(1).map(|arr| arr.as_primitive::<Int64Type>());
 
     let mut builder = UInt64Builder::with_capacity(cell.len());

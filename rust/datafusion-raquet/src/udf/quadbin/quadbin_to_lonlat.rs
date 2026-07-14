@@ -2,7 +2,7 @@ use std::sync::{Arc, OnceLock};
 use std::any::Any;
 use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::{UInt64Type};
 use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 
@@ -25,7 +25,7 @@ pub struct QuadBinToLonLat {
 impl QuadBinToLonLat {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::UInt64], Volatility::Immutable),
         }
     }
     fn data_type(&self) -> DataType {
@@ -89,7 +89,7 @@ impl ScalarUDFImpl for QuadBinToLonLat {
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
-    let cells = arrays[0].as_primitive::<Int64Type>();
+    let cells = arrays[0].as_primitive::<UInt64Type>();
     let mut lon_builder = Float64Builder::new();
     let mut lat_builder = Float64Builder::new();
 

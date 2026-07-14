@@ -1,23 +1,18 @@
-// mod native_builders;
-// pub use native_builders::{
-// convert_list_array_i8,
-// convert_list_array_f32
-// };
-
 mod decode;
 mod decompress;
 mod native;
-// mod parquet_native;
+
 mod parquet_decode;
 
 mod parquet_value;
 mod raquet_value;
 
-mod cast_raquet;
+
 mod parquet_statistics;
 mod raquet_pixel;
 mod statistics;
-// mod test;
+#[cfg(any(test, debug_assertions))]
+pub mod testing;
 
 mod utils;
 
@@ -32,7 +27,7 @@ pub use raquet_pixel::RaquetPixel;
 pub use raquet_value::RaquetValue;
 pub use statistics::StatisticsTile;
 
-pub use cast_raquet::CastRaquet;
+
 
 pub fn register(session_context: &datafusion::prelude::SessionContext) {
     session_context.register_udf(DecompressTile::default().into());
@@ -44,5 +39,5 @@ pub fn register(session_context: &datafusion::prelude::SessionContext) {
     session_context.register_udf(RaquetPixel::default().into());
     session_context.register_udf(RaquetValue::default().into());
     session_context.register_udf(ParquetValue::default().into());
-    session_context.register_udf(CastRaquet::default().into());
+    
 }

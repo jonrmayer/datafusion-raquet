@@ -28,7 +28,7 @@ pub struct DecodeTile {
 impl DecodeTile {
     pub fn new() -> Self {
         Self {
-            // signature: Signature::exact(vec![DataType::Binary], Volatility::Immutable),
+           
             signature: Signature::one_of(
                 vec![
                     TypeSignature::Exact(vec![DataType::Binary]),

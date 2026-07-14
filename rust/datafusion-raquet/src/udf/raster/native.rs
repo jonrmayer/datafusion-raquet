@@ -1,17 +1,19 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
-use crate::error::RaquetDataFusionResult;
+use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
 use arrow::array::GenericListBuilder;
 
-use arrow_array::{ArrayRef, BinaryArray, ListArray};
+use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray, ListArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-    Volatility,
+    TypeSignature, Volatility,
 };
+
+use crate::udf::raster::utils::has_extension;
 
 use rastertile_rs::Operations;
 use rastertile_schema::Metadata;
@@ -43,7 +45,14 @@ pub struct NativeTile {
 impl NativeTile {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Binary], Volatility::Immutable),
+            signature: Signature::one_of(
+                vec![
+                    TypeSignature::Exact(vec![DataType::Binary]),
+                    TypeSignature::Exact(vec![DataType::LargeBinary]),
+                    TypeSignature::Exact(vec![DataType::BinaryView]),
+                ],
+                Volatility::Immutable,
+            ),
         }
     }
 }
@@ -57,7 +66,7 @@ impl Default for NativeTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for NativeTile {
-         fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn name(&self) -> &str {
@@ -76,11 +85,19 @@ impl ScalarUDFImpl for NativeTile {
         Ok(return_field_impl(args)?)
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
+        let binary_field = &args.arg_fields[0];
+        let binary_type = binary_field.data_type();
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        let cell_arr = build_cell_array(arrays, existing_metadata)?;
-        let array_ref: ArrayRef = Arc::new(cell_arr);
-        Ok(ColumnarValue::Array(array_ref))
+
+        match has_extension(binary_field.as_ref()) {
+            true => {
+                let column_metadata = Metadata::try_from(binary_field.as_ref()).unwrap_or_default();
+                let struct_array = build_cell_array(arrays, binary_type, column_metadata)?;
+
+                Ok(ColumnarValue::Array(Arc::new(struct_array)))
+            }
+            false => Err(DataFusionError::Internal("invoke_with_args".to_string())),
+        }
     }
 
     fn documentation(&self) -> Option<&Documentation> {
@@ -96,57 +113,129 @@ impl ScalarUDFImpl for NativeTile {
     }
 }
 
-fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    let metadata = Arc::new(Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default());
+fn return_field_impl(args: ReturnFieldArgs) -> Result<FieldRef> {
+    let binary_field = &args.arg_fields[0];
 
-    let list_field = match metadata.data_type() {
-        RasterDataType::UInt8 => Some(Field::new_list_field(DataType::UInt8, true)),
-        RasterDataType::Int8 => Some(Field::new_list_field(DataType::Int8, true)),
-        RasterDataType::UInt16 => Some(Field::new_list_field(DataType::UInt16, true)),
-        RasterDataType::Int16 => Some(Field::new_list_field(DataType::Int16, true)),
-        RasterDataType::UInt32 => Some(Field::new_list_field(DataType::UInt32, true)),
-        RasterDataType::Int32 => Some(Field::new_list_field(DataType::Int32, true)),
-        RasterDataType::UInt64 => Some(Field::new_list_field(DataType::UInt64, true)),
-        RasterDataType::Int64 => Some(Field::new_list_field(DataType::Int64, true)),
-        RasterDataType::Float32 => Some(Field::new_list_field(DataType::Float32, true)),
-        RasterDataType::Float64 => Some(Field::new_list_field(DataType::Float64, true)),
-        _ => None,
-    };
+    match has_extension(binary_field.as_ref()) {
+        true => {
+            let column_metadata = Metadata::try_from(binary_field.as_ref()).unwrap_or_default();
+            let list_field = match column_metadata.data_type() {
+                RasterDataType::UInt8 => Some(Field::new_list_field(DataType::UInt8, true)),
+                RasterDataType::Int8 => Some(Field::new_list_field(DataType::Int8, true)),
+                RasterDataType::UInt16 => Some(Field::new_list_field(DataType::UInt16, true)),
+                RasterDataType::Int16 => Some(Field::new_list_field(DataType::Int16, true)),
+                RasterDataType::UInt32 => Some(Field::new_list_field(DataType::UInt32, true)),
+                RasterDataType::Int32 => Some(Field::new_list_field(DataType::Int32, true)),
+                RasterDataType::UInt64 => Some(Field::new_list_field(DataType::UInt64, true)),
+                RasterDataType::Int64 => Some(Field::new_list_field(DataType::Int64, true)),
+                RasterDataType::Float32 => Some(Field::new_list_field(DataType::Float32, true)),
+                RasterDataType::Float64 => Some(Field::new_list_field(DataType::Float64, true)),
+                _ => None,
+            };
 
-    let dt = DataType::List(Arc::new(list_field.unwrap()));
-    let out_field: Field = Field::new("", dt, true);
+            let dt = DataType::List(Arc::new(list_field.unwrap()));
+            let out_field: Field = Field::new("", dt, true);
 
-    Ok(Arc::new(out_field))
+            Ok(Arc::new(out_field))
+        }
+        false => Err(DataFusionError::Internal("return_field_impl".to_string())),
+    }
 }
 
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
-    metadata: Metadata,
+    binary_type: &DataType,
+    column_metadata: Metadata,
 ) -> RaquetDataFusionResult<ListArray> {
-    let in_binary = arrays[0]
-        .as_any()
-        .downcast_ref::<BinaryArray>()
-        .expect("cast failed");
-    let ops: Operations = Operations::new(metadata.inner());
-    let out_array = match metadata.data_type() {
-        RasterDataType::Int8 => convert_list_array_i8(in_binary, ops)?.finish(),
-        RasterDataType::UInt8 => convert_list_array_u8(in_binary, ops)?.finish(),
-        RasterDataType::Int16 => convert_list_array_i16(in_binary, ops)?.finish(),
-        RasterDataType::UInt16 => convert_list_array_u16(in_binary, ops)?.finish(),
-        RasterDataType::Int32 => convert_list_array_i32(in_binary, ops)?.finish(),
-        RasterDataType::UInt32 => convert_list_array_u32(in_binary, ops)?.finish(),
-        RasterDataType::Int64 => convert_list_array_i64(in_binary, ops)?.finish(),
-        RasterDataType::UInt64 => convert_list_array_u64(in_binary, ops)?.finish(),
-        RasterDataType::Float32 => convert_list_array_f32(in_binary, ops)?.finish(),
-        RasterDataType::Float64 => convert_list_array_f64(in_binary, ops)?.finish(),
-        _ => todo!(),
+    let out_array = match binary_type {
+        DataType::Binary => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<BinaryArray>()
+                .expect("cast failed");
+            let ops: Operations = Operations::new(column_metadata.inner());
+            let out_array = match column_metadata.data_type() {
+                RasterDataType::Int8 => convert_binary_list_array_i8(in_binary, ops)?.finish(),
+                RasterDataType::UInt8 => convert_binary_list_array_u8(in_binary, ops)?.finish(),
+                RasterDataType::Int16 => convert_binary_list_array_i16(in_binary, ops)?.finish(),
+                RasterDataType::UInt16 => convert_binary_list_array_u16(in_binary, ops)?.finish(),
+                RasterDataType::Int32 => convert_binary_list_array_i32(in_binary, ops)?.finish(),
+                RasterDataType::UInt32 => convert_binary_list_array_u32(in_binary, ops)?.finish(),
+                RasterDataType::Int64 => convert_binary_list_array_i64(in_binary, ops)?.finish(),
+                RasterDataType::UInt64 => convert_binary_list_array_u64(in_binary, ops)?.finish(),
+                RasterDataType::Float32 => convert_binary_list_array_f32(in_binary, ops)?.finish(),
+                RasterDataType::Float64 => convert_binary_list_array_f64(in_binary, ops)?.finish(),
+                _ => todo!(),
+            };
+            out_array
+        }
+        DataType::BinaryView => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<BinaryViewArray>()
+                .expect("cast failed");
+            let ops: Operations = Operations::new(column_metadata.inner());
+            let out_array = match column_metadata.data_type() {
+                RasterDataType::Int8 => convert_binaryview_list_array_i8(in_binary, ops)?.finish(),
+                RasterDataType::UInt8 => convert_binaryview_list_array_u8(in_binary, ops)?.finish(),
+                RasterDataType::Int16 => {
+                    convert_binaryview_list_array_i16(in_binary, ops)?.finish()
+                }
+                RasterDataType::UInt16 => {
+                    convert_binaryview_list_array_u16(in_binary, ops)?.finish()
+                }
+                RasterDataType::Int32 => {
+                    convert_binaryview_list_array_i32(in_binary, ops)?.finish()
+                }
+                RasterDataType::UInt32 => {
+                    convert_binaryview_list_array_u32(in_binary, ops)?.finish()
+                }
+                RasterDataType::Int64 => {
+                    convert_binaryview_list_array_i64(in_binary, ops)?.finish()
+                }
+                RasterDataType::UInt64 => {
+                    convert_binaryview_list_array_u64(in_binary, ops)?.finish()
+                }
+                RasterDataType::Float32 => {
+                    convert_binaryview_list_array_f32(in_binary, ops)?.finish()
+                }
+                RasterDataType::Float64 => {
+                    convert_binaryview_list_array_f64(in_binary, ops)?.finish()
+                }
+                _ => todo!(),
+            };
+            out_array
+        }
+        DataType::LargeBinary => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<LargeBinaryArray>()
+                .expect("cast failed");
+            let ops: Operations = Operations::new(column_metadata.inner());
+            let out_array = match column_metadata.data_type() {
+                RasterDataType::Int8 => convert_largebinary_list_array_i8(in_binary, ops)?.finish(),
+                RasterDataType::UInt8 => convert_largebinary_list_array_u8(in_binary, ops)?.finish(),
+                RasterDataType::Int16 => convert_largebinary_list_array_i16(in_binary, ops)?.finish(),
+                RasterDataType::UInt16 =>convert_largebinary_list_array_u16(in_binary, ops)?.finish(),
+                RasterDataType::Int32 => convert_largebinary_list_array_i32(in_binary, ops)?.finish(),
+                RasterDataType::UInt32 => convert_largebinary_list_array_u32(in_binary, ops)?.finish(),
+                RasterDataType::Int64 => convert_largebinary_list_array_i64(in_binary, ops)?.finish(),
+                RasterDataType::UInt64 => convert_largebinary_list_array_u64(in_binary, ops)?.finish(),
+                RasterDataType::Float32 => convert_largebinary_list_array_f32(in_binary, ops)?.finish(),
+                RasterDataType::Float64 =>convert_largebinary_list_array_f64(in_binary, ops)?.finish(),
+                _ => todo!(),
+            };
+            out_array
+        }
+
+        _ => unreachable!(),
     };
 
     Ok(out_array)
 }
 
 #[macro_export]
-macro_rules! impl_convert_list_builder {
+macro_rules! impl_binary_convert_list_builder {
     ($list_type:ident, $builder:ident,$decode:ident, $name:ident) => {
         pub fn $name(
             in_binary: &arrow_array::GenericByteArray<arrow::datatypes::GenericBinaryType<i32>>,
@@ -164,102 +253,269 @@ macro_rules! impl_convert_list_builder {
         }
     };
 }
-impl_convert_list_builder!(
+
+#[macro_export]
+macro_rules! impl_binaryview_convert_list_builder {
+    ($list_type:ident, $builder:ident,$decode:ident, $name:ident) => {
+        pub fn $name(
+            in_binary: &arrow_array::GenericByteViewArray<arrow::datatypes::BinaryViewType>,
+            ops: Operations,
+        ) -> RaquetDataFusionResult<GenericListBuilder<i32, PrimitiveBuilder<$list_type>>> {
+            let values_builder = $builder::new();
+            let mut builder = ListBuilder::new(values_builder);
+
+            for input in in_binary.iter() {
+                let output = ops.$decode(input)?;
+                builder.append_value(output);
+            }
+
+            Ok(builder)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_largebinary_convert_list_builder {
+    ($list_type:ident, $builder:ident,$decode:ident, $name:ident) => {
+        pub fn $name(
+            in_binary: &arrow_array::GenericByteArray<arrow::datatypes::GenericBinaryType<i64>>,
+            ops: Operations,
+        ) -> RaquetDataFusionResult<GenericListBuilder<i32, PrimitiveBuilder<$list_type>>> {
+            let values_builder = $builder::new();
+            let mut builder = ListBuilder::new(values_builder);
+
+            for input in in_binary.iter() {
+                let output = ops.$decode(input)?;
+                builder.append_value(output);
+            }
+
+            Ok(builder)
+        }
+    };
+}
+
+// Int8Type
+impl_binary_convert_list_builder!(
     Int8Type,
     Int8Builder,
     decode_native_i8,
-    convert_list_array_i8
+    convert_binary_list_array_i8
 );
-impl_convert_list_builder!(
+impl_largebinary_convert_list_builder!(
+    Int8Type,
+    Int8Builder,
+    decode_native_i8,
+    convert_largebinary_list_array_i8
+);
+
+impl_binaryview_convert_list_builder!(
+    Int8Type,
+    Int8Builder,
+    decode_native_i8,
+    convert_binaryview_list_array_i8
+);
+// UInt8Type
+
+impl_binary_convert_list_builder!(
     UInt8Type,
     UInt8Builder,
     decode_native_u8,
-    convert_list_array_u8
+    convert_binary_list_array_u8
 );
 
-impl_convert_list_builder!(
+impl_largebinary_convert_list_builder!(
+    UInt8Type,
+    UInt8Builder,
+    decode_native_u8,
+    convert_largebinary_list_array_u8
+);
+impl_binaryview_convert_list_builder!(
+    UInt8Type,
+    UInt8Builder,
+    decode_native_u8,
+    convert_binaryview_list_array_u8
+);
+
+
+// Int16Type
+impl_binary_convert_list_builder!(
     Int16Type,
     Int16Builder,
     decode_native_i16,
-    convert_list_array_i16
+    convert_binary_list_array_i16
 );
-impl_convert_list_builder!(
+
+impl_largebinary_convert_list_builder!(
+    Int16Type,
+    Int16Builder,
+    decode_native_i16,
+    convert_largebinary_list_array_i16
+);
+
+impl_binaryview_convert_list_builder!(
+    Int16Type,
+    Int16Builder,
+    decode_native_i16,
+    convert_binaryview_list_array_i16
+);
+
+// UInt16Type
+
+impl_binary_convert_list_builder!(
     UInt16Type,
     UInt16Builder,
     decode_native_u16,
-    convert_list_array_u16
+    convert_binary_list_array_u16
 );
 
-impl_convert_list_builder!(
+impl_largebinary_convert_list_builder!(
+    UInt16Type,
+    UInt16Builder,
+    decode_native_u16,
+    convert_largebinary_list_array_u16
+);
+
+impl_binaryview_convert_list_builder!(
+    UInt16Type,
+    UInt16Builder,
+    decode_native_u16,
+    convert_binaryview_list_array_u16
+);
+
+
+// Int32Type
+impl_binary_convert_list_builder!(
     Int32Type,
     Int32Builder,
     decode_native_i32,
-    convert_list_array_i32
+    convert_binary_list_array_i32
 );
-impl_convert_list_builder!(
+
+impl_largebinary_convert_list_builder!(
+    Int32Type,
+    Int32Builder,
+    decode_native_i32,
+    convert_largebinary_list_array_i32
+);
+
+
+impl_binaryview_convert_list_builder!(
+    Int32Type,
+    Int32Builder,
+    decode_native_i32,
+    convert_binaryview_list_array_i32
+);
+
+// UInt32Type
+impl_binary_convert_list_builder!(
     UInt32Type,
     UInt32Builder,
     decode_native_u32,
-    convert_list_array_u32
+    convert_binary_list_array_u32
 );
 
-impl_convert_list_builder!(
+
+impl_largebinary_convert_list_builder!(
+    UInt32Type,
+    UInt32Builder,
+    decode_native_u32,
+    convert_largebinary_list_array_u32
+);
+
+impl_binaryview_convert_list_builder!(
+    UInt32Type,
+    UInt32Builder,
+    decode_native_u32,
+    convert_binaryview_list_array_u32
+);
+
+
+// Int64Type
+
+impl_binary_convert_list_builder!(
     Int64Type,
     Int64Builder,
     decode_native_i64,
-    convert_list_array_i64
+    convert_binary_list_array_i64
 );
-impl_convert_list_builder!(
+
+impl_largebinary_convert_list_builder!(
+    Int64Type,
+    Int64Builder,
+    decode_native_i64,
+    convert_largebinary_list_array_i64
+);
+
+impl_binaryview_convert_list_builder!(
+    Int64Type,
+    Int64Builder,
+    decode_native_i64,
+    convert_binaryview_list_array_i64
+);
+
+// UInt64Type
+impl_binary_convert_list_builder!(
     UInt64Type,
     UInt64Builder,
     decode_native_u64,
-    convert_list_array_u64
+    convert_binary_list_array_u64
 );
 
-impl_convert_list_builder!(
+impl_largebinary_convert_list_builder!(
+    UInt64Type,
+    UInt64Builder,
+    decode_native_u64,
+    convert_largebinary_list_array_u64
+);
+
+impl_binaryview_convert_list_builder!(
+    UInt64Type,
+    UInt64Builder,
+    decode_native_u64,
+    convert_binaryview_list_array_u64
+);
+
+// Float32Type
+
+impl_binary_convert_list_builder!(
     Float32Type,
     Float32Builder,
     decode_native_f32,
-    convert_list_array_f32
+    convert_binary_list_array_f32
 );
-impl_convert_list_builder!(
+
+impl_largebinary_convert_list_builder!(
+    Float32Type,
+    Float32Builder,
+    decode_native_f32,
+    convert_largebinary_list_array_f32
+);
+
+impl_binaryview_convert_list_builder!(
+    Float32Type,
+    Float32Builder,
+    decode_native_f32,
+    convert_binaryview_list_array_f32
+);
+
+// Float64Type
+impl_binary_convert_list_builder!(
     Float64Type,
     Float64Builder,
     decode_native_f64,
-    convert_list_array_f64
+    convert_binary_list_array_f64
 );
 
-#[cfg(test)]
-mod tests {
+impl_largebinary_convert_list_builder!(
+    Float64Type,
+    Float64Builder,
+    decode_native_f64,
+    convert_largebinary_list_array_f64
+);
 
-    use super::*;
-    use crate::RaquetTable;
-    use datafusion::prelude::{SessionConfig, SessionContext};
-
-    #[tokio::test]
-    async fn test_native_tile() {
-        let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-                .to_string();
-
-        let ctx =
-            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-        ctx.register_udf(NativeTile::default().into());
-        // ctx.register_udf(DecodeTile::default().into());
-        let t = RaquetTable::from_path(path).await;
-
-        let _ = ctx.register_table("solar", Arc::new(t));
-        // let tci = ctx.table_provider("tci").await.unwrap();
-
-        // let tci_schema = tci.schema();
-        // println!("{:?}", tci_schema);
-
-        let sql = "select native_tile(band_1) from solar where block<>0  ;";
-        // let sql = "select count(*) from solar;";
-
-        let df = ctx.sql(sql).await.unwrap();
-        println!("{:?}", df.count().await);
-        // df.show().await.unwrap();
-    }
-}
+impl_binaryview_convert_list_builder!(
+    Float64Type,
+    Float64Builder,
+    decode_native_f64,
+    convert_binaryview_list_array_f64
+);

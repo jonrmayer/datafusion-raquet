@@ -116,7 +116,7 @@ mod tests {
 
     use super::*;
     use crate::RaquetTable;
-    use crate::udf::quadbin::QuadBinToPixelXY;
+    use crate::udf::general::QuadBinToPixelXY;
     use datafusion::prelude::{SessionConfig, SessionContext};
 
     #[tokio::test]

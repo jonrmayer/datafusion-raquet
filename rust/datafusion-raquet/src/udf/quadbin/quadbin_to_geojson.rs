@@ -1,22 +1,22 @@
-use std::sync::{Arc, OnceLock};
-use std::any::Any;
+use arrow_array::ArrayRef;
 use arrow_array::builder::StringViewBuilder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, };
-use arrow_array::{ ArrayRef, };
-use arrow_schema::{DataType, Field, FieldRef, };
+use arrow_array::types::UInt64Type;
+use arrow_schema::{DataType, Field, FieldRef};
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-     Volatility,
+    Volatility,
 };
 use quadbin_geo_rs::GeoFormats;
 
-use crate::error::{ RaquetDataFusionResult};
+use crate::error::RaquetDataFusionResult;
 
-use quadbin_rs::{QuadBin, };
+use quadbin_rs::QuadBin;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToGeoJSON {
@@ -26,7 +26,7 @@ pub struct QuadBinToGeoJSON {
 impl QuadBinToGeoJSON {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::UInt64], Volatility::Immutable),
         }
     }
 }
@@ -82,7 +82,7 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_geojson_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ColumnarValue> {
-    let cells = arrays[0].as_primitive::<Int64Type>();
+    let cells = arrays[0].as_primitive::<UInt64Type>();
     let mut builder = StringViewBuilder::with_capacity(cells.len());
 
     for cell in cells.iter() {

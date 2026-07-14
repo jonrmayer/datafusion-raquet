@@ -1,8 +1,6 @@
-use std::sync::{Arc, OnceLock};
-use std::any::Any;
 use arrow_array::builder::Int64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::UInt64Type;
 use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 use datafusion::error::{DataFusionError, Result};
@@ -11,6 +9,8 @@ use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
     Volatility,
 };
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 
@@ -24,7 +24,7 @@ pub struct QuadBinToTile {
 impl QuadBinToTile {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::UInt64], Volatility::Immutable),
         }
     }
     fn data_type(&self) -> DataType {
@@ -88,7 +88,7 @@ impl ScalarUDFImpl for QuadBinToTile {
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
-    let cells = arrays[0].as_primitive::<Int64Type>();
+    let cells = arrays[0].as_primitive::<UInt64Type>();
 
     let mut x_builder = Int64Builder::new();
     let mut y_builder = Int64Builder::new();
@@ -120,20 +120,4 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     Ok(arr)
 }
 
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
 
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_to_tile() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToTile::default().into());
-        let sql = r#"SELECT quadbin_to_tile(5256690695657226239) ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
-}

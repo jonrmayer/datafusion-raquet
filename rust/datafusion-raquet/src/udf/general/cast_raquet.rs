@@ -2,10 +2,9 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
-use arrow_array::builder::GenericBinaryBuilder;
-use arrow_array::cast::as_string_array;
-use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, StringViewArray};
-use arrow_schema::{DataType, Field, FieldRef};
+
+use arrow_array::{ArrayRef, BinaryViewArray};
+use arrow_schema::{DataType, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
@@ -17,10 +16,7 @@ use datafusion::common::ScalarValue;
 
 use rastertile_schema::{Metadata, RasterArrowType, RasterType};
 
-use rastertile_rs::{CompressionFormat, Metadata as RasterMetadata, Operations};
-
-use crate::udf::raster::utils::has_extension;
-use crate::{raquet_band_metadata, raquet_format_from_str};
+use rastertile_rs::Metadata as RasterMetadata;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct CastRaquet {
@@ -164,105 +160,3 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<BinaryViewA
 
     Ok(in_binary.clone())
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::RaquetTable;
-//     use crate::register;
-//     use crate::udf::raster::DecodeTile;
-//     use crate::views::ReadRaquetMetadata;
-//     use datafusion::prelude::*;
-//     use datafusion::prelude::{SessionConfig, SessionContext};
-
-//     use super::*;
-//     pub async fn setup_local() -> SessionContext {
-//         let path =
-//         "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-//             .to_string();
-
-//         let mut ctx =
-//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-//         // register(&mut ctx);
-//         ctx.register_udf(CastRaquet::default().into());
-
-//         let t = RaquetTable::from_path(path).await;
-
-//         let _ = ctx.register_table("solar", Arc::new(t));
-//         ctx
-//     }
-
-//     pub async fn setup_local_parquet() -> SessionContext {
-//         let path =
-//             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet";
-
-//         let ctx = SessionContext::new();
-//         // SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-//         // register(&mut ctx);
-//         ctx.register_udf(CastRaquet::default().into());
-//         ctx.register_udf(DecodeTile::default().into());
-//         let _ = ctx
-//             .register_parquet("solar", path, ParquetReadOptions::default())
-//             .await
-//             .map_err(|e| {
-//                 DataFusionError::Context(format!("Registering 'hits_raw' as {path}"), Box::new(e))
-//             });
-
-//         ctx
-//     }
-
-//     #[tokio::test]
-//     async fn test_decompress_tile() {
-//         let path =
-//             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-//                 .to_string();
-
-//         let ctx =
-//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-//         ctx.register_udf(CastRaquet::default().into());
-//         let t = RaquetTable::from_path(path).await;
-
-//         let _ = ctx.register_table("solar", Arc::new(t));
-
-//         let sql = r#"SELECT raquet_band_decompress(band_1) from solar where block<>0  limit 1 ;"#;
-//         println!("{:?}", sql);
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         println!("{:?}", df.count().await);
-//         // df.show().await.unwrap();
-//     }
-
-//     #[tokio::test]
-//     async fn test_decompress_tile2() {
-//         let ctx = setup_local().await;
-//         let sql = r###"
-
-
-//         select cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip') from solar where block<>0 limit 1
-       
-       
-
-   
-//     "###;
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         df.show().await.unwrap();
-//     }
-
-//     #[tokio::test]
-//     async fn test_decompress_tile_parquet() {
-//         let ctx = setup_local_parquet().await;
-//         let sql = r###"
-//         select decode_tile(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')) band from solar where block<>0 limit 1
-       
-       
-
-   
-//     "###;
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         df.show().await.unwrap();
-//     }
-// }
