@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 
-use arrow_array::{ArrayRef, BinaryViewArray};
+use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray};
 use arrow_schema::{DataType, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -27,14 +27,32 @@ impl CastRaquet {
     pub fn new() -> Self {
         Self {
             signature: Signature::one_of(
-                vec![TypeSignature::Exact(vec![
-                    DataType::BinaryView,
-                    DataType::Utf8,
-                    DataType::Utf8,
-                    DataType::Utf8,
-                    DataType::Utf8,
-                    DataType::Utf8,
-                ])],
+                vec![
+                    TypeSignature::Exact(vec![
+                        DataType::Binary,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                    ]),
+                    TypeSignature::Exact(vec![
+                        DataType::BinaryView,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                    ]),
+                    TypeSignature::Exact(vec![
+                        DataType::LargeBinary,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                        DataType::Utf8,
+                    ]),
+                ],
                 Volatility::Immutable,
             ),
         }
@@ -54,7 +72,7 @@ impl ScalarUDFImpl for CastRaquet {
         self
     }
     fn name(&self) -> &str {
-        "cast_raquet"
+        "binary_to_raquet"
     }
 
     fn signature(&self) -> &Signature {
@@ -69,22 +87,27 @@ impl ScalarUDFImpl for CastRaquet {
         Ok(return_field_impl(args)?)
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let binary_field = &args.arg_fields[0];
+        let binary_type = binary_field.data_type();
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        let cell_arr = build_cell_array(arrays)?;
+        let colvalue = build_cell_array(arrays, binary_type)?;
 
-        let array_ref: ArrayRef = Arc::new(cell_arr);
-        Ok(ColumnarValue::Array(array_ref))
+        Ok(colvalue)
     }
 
     fn documentation(&self) -> Option<&Documentation> {
         Some(DOCUMENTATION.get_or_init(|| {
             Documentation::builder(
                 DOC_SECTION_OTHER,
-                "Return a decompressed binary from an compressed binary.",
-                "raquet_band_decompress(band_1,metadata)",
+                "Return a raquet binary from a binary.",
+                "binary_to_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')",
             )
             .with_argument("band", "band value")
-            .with_argument("metadata", "optional metadata value")
+            .with_argument("tile_size", "tile_size value")
+            .with_argument("binary_type", "binary_type value")
+            .with_argument("data_type", "data_type value")
+            .with_argument("no_data", "no_data value")
+            .with_argument("compression", "compression value")
             .build()
         }))
     }
@@ -152,11 +175,33 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
     ))
 }
 
-fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<BinaryViewArray> {
-    let in_binary = arrays[0]
-        .as_any()
-        .downcast_ref::<BinaryViewArray>()
-        .expect("cast failed");
+fn build_cell_array(
+    arrays: Vec<ArrayRef>,
+    binary_type: &DataType,
+) -> RaquetDataFusionResult<ColumnarValue> {
+    match binary_type {
+        DataType::Binary => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<BinaryArray>()
+                .expect("cast failed");
+            Ok(ColumnarValue::Array(Arc::new(in_binary.clone())))
+        }
+        DataType::LargeBinary => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<LargeBinaryArray>()
+                .expect("cast failed");
+            Ok(ColumnarValue::Array(Arc::new(in_binary.clone())))
+        }
 
-    Ok(in_binary.clone())
+        DataType::BinaryView => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<BinaryViewArray>()
+                .expect("cast failed");
+            Ok(ColumnarValue::Array(Arc::new(in_binary.clone())))
+        }
+        _ => unreachable!(),
+    }
 }

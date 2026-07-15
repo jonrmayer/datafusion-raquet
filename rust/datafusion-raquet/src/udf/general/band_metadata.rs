@@ -60,7 +60,7 @@ impl ScalarUDFImpl for BandMetadata {
         self
     }
     fn name(&self) -> &str {
-        "band_metadata"
+        "raquet_band_metadata"
     }
 
     fn signature(&self) -> &Signature {

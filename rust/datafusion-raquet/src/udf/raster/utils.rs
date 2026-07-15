@@ -1,5 +1,5 @@
 use arrow_schema::Field;
-use rastertile_schema::{Metadata, RasterType};
+// use rastertile_schema::{Metadata, RasterType};
 
 pub fn has_extension(value: &Field) -> bool {
     let extension = match value.extension_type_metadata() {
@@ -9,6 +9,6 @@ pub fn has_extension(value: &Field) -> bool {
     extension
 }
 
-pub fn get_input_array(){
+// pub fn get_input_array(){
     
-}
+// }

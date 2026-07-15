@@ -1,7 +1,7 @@
 use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::{ RaquetDataFusionResult};
 use arrow::array::GenericListBuilder;
 
 use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray, ListArray};
@@ -70,7 +70,7 @@ impl ScalarUDFImpl for NativeTile {
         self
     }
     fn name(&self) -> &str {
-        "native_tile"
+        "raquet_band_native"
     }
 
     fn signature(&self) -> &Signature {

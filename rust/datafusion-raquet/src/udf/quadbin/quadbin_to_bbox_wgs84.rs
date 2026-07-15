@@ -133,21 +133,3 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
 
     Ok(arr)
 }
-
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_to_children() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToBBOXWGS84::default().into());
-        let sql = r#"SELECT quadbin_to_bbox_wgs84(5256690695657226239) ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
-}

@@ -1,10 +1,9 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::GenericBinaryBuilder;
-use arrow_array::cast::as_string_array;
-use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, StringViewArray};
+use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -13,12 +12,11 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-use rastertile_schema::{Metadata, RasterType,RasterArrowType};
+use rastertile_schema::{Metadata, RasterArrowType, RasterType};
 
 use rastertile_rs::{CompressionFormat, Operations};
 
 use crate::udf::raster::utils::has_extension;
-use crate::{raquet_band_metadata, raquet_format_from_str};
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct DecompressTile {
@@ -31,8 +29,8 @@ impl DecompressTile {
             signature: Signature::one_of(
                 vec![
                     TypeSignature::Exact(vec![DataType::Binary]),
-                    TypeSignature::Exact(vec![DataType::Binary, DataType::Utf8]),
-                    TypeSignature::Exact(vec![DataType::BinaryView, DataType::Utf8View]),
+                    TypeSignature::Exact(vec![DataType::Binary]),
+                    TypeSignature::Exact(vec![DataType::BinaryView]),
                 ],
                 Volatility::Immutable,
             ),
@@ -49,11 +47,11 @@ impl Default for DecompressTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for DecompressTile {
-         fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn name(&self) -> &str {
-        "raquet_band_decompress"
+        "raquet_decompress"
     }
 
     fn signature(&self) -> &Signature {
@@ -70,19 +68,17 @@ impl ScalarUDFImpl for DecompressTile {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let binary_field = &args.arg_fields[0];
         let binary_type = binary_field.data_type();
-        let binary_name = binary_field.name();
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        let cell_arr = match has_extension(args.arg_fields[0].as_ref()) {
-            true => {
-                let existing_metadata =
-                    Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
-                build_cell_array(arrays, binary_name, binary_type, Some(existing_metadata))?
-            }
-            false => build_cell_array(arrays, binary_name, binary_type, None)?,
-        };
 
-        let array_ref: ArrayRef = Arc::new(cell_arr);
-        Ok(ColumnarValue::Array(array_ref))
+        match has_extension(binary_field.as_ref()) {
+            true => {
+                let column_metadata = Metadata::try_from(binary_field.as_ref()).unwrap_or_default();
+                let list_array = build_cell_array(arrays, binary_type, column_metadata)?;
+
+                Ok(ColumnarValue::Array(Arc::new(list_array)))
+            }
+            false => Err(DataFusionError::Internal("invoke_with_args".to_string())),
+        }
     }
 
     fn documentation(&self) -> Option<&Documentation> {
@@ -128,63 +124,43 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
 
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
-    binary_name: &String,
     binary_type: &DataType,
-    metadata: Option<Metadata>,
+    column_metadata: Metadata,
 ) -> RaquetDataFusionResult<BinaryArray> {
     let mut builder = GenericBinaryBuilder::<i32>::new();
-
-    match (binary_type, metadata) {
-        (DataType::Binary, Some(m)) => {
+    match binary_type {
+        DataType::Binary => {
             let in_binary = arrays[0]
                 .as_any()
                 .downcast_ref::<BinaryArray>()
                 .expect("cast failed");
-            let ops: Operations = Operations::new(m.inner());
+            let ops: Operations = Operations::new(column_metadata.inner());
             for input in in_binary.iter() {
                 let output = ops.decompress(input)?;
 
                 builder.append_value(output);
             }
         }
-        (DataType::Binary, None) => {
+        DataType::LargeBinary => {
             let in_binary = arrays[0]
                 .as_any()
-                .downcast_ref::<BinaryArray>()
+                .downcast_ref::<LargeBinaryArray>()
                 .expect("cast failed");
-            let metadata_array = as_string_array(&arrays[1]);
-            for (input, metadata) in in_binary.iter().zip(metadata_array.iter()) {
-                let rcm = raquet_band_metadata(binary_name, metadata.unwrap());
-                let ops: Operations = Operations::new(rcm);
-                let output = ops.decompress(input)?;
-
-                builder.append_value(output);
-            }
-        }
-        (DataType::BinaryView, Some(m)) => {
-            let in_binary = arrays[0]
-                .as_any()
-                .downcast_ref::<BinaryViewArray>()
-                .expect("cast failed");
-            let ops: Operations = Operations::new(m.inner());
+            let ops: Operations = Operations::new(column_metadata.inner());
             for input in in_binary.iter() {
                 let output = ops.decompress(input)?;
 
                 builder.append_value(output);
             }
         }
-        (DataType::BinaryView, None) => {
+
+        DataType::BinaryView => {
             let in_binary = arrays[0]
                 .as_any()
                 .downcast_ref::<BinaryViewArray>()
                 .expect("cast failed");
-            let metadata_array = arrays[1]
-                .as_any()
-                .downcast_ref::<StringViewArray>()
-                .expect("cast failed");
-            for (input, metadata) in in_binary.iter().zip(metadata_array.iter()) {
-                let rcm = raquet_band_metadata("band_1", metadata.unwrap());
-                let ops: Operations = Operations::new(rcm);
+            let ops: Operations = Operations::new(column_metadata.inner());
+            for input in in_binary.iter() {
                 let output = ops.decompress(input)?;
 
                 builder.append_value(output);
@@ -197,6 +173,78 @@ fn build_cell_array(
 
     Ok(point_arr)
 }
+
+// fn build_cell_array(
+//     arrays: Vec<ArrayRef>,
+//     binary_name: &String,
+//     binary_type: &DataType,
+//     metadata: Option<Metadata>,
+// ) -> RaquetDataFusionResult<BinaryArray> {
+//     let mut builder = GenericBinaryBuilder::<i32>::new();
+
+//     match (binary_type, metadata) {
+//         (DataType::Binary, Some(m)) => {
+//             let in_binary = arrays[0]
+//                 .as_any()
+//                 .downcast_ref::<BinaryArray>()
+//                 .expect("cast failed");
+//             let ops: Operations = Operations::new(m.inner());
+//             for input in in_binary.iter() {
+//                 let output = ops.decompress(input)?;
+
+//                 builder.append_value(output);
+//             }
+//         }
+//         (DataType::Binary, None) => {
+//             let in_binary = arrays[0]
+//                 .as_any()
+//                 .downcast_ref::<BinaryArray>()
+//                 .expect("cast failed");
+//             let metadata_array = as_string_array(&arrays[1]);
+//             for (input, metadata) in in_binary.iter().zip(metadata_array.iter()) {
+//                 let rcm = raquet_band_metadata(binary_name, metadata.unwrap());
+//                 let ops: Operations = Operations::new(rcm);
+//                 let output = ops.decompress(input)?;
+
+//                 builder.append_value(output);
+//             }
+//         }
+//         (DataType::BinaryView, Some(m)) => {
+//             let in_binary = arrays[0]
+//                 .as_any()
+//                 .downcast_ref::<BinaryViewArray>()
+//                 .expect("cast failed");
+//             let ops: Operations = Operations::new(m.inner());
+//             for input in in_binary.iter() {
+//                 let output = ops.decompress(input)?;
+
+//                 builder.append_value(output);
+//             }
+//         }
+//         (DataType::BinaryView, None) => {
+//             let in_binary = arrays[0]
+//                 .as_any()
+//                 .downcast_ref::<BinaryViewArray>()
+//                 .expect("cast failed");
+//             let metadata_array = arrays[1]
+//                 .as_any()
+//                 .downcast_ref::<StringViewArray>()
+//                 .expect("cast failed");
+//             for (input, metadata) in in_binary.iter().zip(metadata_array.iter()) {
+//                 let rcm = raquet_band_metadata("band_1", metadata.unwrap());
+//                 let ops: Operations = Operations::new(rcm);
+//                 let output = ops.decompress(input)?;
+
+//                 builder.append_value(output);
+//             }
+//         }
+//         _ => unreachable!(),
+//     }
+
+//     let point_arr = builder.finish();
+
+//     Ok(point_arr)
+// }
 
 // #[cfg(test)]
 // mod tests {
@@ -279,10 +327,7 @@ fn build_cell_array(
 //         )
 
 //         select raquet_band_decompress(data.band_1,m.metadata) from data,m
-       
-       
 
-   
 //     "###;
 
 //         let df = ctx.sql(sql).await.unwrap();
@@ -303,10 +348,7 @@ fn build_cell_array(
 //         )
 
 //         select raquet_band_decompress(data.band_1,m.metadata) from data,m
-       
-       
 
-   
 //     "###;
 
 //         let df = ctx.sql(sql).await.unwrap();

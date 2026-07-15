@@ -1,26 +1,26 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 
-use arrow_array::builder::{Float64Builder, };
-use arrow_array::cast::{AsArray, };
+use arrow_array::builder::Float64Builder;
+use arrow_array::cast::AsArray;
 use arrow_array::types::Int64Type;
-use arrow_array::{ArrayRef, BinaryArray, Float64Array, };
+use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, Float64Array, LargeBinaryArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-    Volatility,
+    TypeSignature, Volatility,
 };
 
 use itertools::multizip;
 
 use rastertile_schema::Metadata;
 
-use rastertile_rs::{ Operations};
-
+use crate::udf::raster::utils::has_extension;
+use rastertile_rs::Operations;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct RaquetPixel {
@@ -30,8 +30,24 @@ pub struct RaquetPixel {
 impl RaquetPixel {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(
-                vec![DataType::Binary, DataType::Int64, DataType::Int64],
+            // signature: Signature::exact(
+            //     vec![DataType::Binary, DataType::Int64, DataType::Int64],
+            //     Volatility::Immutable,
+            // ),
+            signature: Signature::one_of(
+                vec![
+                    TypeSignature::Exact(vec![DataType::Binary, DataType::Int64, DataType::Int64]),
+                    TypeSignature::Exact(vec![
+                        DataType::BinaryView,
+                        DataType::Int64,
+                        DataType::Int64,
+                    ]),
+                    TypeSignature::Exact(vec![
+                        DataType::LargeBinary,
+                        DataType::Int64,
+                        DataType::Int64,
+                    ]),
+                ],
                 Volatility::Immutable,
             ),
         }
@@ -47,7 +63,7 @@ impl Default for RaquetPixel {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for RaquetPixel {
-         fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn name(&self) -> &str {
@@ -62,15 +78,22 @@ impl ScalarUDFImpl for RaquetPixel {
         Err(DataFusionError::Internal("return_type".to_string()))
     }
 
-    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {       
+    fn return_field_from_args(&self, _args: ReturnFieldArgs) -> Result<FieldRef> {
         Ok(Arc::new(Field::new("", DataType::Float64, false)))
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let existing_metadata = Metadata::try_from(args.arg_fields[0].as_ref()).unwrap_or_default();
+        let binary_field = &args.arg_fields[0];
+        let binary_type = binary_field.data_type();
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        let cell_arr = build_cell_array(arrays, existing_metadata)?;
-        let array_ref: ArrayRef = Arc::new(cell_arr);
-        Ok(ColumnarValue::Array(array_ref))
+        match has_extension(binary_field.as_ref()) {
+            true => {
+                let column_metadata = Metadata::try_from(binary_field.as_ref()).unwrap_or_default();
+                let list_array = build_cell_array(arrays, binary_type, column_metadata)?;
+
+                Ok(ColumnarValue::Array(Arc::new(list_array)))
+            }
+            false => Err(DataFusionError::Internal("invoke_with_args".to_string())),
+        }
     }
 
     fn documentation(&self) -> Option<&Documentation> {
@@ -90,56 +113,53 @@ impl ScalarUDFImpl for RaquetPixel {
 
 fn build_cell_array(
     arrays: Vec<ArrayRef>,
-    metadata: Metadata,
+    binary_type: &DataType,
+    column_metadata: Metadata,
 ) -> RaquetDataFusionResult<Float64Array> {
-    let binary_array = arrays[0]
-        .as_any()
-        .downcast_ref::<BinaryArray>()
-        .expect("cast failed");
-
+    let mut out_builder = Float64Builder::new();
+    let ops: Operations = Operations::new(column_metadata.inner());
     let pixel_x_array = arrays[1].as_primitive::<Int64Type>();
     let pixel_y_array = arrays[2].as_primitive::<Int64Type>();
 
-    let mut out_builder = Float64Builder::new();
-    let ops: Operations = Operations::new(metadata.inner());
-    for (binary, pixel_x, pixel_y) in multizip((binary_array, pixel_x_array, pixel_y_array)) {
-        let value = ops.getpixel(binary, pixel_x.unwrap() as u64, pixel_y.unwrap() as u64)?;
-        out_builder.append_value(value);
+    match binary_type {
+        DataType::Binary => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<BinaryArray>()
+                .expect("cast failed");
+            for (binary, pixel_x, pixel_y) in multizip((in_binary, pixel_x_array, pixel_y_array)) {
+                let value =
+                    ops.getpixel(binary, pixel_x.unwrap() as u64, pixel_y.unwrap() as u64)?;
+                out_builder.append_value(value);
+            }
+        }
+        DataType::LargeBinary => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<LargeBinaryArray>()
+                .expect("cast failed");
+            for (binary, pixel_x, pixel_y) in multizip((in_binary, pixel_x_array, pixel_y_array)) {
+                let value =
+                    ops.getpixel(binary, pixel_x.unwrap() as u64, pixel_y.unwrap() as u64)?;
+                out_builder.append_value(value);
+            }
+        }
+
+        DataType::BinaryView => {
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<BinaryViewArray>()
+                .expect("cast failed");
+            for (binary, pixel_x, pixel_y) in multizip((in_binary, pixel_x_array, pixel_y_array)) {
+                let value =
+                    ops.getpixel(binary, pixel_x.unwrap() as u64, pixel_y.unwrap() as u64)?;
+                out_builder.append_value(value);
+            }
+        }
+        _ => unreachable!(),
     }
 
     let point_arr = out_builder.finish();
 
     Ok(point_arr)
-}
-#[cfg(test)]
-mod tests {  
-
-    use super::*;
-    use crate::RaquetTable;
-    use crate::udf::general::QuadBinToPixelXY;
-    use datafusion::prelude::{SessionConfig, SessionContext};
-
-    #[tokio::test]
-    async fn test_raquet_pixel() {
-        let path =
-            "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-                .to_string();
-
-        let ctx =
-            SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-        ctx.register_udf(RaquetPixel::default().into());
-        ctx.register_udf(QuadBinToPixelXY::default().into());
-        let t = RaquetTable::from_path(path).await;
-
-        let _ = ctx.register_table("solar", Arc::new(t));
-        // -19.6875,
-        // 26.4312280645064
-
-        let sql = r#"SELECT raquet_pixel(band_1,cast(32 as bigint),cast(17 as bigint)) from solar where block<>0 ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        println!("{:?}", df.count().await);
-    }
 }

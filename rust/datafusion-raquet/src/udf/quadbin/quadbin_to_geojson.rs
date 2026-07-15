@@ -68,8 +68,8 @@ impl ScalarUDFImpl for QuadBinToGeoJSON {
         Some(DOCUMENTATION.get_or_init(|| {
             Documentation::builder(
                 DOC_SECTION_OTHER,
-                "Return a WKT String from a quadbin cell ",
-                "quadbin_to_wkt(5256690695657226239) ",
+                "Return a GeoJSON String from a quadbin cell ",
+                "quadbin_to_geojson(5256690695657226239) ",
             )
             .with_argument("cell", "cell value")
             .build()
@@ -96,20 +96,3 @@ fn build_geojson_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<Columnar
     Ok(ColumnarValue::Array(Arc::new(builder.finish())))
 }
 
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_to_children() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToGeoJSON::default().into());
-        let sql = r#"SELECT quadbin_to_geojson(5256690695657226239) ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
-}

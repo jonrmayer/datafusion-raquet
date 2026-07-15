@@ -44,6 +44,7 @@ pub fn register(session_context: &datafusion::prelude::SessionContext) {
     session_context.register_udf(QuadBinFromTile::default().into());
     session_context.register_udf(QuadBinToTile::default().into());
     session_context.register_udf(QuadBinFromLonLat::default().into());
+    session_context.register_udf(QuadBinToLonLat::default().into());
     session_context.register_udf(QuadBinToParent::default().into());
     session_context.register_udf(QuadBinResolution::default().into());
     session_context.register_udf(QuadBinToChildren::default().into());

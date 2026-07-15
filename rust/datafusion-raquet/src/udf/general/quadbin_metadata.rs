@@ -54,7 +54,7 @@ impl ScalarUDFImpl for QuadbinMetadata {
         self
     }
     fn name(&self) -> &str {
-        "quadbin_metadata"
+        "raquet_quadbin_metadata"
     }
 
     fn signature(&self) -> &Signature {

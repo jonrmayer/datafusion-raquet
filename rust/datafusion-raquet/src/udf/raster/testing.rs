@@ -33,8 +33,40 @@ mod tests {
     #[tokio::test]
     async fn test_native_tile() {
         let ctx = get_ctx().await;
-        let sql = r#"SELECT native_tile(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')) as native from solar where block=5230520127799164927  ;"#;
-        let df = ctx.sql(sql).await.unwrap();
+        let sql = r#"SELECT raquet_band_native(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')) as native from solar where block=5230520127799164927  ;"#;
+        let _df = ctx.sql(sql).await.unwrap();
         // df.show().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_decode_tile() {
+        let ctx = get_ctx().await;
+        let sql = r#"SELECT raquet_band_decode(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')) as native from solar where block=5230520127799164927  ;"#;
+        let _df = ctx.sql(sql).await.unwrap();
+        // df.show().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_decompress_tile() {
+        let ctx = get_ctx().await;
+        let sql = r#"SELECT raquet_decompress(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')) as native from solar where block=5230520127799164927  ;"#;
+        let _df = ctx.sql(sql).await.unwrap();
+        // df.show().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_raquet_value() {
+        let ctx = get_ctx().await;
+        let sql = r#"SELECT raquet_value(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip'),'POINT(-3.7038 40.4168)',cast(9 as INT)) as value from solar where block=5229757908543078399  ;"#;
+        let df = ctx.sql(sql).await.unwrap();
+        df.show().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_raquet_pixel() {
+        let ctx = get_ctx().await;
+        let sql = r#"SELECT raquet_pixel(cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip'),32,17) as value from solar where block=5229757908543078399  ;"#;
+        let df = ctx.sql(sql).await.unwrap();
+        df.show().await.unwrap();
     }
 }

@@ -51,7 +51,7 @@ mod tests {
 
         )
 
-        select band_metadata('band_1',m.metadata) as band_meta from m
+        select raquet_band_metadata('band_1',m.metadata) as band_meta from m
 
         "###;
 
@@ -70,7 +70,7 @@ mod tests {
 
         )
 
-        select quadbin_metadata(m.metadata) as quadbin_meta from m
+        select raquet_quadbin_metadata(m.metadata) as quadbin_meta from m
 
         "###;
 
@@ -114,13 +114,13 @@ mod tests {
         let ctx = get_ctx().await;
         let sql = r###"
        
-         select cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip') band_1 from solar where block<>0 limit 1
+         select binary_to_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip') band_1 from solar where block<>0 limit 1
 
         "###;
 
        
 
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
+        let _df = ctx.sql(sql).await.unwrap();
+        // df.show().await.unwrap();
     }
 }

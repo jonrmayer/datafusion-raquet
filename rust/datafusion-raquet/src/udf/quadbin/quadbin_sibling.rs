@@ -1,9 +1,9 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::{UInt64Type};
+use arrow_array::types::UInt64Type;
 use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -78,8 +78,11 @@ impl ScalarUDFImpl for QuadBinToSibling {
 }
 
 fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    let item_field = Arc::new(Field::new("", DataType::UInt64, false));
-    Ok(Arc::new(Field::new_list("", item_field.clone(), false)))
+    let list_field = Field::new_list_field(DataType::UInt64, true);
+    let dt = DataType::List(Arc::new(list_field));
+    let out_field: Field = Field::new("", dt, true);
+
+    Ok(Arc::new(out_field))
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> {
