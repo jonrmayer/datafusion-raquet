@@ -47,11 +47,11 @@ impl GeoTiles {
         let gr0 = GeoRasterizer::new(tile_geom0);
         let gr1 = GeoRasterizer::new(tile_geom1);
         // gr.
-        for (_i, v) in gr0.intersecting().iter().enumerate() {
+        for v in gr0.intersecting().iter() {
             println!("{:?}", 2.0_f64.powf(5.0) + v.0);
         }
 
-        for (_i, v) in gr1.intersecting().iter().enumerate() {
+        for v in gr1.intersecting().iter() {
             println!("{:?}", v);
         }
 

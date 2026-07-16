@@ -48,8 +48,8 @@ impl GeoRasterizer {
     pub fn local_geom(&self) -> Geometry {
         let (min_x, min_y) = self.min_xy();
 
-        let local_geom = transform_tile_to_local_coord(self.geom(), min_x, min_y);
-        local_geom
+        
+        transform_tile_to_local_coord(self.geom(), min_x, min_y)
     }
 
     pub fn intersecting(&self) -> Vec<(f64, f64)> {

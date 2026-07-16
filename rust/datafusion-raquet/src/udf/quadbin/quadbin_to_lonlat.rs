@@ -94,7 +94,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let mut lat_builder = Float64Builder::new();
 
     for cell in cells.iter() {
-        let lonlat = QuadBin::from_cell(cell.unwrap() as u64)?.to_lonlat()?;
+        let lonlat = QuadBin::from_cell(cell.unwrap())?.to_lonlat()?;
         lon_builder.append_value(lonlat.0);
         lat_builder.append_value(lonlat.1);
     }

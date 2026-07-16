@@ -15,7 +15,7 @@ impl BaseGeo {
         self.geom.clone()
     }
     pub fn resolution(&self) -> i8 {
-        self.resolution.clone()
+        self.resolution
     }
     pub fn extent(&self) -> (f64, f64, f64, f64) {
         let bounds = self.geom().bounding_rect().unwrap();

@@ -111,7 +111,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let mut ymax_builder = Float64Builder::new();
 
     for cell in cells.iter() {       
-        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap() as u64)?.to_tile()?.to_bbox_wgs84()?;
+        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap())?.to_tile()?.to_bbox_wgs84()?;
         xmin_builder.append_value(bbox_wgs84.min_x);
         ymin_builder.append_value(bbox_wgs84.min_y);
         xmax_builder.append_value(bbox_wgs84.max_x);

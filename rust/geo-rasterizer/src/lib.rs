@@ -98,8 +98,8 @@ where
     T: Into<Coord> + Copy,
 {
     Coord {
-        x: coords.x.into(),
-        y: coords.y.into(),
+        x: coords.x,
+        y: coords.y,
     }
 }
 
@@ -138,7 +138,7 @@ impl BinaryRasterizer {
     pub fn finish(self) -> Array2<bool> {
         self.inner
             .finish()
-            .mapv(|v| if v == 1u8 { true } else { false })
+            .mapv(|v| v == 1u8)
     }
 }
 
@@ -152,9 +152,11 @@ where
 /// Conflict resolution strategy for cases where two shapes cover the
 /// same pixel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum MergeAlgorithm {
     /// Overwrite the pixel with the burn value associated with the
     /// last shape to be written to it. This is the default.
+    #[default]
     Replace,
 
     /// Overwrite the pixel with the sum of the burn values associated
@@ -162,11 +164,6 @@ pub enum MergeAlgorithm {
     Add,
 }
 
-impl Default for MergeAlgorithm {
-    fn default() -> Self {
-        MergeAlgorithm::Replace
-    }
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct LabelBuilder<Label> {

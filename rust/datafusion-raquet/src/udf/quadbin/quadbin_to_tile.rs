@@ -95,7 +95,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let mut z_builder = Int64Builder::new();
 
     for cell in cells.iter() {
-        let tile = QuadBin::from_cell(cell.unwrap() as u64)?.to_tile()?;
+        let tile = QuadBin::from_cell(cell.unwrap())?.to_tile()?;
         x_builder.append_value(tile.x as i64);
         y_builder.append_value(tile.y as i64);
         z_builder.append_value(tile.z as i64);

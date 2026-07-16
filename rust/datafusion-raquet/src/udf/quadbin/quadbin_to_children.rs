@@ -111,12 +111,10 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
             }
         }
         None => {
-            for cell in cell.iter() {
-                if let Some(cell) = cell {
-                    let child_cells = QuadBin::from_cell(cell as u64)?.children()?;
-                    let children = UInt64Array::from(child_cells);
-                    builder.append_value(&children);
-                }
+            for cell in cell.iter().flatten() {
+                let child_cells = QuadBin::from_cell(cell)?.children()?;
+                let children = UInt64Array::from(child_cells);
+                builder.append_value(&children);
             }
         }
     };

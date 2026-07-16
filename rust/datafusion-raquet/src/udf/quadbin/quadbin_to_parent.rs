@@ -97,17 +97,15 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
             for (cell, resolution) in cell.iter().zip(resolution.iter()) {
                 if let (Some(cell), Some(resolution)) = (cell, resolution) {
                     let parent =
-                        QuadBin::from_cell(cell as u64)?.parent_resolution(resolution as u8)?;
+                        QuadBin::from_cell(cell)?.parent_resolution(resolution as u8)?;
                     builder.append_value(parent);
                 }
             }
         }
         None => {
-            for cell in cell.iter() {
-                if let Some(cell) = cell {
-                    let parent = QuadBin::from_cell(cell as u64)?.parent()?;
-                    builder.append_value(parent);
-                }
+            for cell in cell.iter().flatten() {
+                let parent = QuadBin::from_cell(cell)?.parent()?;
+                builder.append_value(parent);
             }
         }
     };

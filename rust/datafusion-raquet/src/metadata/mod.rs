@@ -65,14 +65,7 @@ pub fn raquet_band_metadata(band_name: &str, raquet_str: &str) -> RasterTileMeta
     let no_data = raquet_format.get_no_data();
     let dtype = band[0].r#type.clone().unwrap();
     let rdt = RasterDataType::from_str(&dtype).unwrap();
-    let rcm = RasterTileMetadata {
-        tile_size,
-        binary_type: BinaryType::Separated,
-        data_type: rdt,
-        no_data: no_data,
-        compression: compression,
-        bands: None,
-    };
+    
     //     tile_size,
     //     rdt,
     //     no_data.clone(),
@@ -80,7 +73,14 @@ pub fn raquet_band_metadata(band_name: &str, raquet_str: &str) -> RasterTileMeta
     //     BinaryType::Separated,
     //     None,
     // );
-    rcm
+    RasterTileMetadata {
+        tile_size,
+        binary_type: BinaryType::Separated,
+        data_type: rdt,
+        no_data,
+        compression,
+        bands: None,
+    }
 }
 
 pub fn get_quadbin_metadata(
@@ -102,7 +102,7 @@ pub fn get_quadbin_metadata(
 
     let qm = QuadbinMetadata { version, columns };
 
-    return Ok(qm);
+    Ok(qm)
 }
 
 pub fn get_raquet_metadata(
@@ -127,7 +127,7 @@ pub fn get_raquet_metadata(
 
     if bands.len() == raster_columns.len() {
         let binary_type: BinaryType = BinaryType::Separated;
-        for (_, band) in bands.iter().enumerate() {
+        for band in bands.iter() {
             let name = band.name.clone().unwrap();
             let dtype = band.r#type.clone().unwrap();
             let rdt = RasterDataType::from_str(&dtype).unwrap();
@@ -161,7 +161,7 @@ pub fn get_raquet_metadata(
 
     let rm = RaquetMetadata { version, columns };
 
-    return Ok(rm);
+    Ok(rm)
 }
 
 #[derive(Debug, Clone)]
@@ -189,9 +189,8 @@ impl RaquetMetadataReader {
         let quadbin_metadata =
             get_quadbin_metadata(raquet_format.clone(), existing_schema.clone()).unwrap();
 
-        let new_schema =
-            infer_rastertile_schema(&existing_schema, &raquet_metadata, &quadbin_metadata).unwrap();
-        new_schema
+        
+        infer_rastertile_schema(&existing_schema, &raquet_metadata, &quadbin_metadata).unwrap()
     }
 
     // fn get_quadbin_metadata(
@@ -328,8 +327,8 @@ pub struct QuadbinColumnMetadata {
 impl QuadbinColumnMetadata {
     pub fn new(min_zoom: i32, max_zoom: i32) -> Self {
         QuadbinColumnMetadata {
-            min_zoom: min_zoom,
-            max_zoom: max_zoom,
+            min_zoom,
+            max_zoom,
         }
     }
 }
@@ -375,12 +374,12 @@ impl RaquetColumnMetadata {
         bands: Option<Vec<String>>,
     ) -> Self {
         RaquetColumnMetadata {
-            tile_size: tile_size,
-            binary_type: binary_type,
-            data_type: data_type,
-            no_data: no_data,
-            compression: compression,
-            bands: bands,
+            tile_size,
+            binary_type,
+            data_type,
+            no_data,
+            compression,
+            bands,
         }
     }
 }

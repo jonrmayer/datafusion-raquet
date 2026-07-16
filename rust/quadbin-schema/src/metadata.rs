@@ -28,14 +28,14 @@ impl Metadata {
 
    
     pub fn to_json_value(&self) -> Value {
-        let val = serde_json::to_value(self).unwrap();
-        val
+        
+        serde_json::to_value(self).unwrap()
     }
 
     pub fn to_str_value(&self) -> String {
         let json_value = self.to_json_value();
-        let val = serde_json::to_string(&json_value).unwrap();
-        val
+        
+        serde_json::to_string(&json_value).unwrap()
     }
 
     /// Serialize this metadata to a string.

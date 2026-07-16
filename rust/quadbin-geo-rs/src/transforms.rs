@@ -9,14 +9,14 @@ use crate::proj::{ mercator_from_latlon};
 pub fn transform_latlon_to_mercator(in_geom: Geometry) -> Geometry {
     let transform_mercator = |c: geo_types::Coord<f64>| -> Result<_, QuadBinGeoError> {
         let (x, y) = mercator_from_latlon(c.x, c.y);
-        let out = geo_types::Coord { x: x, y: y };
+        let out = geo_types::Coord { x, y };
         Ok(out)
     };
-    let out_geom = in_geom
-        .try_map_coords(|coord| transform_mercator(coord))
-        .unwrap();
+    
 
-    out_geom
+    in_geom
+        .try_map_coords(transform_mercator)
+        .unwrap()
 }
 
 pub fn transform_latlon_to_tile_coord(in_geom: Geometry, resolution: i8) -> Geometry {
@@ -28,11 +28,11 @@ pub fn transform_latlon_to_tile_coord(in_geom: Geometry, resolution: i8) -> Geom
         };
         Ok(out)
     };
-    let out_geom = in_geom
-        .try_map_coords(|coord| transform_to_tile(coord))
-        .unwrap();
+    
 
-    out_geom
+    in_geom
+        .try_map_coords(transform_to_tile)
+        .unwrap()
 }
 
 pub fn transform_tile_to_local_coord(in_geom: Geometry, min_x: f64, min_y: f64) -> Geometry {
@@ -43,9 +43,9 @@ pub fn transform_tile_to_local_coord(in_geom: Geometry, min_x: f64, min_y: f64) 
         };
         Ok(out)
     };
-    let out_geom = in_geom
-        .try_map_coords(|coord| transform_to_local(coord))
-        .unwrap();
+    
 
-    out_geom
+    in_geom
+        .try_map_coords(transform_to_local)
+        .unwrap()
 }

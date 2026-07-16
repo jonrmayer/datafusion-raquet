@@ -136,10 +136,10 @@ impl RaquetFormat {
     }
 
     pub fn get_compression(&self) -> String {
-        let compression = self.compression().unwrap().clone();
+        
         // if band_index < 0 || band_index >= self.band_info().len() {}
 
-        compression
+        self.compression().unwrap().clone()
     }
 
     pub fn get_no_data(&self) -> String {
@@ -150,12 +150,12 @@ impl RaquetFormat {
         }
         .unwrap();
 
-        let nodata_value = match nodata {
+        
+        match nodata {
             NoData::String(val) => val,
             NoData::Float(val) => val.to_string(),
             NoData::Int(val) => val.to_string(),
-        };
-        nodata_value
+        }
     }
 }
 

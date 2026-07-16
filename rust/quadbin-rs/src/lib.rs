@@ -1,7 +1,7 @@
 pub(crate) const MAX_RESOLUTION: u8 = 26;
-pub(crate) const PI: f64 = 3.14159265358979323846;
+pub(crate) const PI: f64 = 3.141_592_653_589_793;
 pub(crate) const EARTH_RADIUS: f64 = 6378137.0;
-pub(crate) const MAX_LATITUDE: f64 = 85.051128779806604;
+pub(crate) const MAX_LATITUDE: f64 = 85.051_128_779_806_6;
 
 pub(crate) const HEADER: u64 = 0x4000_0000_0000_0000;
 pub(crate) const MODE: u64 = 0x0800_0000_0000_0000;
@@ -61,7 +61,7 @@ impl QuadBin {
         Ok(QuadBin { cell })
     }
     pub fn cell(&self) -> u64 {
-        self.cell.clone()
+        self.cell
     }
     pub fn resolution(&self) -> QuadBinResult<u8> {
         let out = ((self.cell() >> 52) & 0x1F) as u8;
@@ -96,7 +96,7 @@ impl QuadBin {
         let tile = Tile {
             x: ux as u32,
             y: uy as u32,
-            z: z,
+            z,
         };
         Ok(tile)
     }
@@ -110,7 +110,7 @@ impl QuadBin {
     pub fn children_resolution(&self, child_resolution: u8) -> QuadBinResult<Vec<u64>> {
         let mut result: Vec<u64> = vec![];
         let current_res = self.resolution()?;
-        if child_resolution <= current_res || child_resolution > MAX_RESOLUTION {}
+        child_resolution <= current_res || child_resolution > MAX_RESOLUTION;
         let tile = self.to_tile()?;
         let res_diff = child_resolution - current_res;
         let children_per_dim = 1 << res_diff;
@@ -147,7 +147,7 @@ impl QuadBin {
             y: parent_y,
             z: parent_resolution,
         };
-        Ok(new_tile.to_cell()?)
+        new_tile.to_cell()
     }
 
     // Get parent cell at resolution - 1
@@ -156,7 +156,7 @@ impl QuadBin {
         if current_res == 0 {
             return Ok(self.cell());
         }
-        Ok(self.parent_resolution(current_res - 1)?)
+        self.parent_resolution(current_res - 1)
     }
 
     // Convert quadbin cell to longitude/latitude (center of cell)
@@ -172,7 +172,7 @@ impl QuadBin {
     // Returns cells in a grid pattern around the center cell
     pub fn kring(&self, k: i32) -> QuadBinResult<Vec<u64>> {
         let mut result: Vec<u64> = vec![];
-        if k < 0 {}
+        k < 0;
         let tile: Tile = self.to_tile()?;
         let max_coord = (1 << tile.z) - 1; // Maximum valid coordinate at this resolution
         let _diameter = 2 * k + 1;
@@ -247,13 +247,13 @@ impl Tile {
     }
 
     pub fn x(&self) -> u32 {
-        self.x.clone()
+        self.x
     }
     pub fn y(&self) -> u32 {
-        self.y.clone()
+        self.y
     }
     pub fn z(&self) -> u8 {
-        self.z.clone()
+        self.z
     }
     pub fn is_valid(&self) -> QuadBinResult<bool> {
         if self.z() > MAX_RESOLUTION {
@@ -317,10 +317,10 @@ impl Tile {
         let min_lon = self.x() as f64 / n * 360.0 - 180.0;
         let max_lon = (self.x() as f64 + 1.0) / n * 360.0 - 180.0;
 
-        let min_lat_rad = (PI * (1.0 - 2.0 * (self.y() as f64 + 1.0) / n as f64))
+        let min_lat_rad = (PI * (1.0 - 2.0 * (self.y() as f64 + 1.0) / n))
             .sinh()
             .atan();
-        let max_lat_rad = (PI * (1.0 - 2.0 * self.y() as f64 / n as f64))
+        let max_lat_rad = (PI * (1.0 - 2.0 * self.y() as f64 / n))
             .sinh()
             .atan();
 

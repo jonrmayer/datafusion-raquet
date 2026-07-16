@@ -132,26 +132,26 @@ impl Metadata {
     }
 
     pub fn samples(&self) -> usize {
-        let samples = match self.bands() {
+        
+        match self.bands() {
             Some(bands) => bands.len(),
             _ => 1,
-        };
-        samples
+        }
     }
 
     /// Expose the underlying tile_size.
     pub fn tile_size(&self) -> usize {
-        self.tile_size.clone()
+        self.tile_size
     }
 
     /// Expose the underlying binary_type
     pub fn binary_type(&self) -> BinaryType {
-        self.binary_type.clone()
+        self.binary_type
     }
 
     /// Expose the underlying binary_type
     pub fn data_type(&self) -> DataType {
-        self.data_type.clone()
+        self.data_type
     }
 
     pub fn no_data(&self) -> String {
@@ -160,18 +160,18 @@ impl Metadata {
 
     /// Expose the underlying binary_type
     pub fn compression(&self) -> CompressionFormat {
-        self.compression.clone()
+        self.compression
     }
 
     pub fn to_json_value(&self) -> Value {
-        let val = serde_json::to_value(self).unwrap();
-        val
+        
+        serde_json::to_value(self).unwrap()
     }
 
     pub fn to_str_value(&self) -> String {
         let json_value = self.to_json_value();
-        let val = serde_json::to_string(&json_value).unwrap();
-        val
+        
+        serde_json::to_string(&json_value).unwrap()
     }
 
     /// Serialize this metadata to a string.

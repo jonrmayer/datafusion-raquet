@@ -63,7 +63,7 @@ impl ScalarUDFImpl for DecompressTile {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
-        Ok(return_field_impl(args)?)
+        return_field_impl(args)
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let binary_field = &args.arg_fields[0];

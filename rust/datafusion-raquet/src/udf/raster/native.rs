@@ -82,7 +82,7 @@ impl ScalarUDFImpl for NativeTile {
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
-        Ok(return_field_impl(args)?)
+        return_field_impl(args)
     }
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let binary_field = &args.arg_fields[0];
@@ -154,7 +154,8 @@ fn build_cell_array(
                 .downcast_ref::<BinaryArray>()
                 .expect("cast failed");
             let ops: Operations = Operations::new(column_metadata.inner());
-            let out_array = match column_metadata.data_type() {
+            
+            match column_metadata.data_type() {
                 RasterDataType::Int8 => convert_binary_list_array_i8(in_binary, ops)?.finish(),
                 RasterDataType::UInt8 => convert_binary_list_array_u8(in_binary, ops)?.finish(),
                 RasterDataType::Int16 => convert_binary_list_array_i16(in_binary, ops)?.finish(),
@@ -166,8 +167,7 @@ fn build_cell_array(
                 RasterDataType::Float32 => convert_binary_list_array_f32(in_binary, ops)?.finish(),
                 RasterDataType::Float64 => convert_binary_list_array_f64(in_binary, ops)?.finish(),
                 _ => todo!(),
-            };
-            out_array
+            }
         }
         DataType::BinaryView => {
             let in_binary = arrays[0]
@@ -175,7 +175,8 @@ fn build_cell_array(
                 .downcast_ref::<BinaryViewArray>()
                 .expect("cast failed");
             let ops: Operations = Operations::new(column_metadata.inner());
-            let out_array = match column_metadata.data_type() {
+            
+            match column_metadata.data_type() {
                 RasterDataType::Int8 => convert_binaryview_list_array_i8(in_binary, ops)?.finish(),
                 RasterDataType::UInt8 => convert_binaryview_list_array_u8(in_binary, ops)?.finish(),
                 RasterDataType::Int16 => {
@@ -203,8 +204,7 @@ fn build_cell_array(
                     convert_binaryview_list_array_f64(in_binary, ops)?.finish()
                 }
                 _ => todo!(),
-            };
-            out_array
+            }
         }
         DataType::LargeBinary => {
             let in_binary = arrays[0]
@@ -212,7 +212,8 @@ fn build_cell_array(
                 .downcast_ref::<LargeBinaryArray>()
                 .expect("cast failed");
             let ops: Operations = Operations::new(column_metadata.inner());
-            let out_array = match column_metadata.data_type() {
+            
+            match column_metadata.data_type() {
                 RasterDataType::Int8 => convert_largebinary_list_array_i8(in_binary, ops)?.finish(),
                 RasterDataType::UInt8 => convert_largebinary_list_array_u8(in_binary, ops)?.finish(),
                 RasterDataType::Int16 => convert_largebinary_list_array_i16(in_binary, ops)?.finish(),
@@ -224,8 +225,7 @@ fn build_cell_array(
                 RasterDataType::Float32 => convert_largebinary_list_array_f32(in_binary, ops)?.finish(),
                 RasterDataType::Float64 =>convert_largebinary_list_array_f64(in_binary, ops)?.finish(),
                 _ => todo!(),
-            };
-            out_array
+            }
         }
 
         _ => unreachable!(),

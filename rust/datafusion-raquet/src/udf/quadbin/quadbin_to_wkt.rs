@@ -87,7 +87,7 @@ fn build_wkt_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ColumnarValu
     let mut builder = StringViewBuilder::with_capacity(cells.len());
 
     for cell in cells.iter() {
-        let bbox = QuadBin::from_cell(cell.unwrap() as u64)?
+        let bbox = QuadBin::from_cell(cell.unwrap())?
             .to_tile()?
             .to_bbox_wgs84()?;
         let wkt = GeoFormats::new(bbox).to_wkt();

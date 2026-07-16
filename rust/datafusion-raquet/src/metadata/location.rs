@@ -21,15 +21,15 @@ impl MetaDataLocation {
     }
 
     pub fn column_index(&self) -> usize {
-        let column_index = self
+        
+        self
             .metadata()
             .file_metadata()
             .schema()
             .get_fields()
             .iter()
             .position(|r| r.name() == "metadata")
-            .unwrap();
-        column_index
+            .unwrap()
     }
 
     pub fn row_group_indexes(&self) -> Vec<usize> {
@@ -49,11 +49,11 @@ impl MetaDataLocation {
     }
 
     pub fn projection(&self) -> ProjectionMask {
-        let mask = ProjectionMask::roots(
+        
+
+        ProjectionMask::roots(
             &self.metadata().file_metadata().schema_descr_ptr(),
             vec![self.column_index()],
-        );
-
-        mask
+        )
     }
 }
