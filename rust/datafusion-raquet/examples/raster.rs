@@ -3,7 +3,6 @@ use crate::udf::quadbin::register as quadbin_register;
 use crate::udf::raster::register as raster_register;
 use datafusion::prelude::*;
 use datafusion_raquet::*;
-use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 
 pub async fn time_async<F, O>(f: F) -> (O, Duration)

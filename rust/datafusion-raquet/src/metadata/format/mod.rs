@@ -160,7 +160,7 @@ impl RaquetFormat {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::Value;
+    // use serde_json::Value;
     use std::fs::File;
 
     #[test]

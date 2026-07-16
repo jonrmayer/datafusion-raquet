@@ -1,4 +1,3 @@
-use datafusion::execution::object_store::ObjectStoreUrl;
 // use datafusion::prelude::*;
 // use datafusion_raquet::*;
 // use object_store::ClientOptions;

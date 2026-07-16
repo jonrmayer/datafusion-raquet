@@ -1,11 +1,5 @@
-use datafusion::execution::object_store::ObjectStoreUrl;
 use datafusion::prelude::*;
-use datafusion_raquet::*;
-use object_store::ClientOptions;
-use object_store::http::{HttpBuilder, HttpStore};
-use std::sync::Arc;
 use tokio::time::{Duration, Instant};
-use url::Url;
 
 // use datafusion::common::DataFusionError;
 // use datafusion_raquet::udf::general::intersects::Intersects;
@@ -28,7 +22,7 @@ pub async fn setup_local_store() -> SessionContext {
     //     "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
     //         .to_string();
 
-    let mut ctx =
+    let ctx =
         SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
     let sql = r###"
         CREATE EXTERNAL TABLE spain_solar
@@ -92,14 +86,14 @@ pub async fn setup_local_store() -> SessionContext {
 //     let df = ctx.sql(sql).await.unwrap();
 //     df.collect().await.unwrap()
 // }
-pub async fn test_read_parquet_band(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
-    let sql = r###"
-        select count(*) from spain_solar;
-    "###;
-    let df = ctx.sql(sql).await.unwrap();
-    df.clone().show().await;
-    df.collect().await.unwrap()
-}
+// pub async fn test_read_parquet_band(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
+//     let sql = r###"
+//         select count(*) from spain_solar;
+//     "###;
+//     // let df = ctx.sql(sql).await.unwrap();
+//     // df.clone().show().await;
+//     // df.collect().await.unwrap()
+// }
 // pub async fn test_read_parquet_cast(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
 //        select cast_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip') from solar where block<>0
@@ -192,10 +186,10 @@ pub async fn test_read_parquet_band(ctx: SessionContext) -> Vec<arrow_array::Rec
 // // }
 #[tokio::main]
 async fn main() {
-    let (ctx, duration) = time_async(setup_local_store()).await;
-    println!("remote setup {:?}", duration);
-    let (out, duration) = time_async(test_read_parquet_band(ctx.clone())).await;
-    println!("local parquet {:?} {:?}", out[0].num_rows(), duration);
+    // let (ctx, duration) = time_async(setup_local_store()).await;
+    // println!("remote setup {:?}", duration);
+    // let (out, duration) = time_async(test_read_parquet_band(ctx.clone())).await;
+    // println!("local parquet {:?} {:?}", out[0].num_rows(), duration);
 
     // test_local_parquet().await;
     // test_local_raquet().await;
