@@ -184,7 +184,7 @@ impl Metadata {
     // /// Deserialize metadata from a string.
     pub fn deserialize<S: AsRef<str>>(metadata: Option<S>) -> Result<Self, MetadataError> {
         if let Some(ext_meta) = metadata {
-            Ok(serde_json::from_str(ext_meta.as_ref()).map_err(|err| {
+            Ok(serde_json::from_str(ext_meta.as_ref()).map_err(|_err| {
                 MetadataError::General("Bool must be constructed via Array::try_new".to_string())
             })?)
         } else {

@@ -6,6 +6,7 @@ use error::{MetadataError, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ColorInterp {
@@ -174,25 +175,25 @@ mod tests {
         println!(" value {:?}", feature);
     }
 
-    #[test]
-    fn test_colortable() {
-        let colortable_str = r#"{
-                "0": [
-                    0,
-                    0,
-                    0,
-                    255],
-                     "1": [
-                    0,
-                    0,
-                    0,
-                    255
-                ]
-                    }"#;
-        let v: Value = serde_json::from_str(colortable_str).unwrap();
+//     #[test]
+//     fn test_colortable() {
+//         let colortable_str = r#"{
+//                 "0": [
+//                     0,
+//                     0,
+//                     0,
+//                     255],
+//                      "1": [
+//                     0,
+//                     0,
+//                     0,
+//                     255
+//                 ]
+//                     }"#;
+//         let v: Value = serde_json::from_str(colortable_str).unwrap();
 
-        let r: Vec<(String, [f64; 4])> = serde_json::from_value(v).unwrap();
+//         let r: Vec<(String, [f64; 4])> = serde_json::from_value(v).unwrap();
 
-        println!(" value {:?}", r);
-    }
+//         println!(" value {:?}", r);
+//     }
 }

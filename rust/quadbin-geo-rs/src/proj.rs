@@ -1,24 +1,26 @@
+
+#[allow(dead_code)]
 // length of semi-major axis of the WGS84 ellipsoid, i.e. radius at equator
 const EARTH_RADIUS_KM: f64 = 6_378.137;
-
+#[allow(dead_code)]
 pub fn lon2x(lon: f64) -> f64 {
     EARTH_RADIUS_KM * 1000. * lon.to_radians()
 }
-
+#[allow(dead_code)]
 pub fn x2lon(x: f64) -> f64 {
     (x / (EARTH_RADIUS_KM * 1000.)).to_degrees()
 }
-
+#[allow(dead_code)]
 pub fn lat2y(lat: f64) -> f64 {
     ((lat.to_radians() / 2. + std::f64::consts::PI / 4.).tan()).log(std::f64::consts::E)
         * EARTH_RADIUS_KM
         * 1000.
 }
-
+#[allow(dead_code)]
 pub fn y2lat(y: f64) -> f64 {
     (2. * ((y / (EARTH_RADIUS_KM * 1000.)).exp()).atan() - std::f64::consts::PI / 2.).to_degrees()
 }
-
+#[allow(dead_code)]
 pub fn latlon_from_mercator(x: f64, y: f64) -> (f64, f64) {
     let lat = y2lat(y);
     let lon = x2lon(x);

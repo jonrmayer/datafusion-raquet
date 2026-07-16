@@ -1,10 +1,11 @@
 use geo::map_coords::MapCoords;
-use geo::{BoundingRect, Geometry};
-use quadbin_rs::{QuadBin, Tile};
+use geo::{ Geometry};
+use quadbin_rs::{ Tile};
 
 use crate::error::QuadBinGeoError;
-use crate::proj::{latlon_from_mercator, mercator_from_latlon};
+use crate::proj::{ mercator_from_latlon};
 
+#[allow(dead_code)]
 pub fn transform_latlon_to_mercator(in_geom: Geometry) -> Geometry {
     let transform_mercator = |c: geo_types::Coord<f64>| -> Result<_, QuadBinGeoError> {
         let (x, y) = mercator_from_latlon(c.x, c.y);

@@ -37,7 +37,7 @@ use rastertile_rs::Metadata as RasterTileMetadata;
 
 use quadbin_schema::{Metadata as QMetadata, QuadbinArrowType, QuadbinType};
 
-use crate::metadata::format::{BandInfo, NoData};
+
 
 pub fn raquet_format_from_str(raquet_str: &str) -> RaquetFormat {
     let raquet_format: RaquetFormat = serde_json::from_str(raquet_str).unwrap();

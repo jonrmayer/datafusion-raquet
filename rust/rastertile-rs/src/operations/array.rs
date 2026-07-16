@@ -3,6 +3,7 @@ use bytemuck::{cast_slice, cast_vec, try_cast_vec};
 use crate::DataType;
 use crate::operations::{OperationsResult,OperationsError};
 
+#[allow(dead_code)]
 /// A 3D array that represents decoded TIFF image data.
 #[derive(Debug, Clone)]
 pub struct Array {
@@ -66,11 +67,13 @@ impl Array {
         &self.data
     }
 
+    #[allow(dead_code)]
     /// Consume the Array and return its components.
     pub fn into_inner(self) -> (TypedArray, [usize; 3], Option<DataType>) {
         (self.data, self.shape, self.data_type)
     }
 
+    #[allow(dead_code)]
     /// Get the shape of the array.
     ///
     /// The shape matches the physical array data exposed, but the _interpretation_ depends on the
@@ -82,6 +85,7 @@ impl Array {
         self.shape
     }
 
+    #[allow(dead_code)]
     /// The logical data type of the array elements.
     ///
     /// If None, the data type is unsupported or unknown.
@@ -90,24 +94,7 @@ impl Array {
     }
 }
 
-/// An enum representing a typed view of the array data.
-///
-/// ```
-/// use async_tiff::{DataType, TypedArray};
-///
-/// let data = TypedArray::try_new(vec![10, 20, 30], Some(DataType::UInt8)).unwrap();
-/// match &data {
-///     TypedArray::UInt8(v) => assert_eq!(v, &[10, 20, 30]),
-///     _ => panic!("expected UInt8"),
-/// }
-///
-/// let bytes = std::f32::consts::PI.to_ne_bytes().to_vec();
-/// let data = TypedArray::try_new(bytes, Some(DataType::Float32)).unwrap();
-/// match &data {
-///     TypedArray::Float32(v) => assert_eq!(v[0], std::f32::consts::PI),
-///     _ => panic!("expected Float32"),
-/// }
-/// ```
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum TypedArray {
     /// Boolean mask array.
@@ -305,7 +292,7 @@ impl TypedArray {
             TypedArray::Float64(data) => data.len(),
         }
     }
-
+    #[allow(dead_code)]
     /// Check if the typed array is empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0

@@ -92,7 +92,7 @@ pub struct BinaryRasterizer {
 //             x: x as f32,
 //             y: y as f32,
 //         });
-
+#[allow(dead_code)]
 fn to_float<T>(coords: Coord) -> Coord
 where
     T: Into<Coord> + Copy,
@@ -553,6 +553,7 @@ where
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

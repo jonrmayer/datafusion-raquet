@@ -85,11 +85,12 @@ impl GetExt for RaquetFormatFactory {
     }
 }
 
+#[allow(dead_code)]
 /// GeoParquet `FileFormat` implementation
 #[derive(Debug, Default)]
 pub struct RaquetFormat {
     inner: ParquetFormat,
-    parse_to_native: bool,
+    // parse_to_native: bool,
 }
 
 impl RaquetFormat {
@@ -97,7 +98,7 @@ impl RaquetFormat {
     pub fn new(format: ParquetFormat) -> Self {
         Self {
             inner: format.with_skip_metadata(false),
-            parse_to_native: false,
+            // parse_to_native: false,
         }
     }
 }

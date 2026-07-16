@@ -3,7 +3,7 @@ use crate::transforms::transform_tile_to_local_coord;
 
 use geo::{BoundingRect, Geometry};
 use geo_rasterizer::{MergeAlgorithm, Rasterizer};
-use vaster::*;
+// use vaster::*;
 #[derive(Debug)]
 pub struct GeoRasterizer {
     pub geom: Geometry,

@@ -4,7 +4,7 @@ use std::sync::{Arc, OnceLock};
 use crate::error::RaquetDataFusionResult;
 use arrow_array::builder::{BinaryViewBuilder,GenericBinaryBuilder};
 use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray};
-use arrow_schema::{DataType, Field, FieldRef};
+use arrow_schema::{DataType, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
@@ -143,7 +143,7 @@ fn build_cell_array(
             }
             let point_arr = builder.finish();
             Ok(ColumnarValue::Array(Arc::new(point_arr)))
-            // Ok(point_arr)
+           
         }
         DataType::LargeBinary => {
             let mut builder = GenericBinaryBuilder::<i64>::new();
@@ -178,190 +178,4 @@ fn build_cell_array(
         }
         _ => unreachable!(),
     }
-
-    // let point_arr = builder.finish();
-
-    // Ok(point_arr)
 }
-
-// fn build_cell_array(
-//     arrays: Vec<ArrayRef>,
-//     binary_name: &String,
-//     binary_type: &DataType,
-//     metadata: Option<Metadata>,
-// ) -> RaquetDataFusionResult<BinaryArray> {
-//     let mut builder = GenericBinaryBuilder::<i32>::new();
-
-//     match (binary_type, metadata) {
-//         (DataType::Binary, Some(m)) => {
-//             let in_binary = arrays[0]
-//                 .as_any()
-//                 .downcast_ref::<BinaryArray>()
-//                 .expect("cast failed");
-//             let ops: Operations = Operations::new(m.inner());
-//             for input in in_binary.iter() {
-//                 let output = ops.decompress(input)?;
-
-//                 builder.append_value(output);
-//             }
-//         }
-//         (DataType::Binary, None) => {
-//             let in_binary = arrays[0]
-//                 .as_any()
-//                 .downcast_ref::<BinaryArray>()
-//                 .expect("cast failed");
-//             let metadata_array = as_string_array(&arrays[1]);
-//             for (input, metadata) in in_binary.iter().zip(metadata_array.iter()) {
-//                 let rcm = raquet_band_metadata(binary_name, metadata.unwrap());
-//                 let ops: Operations = Operations::new(rcm);
-//                 let output = ops.decompress(input)?;
-
-//                 builder.append_value(output);
-//             }
-//         }
-//         (DataType::BinaryView, Some(m)) => {
-//             let in_binary = arrays[0]
-//                 .as_any()
-//                 .downcast_ref::<BinaryViewArray>()
-//                 .expect("cast failed");
-//             let ops: Operations = Operations::new(m.inner());
-//             for input in in_binary.iter() {
-//                 let output = ops.decompress(input)?;
-
-//                 builder.append_value(output);
-//             }
-//         }
-//         (DataType::BinaryView, None) => {
-//             let in_binary = arrays[0]
-//                 .as_any()
-//                 .downcast_ref::<BinaryViewArray>()
-//                 .expect("cast failed");
-//             let metadata_array = arrays[1]
-//                 .as_any()
-//                 .downcast_ref::<StringViewArray>()
-//                 .expect("cast failed");
-//             for (input, metadata) in in_binary.iter().zip(metadata_array.iter()) {
-//                 let rcm = raquet_band_metadata("band_1", metadata.unwrap());
-//                 let ops: Operations = Operations::new(rcm);
-//                 let output = ops.decompress(input)?;
-
-//                 builder.append_value(output);
-//             }
-//         }
-//         _ => unreachable!(),
-//     }
-
-//     let point_arr = builder.finish();
-
-//     Ok(point_arr)
-// }
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::RaquetTable;
-//     use crate::register;
-//     use crate::views::ReadRaquetMetadata;
-//     use datafusion::prelude::*;
-//     use datafusion::prelude::{SessionConfig, SessionContext};
-
-//     use super::*;
-//     pub async fn setup_local() -> SessionContext {
-//         let path =
-//         "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-//             .to_string();
-
-//         let mut ctx =
-//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-//         // register(&mut ctx);
-//         ctx.register_udf(DecompressTile::default().into());
-
-//         let t = RaquetTable::from_path(path).await;
-
-//         let _ = ctx.register_table("solar", Arc::new(t));
-//         ctx
-//     }
-
-//     pub async fn setup_local_parquet() -> SessionContext {
-//         let path =
-//             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet";
-
-//         let ctx = SessionContext::new();
-//         // SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-//         // register(&mut ctx);
-//         ctx.register_udf(DecompressTile::default().into());
-//         let _ = ctx
-//             .register_parquet("solar", path, ParquetReadOptions::default())
-//             .await
-//             .map_err(|e| {
-//                 DataFusionError::Context(format!("Registering 'hits_raw' as {path}"), Box::new(e))
-//             });
-
-//         ctx
-//     }
-
-//     #[tokio::test]
-//     async fn test_decompress_tile() {
-//         let path =
-//             "/home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
-//                 .to_string();
-
-//         let ctx =
-//             SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
-
-//         ctx.register_udf(DecompressTile::default().into());
-//         let t = RaquetTable::from_path(path).await;
-
-//         let _ = ctx.register_table("solar", Arc::new(t));
-
-//         let sql = r#"SELECT raquet_band_decompress(band_1) from solar where block<>0  limit 1 ;"#;
-//         println!("{:?}", sql);
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         println!("{:?}", df.count().await);
-//         // df.show().await.unwrap();
-//     }
-
-//     #[tokio::test]
-//     async fn test_decompress_tile2() {
-//         let ctx = setup_local().await;
-//         let sql = r###"
-//         with m as (
-//             select metadata from solar where block=0
-
-//         ),
-//         data as (
-//             select band_1  from solar
-//             where block<>0 limit 1
-//         )
-
-//         select raquet_band_decompress(data.band_1,m.metadata) from data,m
-
-//     "###;
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         df.show().await.unwrap();
-//     }
-
-//     #[tokio::test]
-//     async fn test_decompress_tile_parquet() {
-//         let ctx = setup_local_parquet().await;
-//         let sql = r###"
-//         with m as (
-//             select metadata from solar where block=0
-
-//         ),
-//         data as (
-//             select band_1  from solar
-//             where block<>0 limit 1
-//         )
-
-//         select raquet_band_decompress(data.band_1,m.metadata) from data,m
-
-//     "###;
-
-//         let df = ctx.sql(sql).await.unwrap();
-//         df.show().await.unwrap();
-//     }
-// }

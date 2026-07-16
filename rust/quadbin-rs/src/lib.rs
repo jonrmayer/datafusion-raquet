@@ -230,16 +230,16 @@ impl Tile {
         let mut y: u32 = fy as u32;
         let n_int: i8 = n as i8;
 
-        if x < 0 {
-            x = 0;
-        }
+        // if x < 0 {
+        //     x = 0;
+        // }
         if fx >= n {
             x = (n_int - 1) as u32;
         }
 
-        if y < 0 {
-            y = 0;
-        }
+        // if y < 0 {
+        //     y = 0;
+        // }
         if fy >= n {
             y = (n_int - 1) as u32;
         }

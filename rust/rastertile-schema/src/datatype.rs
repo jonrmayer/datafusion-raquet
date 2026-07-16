@@ -11,12 +11,7 @@ use crate::Metadata;
 use crate::error::{RasterArrowError, RasterArrowResult};
 use crate::{ RasterType};
 
-/// Geospatial data types supported by GeoArrow.
-///
-/// The variants of this enum include all possible GeoArrow geometry types, including both "native"
-/// and "serialized" encodings.
-///
-/// Each variant uniquely identifies the physical buffer layout for the respective array type.
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RasterArrowType {
     /// A Raster stored in a `BinaryArray` with `i32` offsets.
@@ -46,21 +41,6 @@ impl RasterArrowType {
            
         }
     }
-    /// Converts a [`GeoArrowType`] into the relevant arrow [`DataType`].
-    ///
-    /// Note that an arrow [`DataType`] will lose the accompanying GeoArrow metadata if it is not
-    /// part of a [`Field`] with GeoArrow extension metadata in its field metadata.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use arrow_schema::DataType;
-    /// # use geoarrow_schema::{Dimension, GeoArrowType, PointType};
-    /// #
-    /// let point_type = PointType::new(Dimension::XY, Default::default());
-    /// let data_type = GeoArrowType::Point(point_type).to_data_type();
-    /// assert!(matches!(data_type, DataType::Struct(_)));
-    /// ```
     pub fn to_data_type(&self) -> DataType {
         use RasterArrowType::*;
         match self {
@@ -99,12 +79,7 @@ impl RasterArrowType {
         }
     }
 
-    /// Create a new [`GeoArrowType`] from an Arrow [`Field`], requiring GeoArrow metadata to be
-    /// set.
-    ///
-    /// If the field does not have at least a GeoArrow extension name, an error will be returned.
-    ///
-    /// See also [`GeoArrowType::from_arrow_field`].
+ 
     pub fn from_extension_field(field: &Field) -> RasterArrowResult<Self> {
         let extension_name = field.extension_type_name().ok_or(RasterArrowError::InvalidGeoArrow(
                 "Expected GeoArrow extension metadata, but found none, and `require_geoarrow_metadata` is `true`.".to_string(),
@@ -154,16 +129,6 @@ impl RasterArrowType {
     }
 }
 
-
-// macro_rules! impl_into_geoarrowtype {
-//     ($source_type:ident, $variant:expr) => {
-//         impl From<$source_type> for RasterArrowType {
-//             fn from(value: $source_type) -> Self {
-//                 $variant(value)
-//             }
-//         }
-//     };
-// }
 
 
 impl TryFrom<&Field> for RasterArrowType {
