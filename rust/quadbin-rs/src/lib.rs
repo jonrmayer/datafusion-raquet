@@ -110,7 +110,7 @@ impl QuadBin {
     pub fn children_resolution(&self, child_resolution: u8) -> QuadBinResult<Vec<u64>> {
         let mut result: Vec<u64> = vec![];
         let current_res = self.resolution()?;
-        child_resolution <= current_res || child_resolution > MAX_RESOLUTION;
+        let _ =child_resolution <= current_res || child_resolution > MAX_RESOLUTION;
         let tile = self.to_tile()?;
         let res_diff = child_resolution - current_res;
         let children_per_dim = 1 << res_diff;
@@ -172,7 +172,7 @@ impl QuadBin {
     // Returns cells in a grid pattern around the center cell
     pub fn kring(&self, k: i32) -> QuadBinResult<Vec<u64>> {
         let mut result: Vec<u64> = vec![];
-        k < 0;
+        // let _k < 0;
         let tile: Tile = self.to_tile()?;
         let max_coord = (1 << tile.z) - 1; // Maximum valid coordinate at this resolution
         let _diameter = 2 * k + 1;
