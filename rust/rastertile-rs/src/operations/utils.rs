@@ -2,7 +2,6 @@ use crate::DataType;
 use crate::operations::TypedArray;
 use crate::operations::{OperationsError, OperationsResult};
 
-
 #[macro_export]
 macro_rules! impl_decode_native_array {
     ($in_type:ident, $out_type:ident, $name:ident) => {
@@ -19,17 +18,16 @@ macro_rules! impl_decode_native_array {
     };
 }
 
-impl_decode_native_array!(Int8,i8,decode_native_array_i8);
-impl_decode_native_array!(UInt8,u8,decode_native_array_u8);
-impl_decode_native_array!(Int16,i16,decode_native_array_i16);
-impl_decode_native_array!(UInt16,u16,decode_native_array_u16);
-impl_decode_native_array!(Int32,i32,decode_native_array_i32);
-impl_decode_native_array!(UInt32,u32,decode_native_array_u32);
-impl_decode_native_array!(Int64,i64,decode_native_array_i64);
-impl_decode_native_array!(UInt64,u64,decode_native_array_u64);
-impl_decode_native_array!(Float32,f32,decode_native_array_f32);
-impl_decode_native_array!(Float64,f64,decode_native_array_f64);
-
+impl_decode_native_array!(Int8, i8, decode_native_array_i8);
+impl_decode_native_array!(UInt8, u8, decode_native_array_u8);
+impl_decode_native_array!(Int16, i16, decode_native_array_i16);
+impl_decode_native_array!(UInt16, u16, decode_native_array_u16);
+impl_decode_native_array!(Int32, i32, decode_native_array_i32);
+impl_decode_native_array!(UInt32, u32, decode_native_array_u32);
+impl_decode_native_array!(Int64, i64, decode_native_array_i64);
+impl_decode_native_array!(UInt64, u64, decode_native_array_u64);
+impl_decode_native_array!(Float32, f32, decode_native_array_f32);
+impl_decode_native_array!(Float64, f64, decode_native_array_f64);
 
 // pub fn decode_native_array_i8(data: &TypedArray) -> Vec<Option<i8>> {
 //      let vals = match data {
@@ -189,13 +187,7 @@ pub fn no_data(data_type: DataType, val: String) -> Option<f64> {
             };
             out
         }
-        DataType::Float64 => {
-            let out = match val.parse::<f64>() {
-                Ok(val) => Some(val),
-                Err(_e) => None,
-            };
-            out
-        }
+        DataType::Float64 => val.parse::<f64>().ok(),
         _ => todo!(),
     }
 }
