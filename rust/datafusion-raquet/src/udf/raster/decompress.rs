@@ -2,7 +2,7 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
-use arrow_array::builder::GenericBinaryBuilder;
+use arrow_array::builder::{BinaryViewBuilder,GenericBinaryBuilder};
 use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -29,7 +29,7 @@ impl DecompressTile {
             signature: Signature::one_of(
                 vec![
                     TypeSignature::Exact(vec![DataType::Binary]),
-                    TypeSignature::Exact(vec![DataType::Binary]),
+                    TypeSignature::Exact(vec![DataType::LargeBinary]),
                     TypeSignature::Exact(vec![DataType::BinaryView]),
                 ],
                 Volatility::Immutable,
@@ -73,9 +73,9 @@ impl ScalarUDFImpl for DecompressTile {
         match has_extension(binary_field.as_ref()) {
             true => {
                 let column_metadata = Metadata::try_from(binary_field.as_ref()).unwrap_or_default();
-                let list_array = build_cell_array(arrays, binary_type, column_metadata)?;
+                let col_value = build_cell_array(arrays, binary_type, column_metadata)?;
 
-                Ok(ColumnarValue::Array(Arc::new(list_array)))
+                Ok(col_value)
             }
             false => Err(DataFusionError::Internal("invoke_with_args".to_string())),
         }
@@ -95,7 +95,7 @@ impl ScalarUDFImpl for DecompressTile {
     }
 }
 
-fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
+fn return_field_impl(args: ReturnFieldArgs) -> Result<FieldRef> {
     let binary_field = &args.arg_fields[0];
     match has_extension(args.arg_fields[0].as_ref()) {
         true => {
@@ -118,7 +118,7 @@ fn return_field_impl(args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> 
             };
             Ok(Arc::new(raster_arrow_type.to_field("", true)))
         }
-        false => Ok(Arc::new(Field::new("", DataType::Binary, false))),
+        false => Err(DataFusionError::Internal("return_field_impl".to_string())),
     }
 }
 
@@ -126,10 +126,11 @@ fn build_cell_array(
     arrays: Vec<ArrayRef>,
     binary_type: &DataType,
     column_metadata: Metadata,
-) -> RaquetDataFusionResult<BinaryArray> {
-    let mut builder = GenericBinaryBuilder::<i32>::new();
+) -> RaquetDataFusionResult<ColumnarValue> {
+    
     match binary_type {
         DataType::Binary => {
+            let mut builder = GenericBinaryBuilder::<i32>::new();
             let in_binary = arrays[0]
                 .as_any()
                 .downcast_ref::<BinaryArray>()
@@ -140,8 +141,12 @@ fn build_cell_array(
 
                 builder.append_value(output);
             }
+            let point_arr = builder.finish();
+            Ok(ColumnarValue::Array(Arc::new(point_arr)))
+            // Ok(point_arr)
         }
         DataType::LargeBinary => {
+            let mut builder = GenericBinaryBuilder::<i64>::new();
             let in_binary = arrays[0]
                 .as_any()
                 .downcast_ref::<LargeBinaryArray>()
@@ -152,9 +157,12 @@ fn build_cell_array(
 
                 builder.append_value(output);
             }
+            let point_arr = builder.finish();
+            Ok(ColumnarValue::Array(Arc::new(point_arr)))
         }
 
         DataType::BinaryView => {
+            let mut builder = BinaryViewBuilder::new();
             let in_binary = arrays[0]
                 .as_any()
                 .downcast_ref::<BinaryViewArray>()
@@ -165,13 +173,15 @@ fn build_cell_array(
 
                 builder.append_value(output);
             }
+            let point_arr = builder.finish();
+            Ok(ColumnarValue::Array(Arc::new(point_arr)))
         }
         _ => unreachable!(),
     }
 
-    let point_arr = builder.finish();
+    // let point_arr = builder.finish();
 
-    Ok(point_arr)
+    // Ok(point_arr)
 }
 
 // fn build_cell_array(
