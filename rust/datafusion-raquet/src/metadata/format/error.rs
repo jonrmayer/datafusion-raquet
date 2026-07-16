@@ -123,5 +123,3 @@ pub enum MetadataError {
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
 }
-
-

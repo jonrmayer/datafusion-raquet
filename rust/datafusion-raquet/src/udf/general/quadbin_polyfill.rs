@@ -1,5 +1,5 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::{as_primitive_array, as_string_array};
@@ -42,7 +42,7 @@ impl Default for QuadBinPolyFill {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinPolyFill {
-        fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn name(&self) -> &str {
@@ -108,4 +108,3 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
 
     Ok(point_arr)
 }
-

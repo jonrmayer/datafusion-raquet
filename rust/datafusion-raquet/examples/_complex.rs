@@ -33,8 +33,8 @@
 
 //     let sql = r###"
 //     with data as (
-//     SELECT block,statistics_tile(band_1) as stats from solar where block<>0    
-   
+//     SELECT block,statistics_tile(band_1) as stats from solar where block<>0
+
 //     ),
 //      out as (select block,unnest(stats) l from data)
 
@@ -50,7 +50,7 @@
 
 //     let sql = r###"
 //     with data as (
-//     SELECT block,native_tile(band_1) as native from solar where block<>0 
+//     SELECT block,native_tile(band_1) as native from solar where block<>0
 //     limit 100
 //     ),
 //     out as ( select block,array_length(native,1) l from data)

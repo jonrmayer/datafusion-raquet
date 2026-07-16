@@ -1,15 +1,11 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
-use arrow_array::builder::{
-     Float64Builder, 
-};
+use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{UInt64Type };
-use arrow_array::{ ArrayRef,  StructArray, };
+use arrow_array::types::UInt64Type;
+use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
-
-
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -18,8 +14,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-use crate::error::{RaquetDataFusionResult};
-
+use crate::error::RaquetDataFusionResult;
 
 use quadbin_rs::QuadBin;
 
@@ -51,8 +46,7 @@ impl Default for QuadBinToBBOX {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToBBOX {
-
-        fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 
@@ -99,7 +93,7 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 
     let fields = Fields::from(vec![min_lon, min_lat, max_lon, max_lat]);
     let bbox = Field::new_struct("", fields, false);
-   
+
     Ok(Arc::new(bbox))
 }
 
@@ -110,8 +104,10 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let mut xmax_builder = Float64Builder::new();
     let mut ymax_builder = Float64Builder::new();
 
-    for cell in cells.iter() {       
-        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap())?.to_tile()?.to_bbox_wgs84()?;
+    for cell in cells.iter() {
+        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap())?
+            .to_tile()?
+            .to_bbox_wgs84()?;
         xmin_builder.append_value(bbox_wgs84.min_x);
         ymin_builder.append_value(bbox_wgs84.min_y);
         xmax_builder.append_value(bbox_wgs84.max_x);
@@ -135,8 +131,6 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     ];
     let nulls = None;
     let arr = StructArray::new(fields, arrays, nulls);
-   
-     Ok(arr)
+
+    Ok(arr)
 }
-
-

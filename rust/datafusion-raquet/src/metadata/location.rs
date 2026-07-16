@@ -21,9 +21,7 @@ impl MetaDataLocation {
     }
 
     pub fn column_index(&self) -> usize {
-        
-        self
-            .metadata()
+        self.metadata()
             .file_metadata()
             .schema()
             .get_fields()
@@ -49,8 +47,6 @@ impl MetaDataLocation {
     }
 
     pub fn projection(&self) -> ProjectionMask {
-        
-
         ProjectionMask::roots(
             &self.metadata().file_metadata().schema_descr_ptr(),
             vec![self.column_index()],

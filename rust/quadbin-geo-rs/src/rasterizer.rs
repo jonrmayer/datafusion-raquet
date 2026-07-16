@@ -7,14 +7,10 @@ use geo_rasterizer::{MergeAlgorithm, Rasterizer};
 #[derive(Debug)]
 pub struct GeoRasterizer {
     pub geom: Geometry,
-   
 }
 impl GeoRasterizer {
     pub fn new(geom: Geometry) -> Self {
-        Self {
-            geom,
-          
-        }
+        Self { geom }
     }
 
     pub fn geom(&self) -> Geometry {
@@ -48,7 +44,6 @@ impl GeoRasterizer {
     pub fn local_geom(&self) -> Geometry {
         let (min_x, min_y) = self.min_xy();
 
-        
         transform_tile_to_local_coord(self.geom(), min_x, min_y)
     }
 

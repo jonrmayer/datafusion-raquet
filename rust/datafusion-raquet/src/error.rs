@@ -18,7 +18,7 @@ pub(crate) enum RaquetDataFusionError {
     #[error(transparent)]
     QuadBin(#[from] quadbin_rs::QuadBinError),
 
-     #[error(transparent)]
+    #[error(transparent)]
     QuadBinGeo(#[from] quadbin_geo_rs::QuadBinGeoError),
 
     #[error(transparent)]

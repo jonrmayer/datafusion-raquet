@@ -95,4 +95,3 @@ fn build_geojson_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<Columnar
 
     Ok(ColumnarValue::Array(Arc::new(builder.finish())))
 }
-

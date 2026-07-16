@@ -31,11 +31,11 @@
 // pub async fn test_quadbin_to_tile_1000(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
 
-//  with test as 
+//  with test as
 //     (
 //    select
 //     block
-//     FROM 
+//     FROM
 //     solar
 //     where block<>0
 //      order by block asc
@@ -50,11 +50,11 @@
 // pub async fn test_quadbin_to_bbox_1000(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
 
-//  with test as 
+//  with test as
 //     (
 //     select
 //     block
-//     FROM 
+//     FROM
 //     solar
 //     where block<>0
 //     order by block asc
@@ -69,19 +69,19 @@
 // pub async fn test_quadbin_pixel_xy_1000(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
 
-//    with test as 
+//    with test as
 //     (
 //     select
 //     block
-//     FROM 
+//     FROM
 //     solar
 //     where block<>0
 //     order by block asc
 //     limit 1000
 //     ),
-//     result as 
+//     result as
 //     (
-//     select quadbin_pixel_xy(0.0, 0.0, 9, 256) as tile from test  
+//     select quadbin_pixel_xy(0.0, 0.0, 9, 256) as tile from test
 //     )
 //    select * from result ;"###;
 

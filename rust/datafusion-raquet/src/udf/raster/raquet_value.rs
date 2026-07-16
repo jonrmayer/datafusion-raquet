@@ -18,8 +18,6 @@ use datafusion::logical_expr::{
 
 use itertools::multizip;
 
-
-
 use quadbin_rs::lonlat_to_pixel;
 
 use quadbin_geo_rs::wkt_to_lonlat;
@@ -97,8 +95,6 @@ impl ScalarUDFImpl for RaquetValue {
             }
             false => Err(DataFusionError::Internal("invoke_with_args".to_string())),
         }
-
-
     }
 
     fn documentation(&self) -> Option<&Documentation> {
@@ -192,4 +188,3 @@ fn build_cell_array(
 
     Ok(point_arr)
 }
-

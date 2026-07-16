@@ -36,8 +36,6 @@ mod tests {
    
         "###;
 
-        
-
         let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();
     }
@@ -54,8 +52,6 @@ mod tests {
         select raquet_band_metadata('band_1',m.metadata) as band_meta from m
 
         "###;
-
-        
 
         let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();
@@ -74,8 +70,6 @@ mod tests {
 
         "###;
 
-       
-
         let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();
     }
@@ -88,8 +82,6 @@ mod tests {
         select quadbin_pixel_xy(0.0, 0.0, 9, 256) as pixel 
 
         "###;
-
-       
 
         let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();
@@ -104,7 +96,6 @@ mod tests {
 
         "###;
 
-        
         let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();
     }
@@ -117,8 +108,6 @@ mod tests {
          select binary_to_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip') band_1 from solar where block<>0 limit 1
 
         "###;
-
-       
 
         let _df = ctx.sql(sql).await.unwrap();
         // df.show().await.unwrap();

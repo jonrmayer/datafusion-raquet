@@ -1,8 +1,6 @@
-use std::sync::{Arc, OnceLock};
-use std::any::Any;
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{UInt64Type,Int64Type};
+use arrow_array::types::{Int64Type, UInt64Type};
 use arrow_array::{ArrayRef, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -11,6 +9,8 @@ use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
 };
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 
@@ -96,8 +96,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
         Some(resolution) => {
             for (cell, resolution) in cell.iter().zip(resolution.iter()) {
                 if let (Some(cell), Some(resolution)) = (cell, resolution) {
-                    let parent =
-                        QuadBin::from_cell(cell)?.parent_resolution(resolution as u8)?;
+                    let parent = QuadBin::from_cell(cell)?.parent_resolution(resolution as u8)?;
                     builder.append_value(parent);
                 }
             }

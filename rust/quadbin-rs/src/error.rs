@@ -1,4 +1,3 @@
-
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -10,7 +9,5 @@ pub enum QuadBinError {
     #[error("QuadBinError error: {0}")]
     General(String),
 }
-
-
 
 pub type QuadBinResult<T> = std::result::Result<T, QuadBinError>;

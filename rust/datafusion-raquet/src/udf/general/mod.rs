@@ -1,21 +1,19 @@
 mod band_metadata;
+mod binary_to_raquet;
 mod intersects;
 mod quadbin_metadata;
 mod quadbin_pixel_xy;
 mod quadbin_polyfill;
-mod binary_to_raquet;
 
 #[cfg(any(test, debug_assertions))]
 pub mod testing;
 
-
-
 pub use band_metadata::BandMetadata;
+pub use binary_to_raquet::CastRaquet;
 pub use intersects::Intersects;
 pub use quadbin_metadata::QuadbinMetadata;
 pub use quadbin_pixel_xy::QuadBinToPixelXY;
 pub use quadbin_polyfill::QuadBinPolyFill;
-pub use binary_to_raquet::CastRaquet;
 
 pub fn register(session_context: &datafusion::prelude::SessionContext) {
     session_context.register_udf(BandMetadata::default().into());

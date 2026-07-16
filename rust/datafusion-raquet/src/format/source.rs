@@ -1,6 +1,6 @@
+use std::any::Any;
 use std::fmt::Formatter;
 use std::sync::Arc;
-use std::any::Any;
 
 use datafusion::config::ConfigOptions;
 use datafusion::datasource::physical_plan::{FileScanConfig, FileSource};
@@ -25,7 +25,7 @@ impl From<RaquetSource> for Arc<dyn FileSource> {
 }
 
 impl FileSource for RaquetSource {
-     fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn create_file_opener(
@@ -37,8 +37,6 @@ impl FileSource for RaquetSource {
         self.inner
             .create_file_opener(object_store, base_config, partition)
     }
-
-
 
     fn with_batch_size(&self, batch_size: usize) -> Arc<dyn FileSource> {
         self.inner.with_batch_size(batch_size)

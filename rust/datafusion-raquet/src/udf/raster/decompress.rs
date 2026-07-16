@@ -2,7 +2,7 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
-use arrow_array::builder::{BinaryViewBuilder,GenericBinaryBuilder};
+use arrow_array::builder::{BinaryViewBuilder, GenericBinaryBuilder};
 use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray};
 use arrow_schema::{DataType, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -127,7 +127,6 @@ fn build_cell_array(
     binary_type: &DataType,
     column_metadata: Metadata,
 ) -> RaquetDataFusionResult<ColumnarValue> {
-    
     match binary_type {
         DataType::Binary => {
             let mut builder = GenericBinaryBuilder::<i32>::new();
@@ -143,7 +142,6 @@ fn build_cell_array(
             }
             let point_arr = builder.finish();
             Ok(ColumnarValue::Array(Arc::new(point_arr)))
-           
         }
         DataType::LargeBinary => {
             let mut builder = GenericBinaryBuilder::<i64>::new();

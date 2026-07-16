@@ -14,7 +14,7 @@ use geo::{
 
 use ndarray::Array2;
 use ndarray::s;
-use num_traits::{ Num, NumCast};
+use num_traits::{Num, NumCast};
 use thiserror::Error;
 
 mod line;
@@ -136,9 +136,7 @@ impl BinaryRasterizer {
 
     /// Retrieve the completed raster array.
     pub fn finish(self) -> Array2<bool> {
-        self.inner
-            .finish()
-            .mapv(|v| v == 1u8)
+        self.inner.finish().mapv(|v| v == 1u8)
     }
 }
 
@@ -151,8 +149,7 @@ where
 
 /// Conflict resolution strategy for cases where two shapes cover the
 /// same pixel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MergeAlgorithm {
     /// Overwrite the pixel with the burn value associated with the
     /// last shape to be written to it. This is the default.
@@ -163,7 +160,6 @@ pub enum MergeAlgorithm {
     /// with the shapes written to it.
     Add,
 }
-
 
 #[derive(Debug, Clone, Default)]
 pub struct LabelBuilder<Label> {
@@ -561,7 +557,6 @@ mod tests {
         let _ = r.rasterize(&shape, 1u8);
         let pixels = r.finish();
         let a = pixels.mapv(|v| v as u8);
-
 
         println!("{:?}", a);
     }

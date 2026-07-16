@@ -8,7 +8,7 @@ mod webp;
 
 use crate::CompressionFormat;
 
-pub use crate::compression::error::{CompressionResult,CompressionError};
+pub use crate::compression::error::{CompressionError, CompressionResult};
 
 pub struct Compression {
     pub format: CompressionFormat,
@@ -24,7 +24,7 @@ impl Compression {
     /// Decompress  data
     pub fn decompress(&self, input: &[u8]) -> CompressionResult<Vec<u8>> {
         if input.is_empty() {
-            return  Ok(Vec::new())
+            return Ok(Vec::new());
         }
 
         match self.format {

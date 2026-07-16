@@ -6,7 +6,6 @@ use arrow_schema::{ArrowError, DataType, Field};
 
 use crate::error::{QuadbinArrowError, QuadbinArrowResult};
 
-
 // macro_rules! define_basic_type {
 //     (
 //         $(#[$($attrss:meta)*])*
@@ -25,7 +24,6 @@ use crate::error::{QuadbinArrowError, QuadbinArrowResult};
 //                     metadata,
 //                 }
 //             }
-
 
 //             /// Change the underlying [`Metadata`]
 //             pub fn with_metadata(self, metadata: Arc<Metadata>) -> Self {
@@ -49,7 +47,6 @@ use crate::error::{QuadbinArrowError, QuadbinArrowResult};
 //         }
 //     };
 // }
-
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct QuadbinType {

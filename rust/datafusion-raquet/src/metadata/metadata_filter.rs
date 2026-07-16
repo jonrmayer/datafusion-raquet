@@ -4,8 +4,8 @@ use parquet::arrow::{
     ProjectionMask,
     arrow_reader::{ArrowPredicate, ArrowPredicateFn},
 };
-use parquet::schema::types::SchemaDescriptor;
 use parquet::errors::Result;
+use parquet::schema::types::SchemaDescriptor;
 
 pub fn metadata_arrow_predicate(schema_desc: &SchemaDescriptor) -> Result<Box<dyn ArrowPredicate>> {
     let projection = ProjectionMask::leaves(schema_desc, [0]);

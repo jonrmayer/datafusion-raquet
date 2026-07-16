@@ -37,8 +37,6 @@ use rastertile_rs::Metadata as RasterTileMetadata;
 
 use quadbin_schema::{Metadata as QMetadata, QuadbinArrowType, QuadbinType};
 
-
-
 pub fn raquet_format_from_str(raquet_str: &str) -> RaquetFormat {
     let raquet_format: RaquetFormat = serde_json::from_str(raquet_str).unwrap();
     raquet_format
@@ -65,7 +63,7 @@ pub fn raquet_band_metadata(band_name: &str, raquet_str: &str) -> RasterTileMeta
     let no_data = raquet_format.get_no_data();
     let dtype = band[0].r#type.clone().unwrap();
     let rdt = RasterDataType::from_str(&dtype).unwrap();
-    
+
     //     tile_size,
     //     rdt,
     //     no_data.clone(),
@@ -189,7 +187,6 @@ impl RaquetMetadataReader {
         let quadbin_metadata =
             get_quadbin_metadata(raquet_format.clone(), existing_schema.clone()).unwrap();
 
-        
         infer_rastertile_schema(&existing_schema, &raquet_metadata, &quadbin_metadata).unwrap()
     }
 
@@ -326,10 +323,7 @@ pub struct QuadbinColumnMetadata {
 
 impl QuadbinColumnMetadata {
     pub fn new(min_zoom: i32, max_zoom: i32) -> Self {
-        QuadbinColumnMetadata {
-            min_zoom,
-            max_zoom,
-        }
+        QuadbinColumnMetadata { min_zoom, max_zoom }
     }
 }
 

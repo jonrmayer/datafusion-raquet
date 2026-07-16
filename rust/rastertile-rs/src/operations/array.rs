@@ -1,7 +1,7 @@
 use bytemuck::{cast_slice, cast_vec, try_cast_vec};
 
 use crate::DataType;
-use crate::operations::{OperationsResult,OperationsError};
+use crate::operations::{OperationsError, OperationsResult};
 
 #[allow(dead_code)]
 /// A 3D array that represents decoded TIFF image data.

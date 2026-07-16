@@ -1,5 +1,4 @@
-
-use quadbin_rs::{ Tile};
+use quadbin_rs::Tile;
 
 use crate::rasterizer::GeoRasterizer;
 use crate::transforms::transform_latlon_to_tile_coord;
@@ -70,7 +69,7 @@ impl GeoTiles {
         let w_h = self.tile_width_height();
         let max = w_h.0.max(w_h.1);
         let range = max.ilog2() as i8;
-        let  steps: i8 = (range / increment) + 1;
+        let steps: i8 = (range / increment) + 1;
 
         for i in 0..steps {
             let res = self.geo().resolution() - (i * increment);

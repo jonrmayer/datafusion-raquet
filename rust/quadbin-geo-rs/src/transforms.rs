@@ -1,9 +1,9 @@
+use geo::Geometry;
 use geo::map_coords::MapCoords;
-use geo::{ Geometry};
-use quadbin_rs::{ Tile};
+use quadbin_rs::Tile;
 
 use crate::error::QuadBinGeoError;
-use crate::proj::{ mercator_from_latlon};
+use crate::proj::mercator_from_latlon;
 
 #[allow(dead_code)]
 pub fn transform_latlon_to_mercator(in_geom: Geometry) -> Geometry {
@@ -12,11 +12,8 @@ pub fn transform_latlon_to_mercator(in_geom: Geometry) -> Geometry {
         let out = geo_types::Coord { x, y };
         Ok(out)
     };
-    
 
-    in_geom
-        .try_map_coords(transform_mercator)
-        .unwrap()
+    in_geom.try_map_coords(transform_mercator).unwrap()
 }
 
 pub fn transform_latlon_to_tile_coord(in_geom: Geometry, resolution: i8) -> Geometry {
@@ -28,11 +25,8 @@ pub fn transform_latlon_to_tile_coord(in_geom: Geometry, resolution: i8) -> Geom
         };
         Ok(out)
     };
-    
 
-    in_geom
-        .try_map_coords(transform_to_tile)
-        .unwrap()
+    in_geom.try_map_coords(transform_to_tile).unwrap()
 }
 
 pub fn transform_tile_to_local_coord(in_geom: Geometry, min_x: f64, min_y: f64) -> Geometry {
@@ -43,9 +37,6 @@ pub fn transform_tile_to_local_coord(in_geom: Geometry, min_x: f64, min_y: f64) 
         };
         Ok(out)
     };
-    
 
-    in_geom
-        .try_map_coords(transform_to_local)
-        .unwrap()
+    in_geom.try_map_coords(transform_to_local).unwrap()
 }

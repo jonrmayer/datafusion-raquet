@@ -1,10 +1,10 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
-use arrow_array::builder::{ StringBuilder, Int32Builder};
+use arrow_array::builder::{Int32Builder, StringBuilder};
 use arrow_array::cast::as_string_array;
 
-use arrow_array::{ArrayRef,  StructArray};
+use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -15,8 +15,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use crate::{raquet_band_metadata};
-
+use crate::raquet_band_metadata;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct BandMetadata {
@@ -56,7 +55,7 @@ impl Default for BandMetadata {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for BandMetadata {
-     fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn name(&self) -> &str {
@@ -136,7 +135,4 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let arr = StructArray::new(fields, arrays, nulls);
 
     Ok(arr)
-
 }
-
-

@@ -100,7 +100,7 @@ impl GeoCells {
                     y: p.1 as u32,
                     z: self.geo().resolution() as u8,
                 };
-                
+
                 new_tile.to_cell().unwrap()
             })
             .collect();

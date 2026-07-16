@@ -15,7 +15,8 @@ mod tests {
     async fn test_quadbin_from_lonlat() {
         let ctx = get_ctx().await;
 
-        let sql = r#"select quadbin_from_lonlat(-73.8226318359375,40.60144147645397,9) as lonlat ;"#;
+        let sql =
+            r#"select quadbin_from_lonlat(-73.8226318359375,40.60144147645397,9) as lonlat ;"#;
 
         let df = ctx.sql(sql).await.unwrap();
         df.show().await.unwrap();

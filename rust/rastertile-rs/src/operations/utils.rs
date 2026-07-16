@@ -42,151 +42,79 @@ impl_decode_native_array!(Float64, f64, decode_native_array_f64);
 // }
 
 pub fn decode_array(data: &TypedArray) -> Vec<Option<f64>> {
-    
     match data {
-        TypedArray::Int8(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::Int16(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::Int32(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::Int64(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::UInt8(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::UInt16(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::UInt32(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::UInt64(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::Float32(v) => {
-            
-            v.iter().map(|n| Some(*n as f64)).collect()
-        }
-        TypedArray::Float64(v) => {
-            
-            v.iter().map(|n| Some(*n)).collect()
-        }
+        TypedArray::Int8(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::Int16(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::Int32(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::Int64(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::UInt8(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::UInt16(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::UInt32(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::UInt64(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::Float32(v) => v.iter().map(|n| Some(*n as f64)).collect(),
+        TypedArray::Float64(v) => v.iter().map(|n| Some(*n)).collect(),
         _ => todo!(),
     }
 }
 
 pub fn filter_float_array(data: &TypedArray, filter: f64) -> Vec<f64> {
-    
     match data {
-        TypedArray::Float32(v) => {
-            
-            v
-                .iter()
-                .map(|n| *n as f64)
-                .filter(|&x| x == filter || !x.is_nan())
-                .collect()
-        }
-        TypedArray::Float64(v) => {
-            
-            v.iter().copied().filter(|&x| x == filter).collect()
-        }
+        TypedArray::Float32(v) => v
+            .iter()
+            .map(|n| *n as f64)
+            .filter(|&x| x == filter || !x.is_nan())
+            .collect(),
+        TypedArray::Float64(v) => v.iter().copied().filter(|&x| x == filter).collect(),
         _ => todo!(),
     }
 }
 
 pub fn no_filter_float_array(data: &TypedArray) -> Vec<f64> {
-    
     match data {
-        TypedArray::Float32(v) => {
-            
-            v.iter().map(|n| *n as f64).collect()
-        }
-        TypedArray::Float64(v) => {
-            
-            v.to_vec()
-        }
+        TypedArray::Float32(v) => v.iter().map(|n| *n as f64).collect(),
+        TypedArray::Float64(v) => v.to_vec(),
         _ => todo!(),
     }
 }
 
 pub fn no_data(data_type: DataType, val: String) -> Option<f64> {
     match data_type {
-        DataType::Int8 => {
-            
-            match val.parse::<i8>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
-        DataType::Int16 => {
-            
-            match val.parse::<i16>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
-        DataType::Int32 => {
-            
-            match val.parse::<i32>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
-        DataType::Int64 => {
-            
-            match val.parse::<i64>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
-        DataType::UInt8 => {
-            
-            match val.parse::<u8>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
-        DataType::UInt16 => {
-            
-            match val.parse::<u16>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
-        DataType::UInt32 => {
-            
-            match val.parse::<u32>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
-        DataType::UInt64 => {
-            
-            match val.parse::<u64>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
-        DataType::Float32 => {
-            
-            match val.parse::<f32>() {
-                Ok(val) => Some(val as f64),
-                Err(_e) => None,
-            }
-        }
+        DataType::Int8 => match val.parse::<i8>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
+        DataType::Int16 => match val.parse::<i16>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
+        DataType::Int32 => match val.parse::<i32>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
+        DataType::Int64 => match val.parse::<i64>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
+        DataType::UInt8 => match val.parse::<u8>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
+        DataType::UInt16 => match val.parse::<u16>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
+        DataType::UInt32 => match val.parse::<u32>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
+        DataType::UInt64 => match val.parse::<u64>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
+        DataType::Float32 => match val.parse::<f32>() {
+            Ok(val) => Some(val as f64),
+            Err(_e) => None,
+        },
         DataType::Float64 => val.parse::<f64>().ok(),
         _ => todo!(),
     }

@@ -1,8 +1,7 @@
-
 use ndarray::Array3;
 
 use crate::operations::OperationsError;
-use crate::operations::{Array,TypedArray};
+use crate::operations::{Array, TypedArray};
 
 #[allow(dead_code)]
 /// An enum representing a view of a [`ndarray::Array3`] with various possible data types.

@@ -20,22 +20,17 @@ mod tests {
     #[test]
     fn test_get_pixel() {
         let nan_str = "";
-        let my_float = no_data(crate::DataType::UInt8,nan_str.to_string());
+        let my_float = no_data(crate::DataType::UInt8, nan_str.to_string());
         // nan_str.
-    // let my_float= match nan_str.parse::<i32>(){
-    //     Ok(val) => Some(val),
-    //     Err(e)=> None,
+        // let my_float= match nan_str.parse::<i32>(){
+        //     Ok(val) => Some(val),
+        //     Err(e)=> None,
 
+        // };
+        println!("{:?}", my_float);
+        // my_float.
 
-    // };
-    println!("{:?}",my_float);
-    // my_float.
-    
-    // Check if the result is NaN
-    // assert!(my_float.is_nan());
-      
+        // Check if the result is NaN
+        // assert!(my_float.is_nan());
     }
-
-
-    
 }

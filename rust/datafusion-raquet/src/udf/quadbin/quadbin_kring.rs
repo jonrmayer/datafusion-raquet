@@ -1,15 +1,16 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type,UInt64Type};
+use arrow_array::types::{Int64Type, UInt64Type};
 use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
-    ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature, Volatility,
+    ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
+    Volatility,
 };
 
 use crate::error::RaquetDataFusionResult;
@@ -98,7 +99,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
     let mut builder = ListBuilder::new(values_builder);
     for (cell, k) in cell.iter().zip(k.iter()) {
         if let (Some(cell), Some(k)) = (cell, k) {
-            let child_cells =QuadBin::from_cell(cell)?.kring(k as i32)?;
+            let child_cells = QuadBin::from_cell(cell)?.kring(k as i32)?;
             let children = UInt64Array::from(child_cells);
             builder.append_value(&children);
         }
@@ -108,4 +109,3 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
 
     Ok(point_arr)
 }
-

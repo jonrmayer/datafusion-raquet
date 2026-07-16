@@ -1,6 +1,6 @@
 use crate::udf::general::register as general_register;
-use crate::udf::raster::register as raster_register;
 use crate::udf::quadbin::register as quadbin_register;
+use crate::udf::raster::register as raster_register;
 use datafusion::prelude::*;
 use datafusion_raquet::*;
 use std::sync::Arc;

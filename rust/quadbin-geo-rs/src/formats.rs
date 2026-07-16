@@ -1,4 +1,4 @@
-use geo::{ Geometry, Rect, coord};
+use geo::{Geometry, Rect, coord};
 
 use quadbin_rs::Bbox;
 use wkt::ToWkt;
@@ -49,6 +49,6 @@ mod tests {
             max_y: 66.51326044311186,
         };
         let wkt = GeoFormats::new(bbox).to_geojson();
-        println!("{:?}",wkt);
+        println!("{:?}", wkt);
     }
 }

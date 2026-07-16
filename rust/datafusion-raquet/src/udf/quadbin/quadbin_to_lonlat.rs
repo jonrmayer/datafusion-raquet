@@ -1,16 +1,16 @@
-use std::sync::{Arc, OnceLock};
-use std::any::Any;
 use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{UInt64Type};
+use arrow_array::types::UInt64Type;
 use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-     Volatility,
+    Volatility,
 };
 
 use crate::error::RaquetDataFusionResult;
@@ -49,8 +49,7 @@ impl Default for QuadBinToLonLat {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToLonLat {
-
-        fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn name(&self) -> &str {

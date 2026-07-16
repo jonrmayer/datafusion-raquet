@@ -1,7 +1,7 @@
 use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
-use crate::error::{ RaquetDataFusionResult};
+use crate::error::RaquetDataFusionResult;
 use arrow::array::GenericListBuilder;
 
 use arrow_array::{ArrayRef, BinaryArray, BinaryViewArray, LargeBinaryArray, ListArray};
@@ -154,7 +154,7 @@ fn build_cell_array(
                 .downcast_ref::<BinaryArray>()
                 .expect("cast failed");
             let ops: Operations = Operations::new(column_metadata.inner());
-            
+
             match column_metadata.data_type() {
                 RasterDataType::Int8 => convert_binary_list_array_i8(in_binary, ops)?.finish(),
                 RasterDataType::UInt8 => convert_binary_list_array_u8(in_binary, ops)?.finish(),
@@ -175,7 +175,7 @@ fn build_cell_array(
                 .downcast_ref::<BinaryViewArray>()
                 .expect("cast failed");
             let ops: Operations = Operations::new(column_metadata.inner());
-            
+
             match column_metadata.data_type() {
                 RasterDataType::Int8 => convert_binaryview_list_array_i8(in_binary, ops)?.finish(),
                 RasterDataType::UInt8 => convert_binaryview_list_array_u8(in_binary, ops)?.finish(),
@@ -212,18 +212,36 @@ fn build_cell_array(
                 .downcast_ref::<LargeBinaryArray>()
                 .expect("cast failed");
             let ops: Operations = Operations::new(column_metadata.inner());
-            
+
             match column_metadata.data_type() {
                 RasterDataType::Int8 => convert_largebinary_list_array_i8(in_binary, ops)?.finish(),
-                RasterDataType::UInt8 => convert_largebinary_list_array_u8(in_binary, ops)?.finish(),
-                RasterDataType::Int16 => convert_largebinary_list_array_i16(in_binary, ops)?.finish(),
-                RasterDataType::UInt16 =>convert_largebinary_list_array_u16(in_binary, ops)?.finish(),
-                RasterDataType::Int32 => convert_largebinary_list_array_i32(in_binary, ops)?.finish(),
-                RasterDataType::UInt32 => convert_largebinary_list_array_u32(in_binary, ops)?.finish(),
-                RasterDataType::Int64 => convert_largebinary_list_array_i64(in_binary, ops)?.finish(),
-                RasterDataType::UInt64 => convert_largebinary_list_array_u64(in_binary, ops)?.finish(),
-                RasterDataType::Float32 => convert_largebinary_list_array_f32(in_binary, ops)?.finish(),
-                RasterDataType::Float64 =>convert_largebinary_list_array_f64(in_binary, ops)?.finish(),
+                RasterDataType::UInt8 => {
+                    convert_largebinary_list_array_u8(in_binary, ops)?.finish()
+                }
+                RasterDataType::Int16 => {
+                    convert_largebinary_list_array_i16(in_binary, ops)?.finish()
+                }
+                RasterDataType::UInt16 => {
+                    convert_largebinary_list_array_u16(in_binary, ops)?.finish()
+                }
+                RasterDataType::Int32 => {
+                    convert_largebinary_list_array_i32(in_binary, ops)?.finish()
+                }
+                RasterDataType::UInt32 => {
+                    convert_largebinary_list_array_u32(in_binary, ops)?.finish()
+                }
+                RasterDataType::Int64 => {
+                    convert_largebinary_list_array_i64(in_binary, ops)?.finish()
+                }
+                RasterDataType::UInt64 => {
+                    convert_largebinary_list_array_u64(in_binary, ops)?.finish()
+                }
+                RasterDataType::Float32 => {
+                    convert_largebinary_list_array_f32(in_binary, ops)?.finish()
+                }
+                RasterDataType::Float64 => {
+                    convert_largebinary_list_array_f64(in_binary, ops)?.finish()
+                }
                 _ => todo!(),
             }
         }
@@ -336,7 +354,6 @@ impl_binaryview_convert_list_builder!(
     convert_binaryview_list_array_u8
 );
 
-
 // Int16Type
 impl_binary_convert_list_builder!(
     Int16Type,
@@ -382,7 +399,6 @@ impl_binaryview_convert_list_builder!(
     convert_binaryview_list_array_u16
 );
 
-
 // Int32Type
 impl_binary_convert_list_builder!(
     Int32Type,
@@ -397,7 +413,6 @@ impl_largebinary_convert_list_builder!(
     decode_native_i32,
     convert_largebinary_list_array_i32
 );
-
 
 impl_binaryview_convert_list_builder!(
     Int32Type,
@@ -414,7 +429,6 @@ impl_binary_convert_list_builder!(
     convert_binary_list_array_u32
 );
 
-
 impl_largebinary_convert_list_builder!(
     UInt32Type,
     UInt32Builder,
@@ -428,7 +442,6 @@ impl_binaryview_convert_list_builder!(
     decode_native_u32,
     convert_binaryview_list_array_u32
 );
-
 
 // Int64Type
 

@@ -1,10 +1,10 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::as_string_array;
 
-use arrow_array::{ArrayRef,  ListArray, UInt64Array};
+use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -15,7 +15,7 @@ use datafusion::logical_expr::{
 
 use crate::error::RaquetDataFusionResult;
 
-use crate::{ raquet_quadbin_metadata};
+use crate::raquet_quadbin_metadata;
 
 use quadbin_geo_rs::GeoCells;
 
@@ -44,7 +44,7 @@ impl Default for Intersects {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for Intersects {
-      fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
     fn name(&self) -> &str {
@@ -100,7 +100,8 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
 
     for (metadata, wkt) in metadata_array.iter().zip(wkt_array.iter()) {
         let qcm = raquet_quadbin_metadata(metadata.unwrap());
-        let geocells = GeoCells::new(wkt.unwrap().to_string(), qcm.max_zoom as i8).intersecting_cells()?;
+        let geocells =
+            GeoCells::new(wkt.unwrap().to_string(), qcm.max_zoom as i8).intersecting_cells()?;
         let bounding = UInt64Array::from(geocells);
 
         builder.append_value(&bounding);

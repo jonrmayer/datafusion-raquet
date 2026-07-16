@@ -23,7 +23,7 @@
 //     let url = Url::parse("https://storage.googleapis.com").unwrap();
 //     let options = ClientOptions::new().with_allow_http(true);
 //     let object_store_url = ObjectStoreUrl::parse(url.origin().ascii_serialization()).unwrap();
-   
+
 //     let storage_container = HttpBuilder::new()
 //         .with_url(object_store_url.as_str())
 //         .with_client_options(options)
@@ -44,7 +44,7 @@
 //     ctx
 // }
 
-// pub async fn setup_local() -> SessionContext {   
+// pub async fn setup_local() -> SessionContext {
 
 //     let path =
 //         "file:///home/jonrm/projects/git/raquet-datafusion/data/parquet/spain_solar_ghi.parquet"
@@ -62,15 +62,13 @@
 // }
 
 // pub async fn test_read_raquet_at(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
-//     let sql = r###"    
+//     let sql = r###"
 //     select raquet_value(block,band_1,'POINT(-3.7038 40.4168)') val from read_raquet_at('solar','POINT(-3.7038 40.4168)')
 //     "###;
 
 //     let df = ctx.sql(sql).await.unwrap();
 //     df.collect().await.unwrap()
 // }
-
-
 
 // async fn test_local() {
 //     let (ctx, duration) = time_async(setup_local()).await;
@@ -87,7 +85,6 @@
 // }
 #[tokio::main]
 async fn main() {
-//    test_local().await;
-//    test_remote().await;
-   
+    //    test_local().await;
+    //    test_remote().await;
 }

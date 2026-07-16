@@ -1,9 +1,9 @@
-use std::sync::{Arc, OnceLock};
 use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::{UInt64Type,Int64Type};
+use arrow_array::types::{Int64Type, UInt64Type};
 use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -45,8 +45,7 @@ impl Default for QuadBinToChildren {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToChildren {
-
-        fn as_any(&self) -> &dyn Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 
@@ -104,7 +103,8 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
         Some(resolution) => {
             for (cell, resolution) in cell.iter().zip(resolution.iter()) {
                 if let (Some(cell), Some(resolution)) = (cell, resolution) {
-                    let child_cells = QuadBin::from_cell(cell )?.children_resolution(resolution as u8)?;
+                    let child_cells =
+                        QuadBin::from_cell(cell)?.children_resolution(resolution as u8)?;
                     let children = UInt64Array::from(child_cells);
                     builder.append_value(&children);
                 }

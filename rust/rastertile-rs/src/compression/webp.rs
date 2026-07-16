@@ -1,5 +1,5 @@
-use image_webp::WebPDecoder;
 use crate::compression::error::CompressionResult;
+use image_webp::WebPDecoder;
 
 pub fn decompress(input: &[u8]) -> CompressionResult<Vec<u8>> {
     let data = std::io::Cursor::new(input);

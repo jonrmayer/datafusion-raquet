@@ -110,7 +110,7 @@ impl QuadBin {
     pub fn children_resolution(&self, child_resolution: u8) -> QuadBinResult<Vec<u64>> {
         let mut result: Vec<u64> = vec![];
         let current_res = self.resolution()?;
-        let _ =child_resolution <= current_res || child_resolution > MAX_RESOLUTION;
+        let _ = child_resolution <= current_res || child_resolution > MAX_RESOLUTION;
         let tile = self.to_tile()?;
         let res_diff = child_resolution - current_res;
         let children_per_dim = 1 << res_diff;
@@ -320,9 +320,7 @@ impl Tile {
         let min_lat_rad = (PI * (1.0 - 2.0 * (self.y() as f64 + 1.0) / n))
             .sinh()
             .atan();
-        let max_lat_rad = (PI * (1.0 - 2.0 * self.y() as f64 / n))
-            .sinh()
-            .atan();
+        let max_lat_rad = (PI * (1.0 - 2.0 * self.y() as f64 / n)).sinh().atan();
 
         let min_lat = min_lat_rad * 180.0 / PI;
         let max_lat = max_lat_rad * 180.0 / PI;

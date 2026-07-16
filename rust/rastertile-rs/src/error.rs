@@ -71,29 +71,24 @@
 //     }
 // }
 
-
-
-
 use thiserror::Error;
 
-
-use crate::operations::OperationsError;
 use crate::metadata::MetadataError;
+use crate::operations::OperationsError;
 
 #[derive(Error, Debug)]
 pub enum RasterTileError {
     // /// An error during De/Compression.
     // #[error(transparent)]
     // CompressionError(#[from] CompressionError),
-
     /// An error during Operations.
     #[error(transparent)]
     OperationsError(#[from] OperationsError),
 
-     /// An error during Metadata.
+    /// An error during Metadata.
     #[error(transparent)]
     MetadataError(#[from] MetadataError),
-   
+
     /// General error.
     #[error("General error: {0}")]
     General(String),
@@ -105,8 +100,4 @@ pub enum RasterTileError {
 //     }
 // }
 
-
-
 pub type RasterTileResult<T> = std::result::Result<T, RasterTileError>;
-
-

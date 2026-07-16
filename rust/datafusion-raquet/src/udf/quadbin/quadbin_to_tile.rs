@@ -119,5 +119,3 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
 
     Ok(arr)
 }
-
-

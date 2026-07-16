@@ -1,6 +1,6 @@
 use geo::{BoundingRect, Geometry};
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct BaseGeo {
     pub geom: Geometry,
     pub resolution: i8,
@@ -26,6 +26,4 @@ impl BaseGeo {
         let max_y = f64::max(bounds.min().y, bounds.max().y);
         (min_x, min_y, max_x, max_y)
     }
-    
 }
-

@@ -77,17 +77,15 @@ pub async fn setup_local_store() -> SessionContext {
 //         ),
 //         data as (
 //             select block,band_1  from solar
-//             where block<>0 
+//             where block<>0
 //         ),
 //         idata as (
 //             select unnest(intersects('POINT(-3.7038 40.4168)',m.metadata)) indata from m
 //         )
 
 //         select parquet_value(data.band_1,'POINT(-3.7038 40.4168)',m.metadata) value from data,m,idata
-        
+
 //         where idata.indata=data.block
-       
-       
 
 //     "###;
 
@@ -118,7 +116,7 @@ pub async fn test_read_parquet_band(ctx: SessionContext) -> Vec<arrow_array::Rec
 
 //     )
 
-//        select decode_tile(band_1) from cast_data 
+//        select decode_tile(band_1) from cast_data
 //         "###;
 
 //     let df = ctx.sql(sql).await.unwrap();
@@ -128,7 +126,7 @@ pub async fn test_read_parquet_band(ctx: SessionContext) -> Vec<arrow_array::Rec
 // pub async fn test_read_raquet_band(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
 
-//        select band_1 from solar where block<>0 
+//        select band_1 from solar where block<>0
 //     "###;
 
 //     let df = ctx.sql(sql).await.unwrap();
@@ -138,7 +136,7 @@ pub async fn test_read_parquet_band(ctx: SessionContext) -> Vec<arrow_array::Rec
 // pub async fn test_read_raquet_decode(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
 
-//        select decode_tile(band_1) from solar where block<>0 
+//        select decode_tile(band_1) from solar where block<>0
 //     "###;
 
 //     let df = ctx.sql(sql).await.unwrap();
@@ -194,11 +192,11 @@ pub async fn test_read_parquet_band(ctx: SessionContext) -> Vec<arrow_array::Rec
 // // }
 #[tokio::main]
 async fn main() {
-     let (ctx, duration) = time_async(setup_local_store()).await;
-     println!("remote setup {:?}", duration);
-     let (out, duration) = time_async(test_read_parquet_band(ctx.clone())).await;
-println!("local parquet {:?} {:?}", out[0].num_rows(), duration);
-     
+    let (ctx, duration) = time_async(setup_local_store()).await;
+    println!("remote setup {:?}", duration);
+    let (out, duration) = time_async(test_read_parquet_band(ctx.clone())).await;
+    println!("local parquet {:?} {:?}", out[0].num_rows(), duration);
+
     // test_local_parquet().await;
     // test_local_raquet().await;
 }

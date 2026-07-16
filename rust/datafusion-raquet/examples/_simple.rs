@@ -30,17 +30,17 @@
 
 // pub async fn test_simple_1m() -> Vec<arrow_array::RecordBatch> {
 //     let ctx = setup().await;
-    
+
 //     let sql = r###"
-//     --create table test_simple as 
-//     with 
+//     --create table test_simple as
+//     with
 //     test as (
 //     select * from generate_series(1,100000000) as t1(output)
 //     ),
-//     result as 
+//     result as
 //     (
 //     select test.output,quadbin_pixel_xy(0.0, 0.0, 4, 256) pixel_xy from test
-//     ) 
+//     )
 //     select * from result ;"###;
 
 //     let df = ctx.sql(sql).await.unwrap();
@@ -50,5 +50,4 @@
 async fn main() {
     // let (out, duration) = time_async(test_simple_1m()).await;
     // println!("{:?} {:?}",out.len(), duration);
-   
 }

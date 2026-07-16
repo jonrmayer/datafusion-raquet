@@ -1,4 +1,3 @@
-
 #[allow(dead_code)]
 // length of semi-major axis of the WGS84 ellipsoid, i.e. radius at equator
 const EARTH_RADIUS_KM: f64 = 6_378.137;
@@ -40,10 +39,10 @@ mod tests {
     #[test]
     fn test_auspix_wgs84() {
         let merc = mercator_from_latlon(160.0, -25.727323225033057);
-        println!("x: {:?},y: {:?}", merc.0,merc.1);
+        println!("x: {:?},y: {:?}", merc.0, merc.1);
 
-        let latlon = latlon_from_mercator(merc.0,merc.1);
-        println!("x: {:?},y: {:?}", latlon.0,latlon.1);
+        let latlon = latlon_from_mercator(merc.0, merc.1);
+        println!("x: {:?},y: {:?}", latlon.0, latlon.1);
     }
 
     #[test]

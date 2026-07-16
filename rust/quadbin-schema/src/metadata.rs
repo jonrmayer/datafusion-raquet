@@ -26,15 +26,13 @@ impl Metadata {
         &self.max_zoom
     }
 
-   
     pub fn to_json_value(&self) -> Value {
-        
         serde_json::to_value(self).unwrap()
     }
 
     pub fn to_str_value(&self) -> String {
         let json_value = self.to_json_value();
-        
+
         serde_json::to_string(&json_value).unwrap()
     }
 

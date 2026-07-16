@@ -72,17 +72,15 @@ use datafusion::execution::object_store::ObjectStoreUrl;
 //         ),
 //         data as (
 //             select block,band_1  from solar
-//             where block<>0 
+//             where block<>0
 //         ),
 //         idata as (
 //             select unnest(intersects('POINT(-3.7038 40.4168)',m.metadata)) indata from m
 //         )
 
 //         select parquet_value(data.band_1,'POINT(-3.7038 40.4168)',m.metadata) value from data,m,idata
-        
+
 //         where idata.indata=data.block
-       
-       
 
 //     "###;
 
@@ -91,7 +89,7 @@ use datafusion::execution::object_store::ObjectStoreUrl;
 // }
 // pub async fn test_read_parquet_band(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
-//         select band_1 from solar where block<>0 
+//         select band_1 from solar where block<>0
 //     "###;
 //     let df = ctx.sql(sql).await.unwrap();
 //     df.collect().await.unwrap()
@@ -112,7 +110,7 @@ use datafusion::execution::object_store::ObjectStoreUrl;
 
 //     )
 
-//        select decode_tile(band_1) from cast_data 
+//        select decode_tile(band_1) from cast_data
 //         "###;
 
 //     let df = ctx.sql(sql).await.unwrap();
@@ -122,7 +120,7 @@ use datafusion::execution::object_store::ObjectStoreUrl;
 // pub async fn test_read_raquet_band(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
 
-//        select band_1 from solar where block<>0 
+//        select band_1 from solar where block<>0
 //     "###;
 
 //     let df = ctx.sql(sql).await.unwrap();
@@ -132,7 +130,7 @@ use datafusion::execution::object_store::ObjectStoreUrl;
 // pub async fn test_read_raquet_decode(ctx: SessionContext) -> Vec<arrow_array::RecordBatch> {
 //     let sql = r###"
 
-//        select decode_tile(band_1) from solar where block<>0 
+//        select decode_tile(band_1) from solar where block<>0
 //     "###;
 
 //     let df = ctx.sql(sql).await.unwrap();

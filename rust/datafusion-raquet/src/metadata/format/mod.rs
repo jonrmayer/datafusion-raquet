@@ -136,7 +136,6 @@ impl RaquetFormat {
     }
 
     pub fn get_compression(&self) -> String {
-        
         // if band_index < 0 || band_index >= self.band_info().len() {}
 
         self.compression().unwrap().clone()
@@ -150,7 +149,6 @@ impl RaquetFormat {
         }
         .unwrap();
 
-        
         match nodata {
             NoData::String(val) => val,
             NoData::Float(val) => val.to_string(),
@@ -175,25 +173,25 @@ mod tests {
         println!(" value {:?}", feature);
     }
 
-//     #[test]
-//     fn test_colortable() {
-//         let colortable_str = r#"{
-//                 "0": [
-//                     0,
-//                     0,
-//                     0,
-//                     255],
-//                      "1": [
-//                     0,
-//                     0,
-//                     0,
-//                     255
-//                 ]
-//                     }"#;
-//         let v: Value = serde_json::from_str(colortable_str).unwrap();
+    //     #[test]
+    //     fn test_colortable() {
+    //         let colortable_str = r#"{
+    //                 "0": [
+    //                     0,
+    //                     0,
+    //                     0,
+    //                     255],
+    //                      "1": [
+    //                     0,
+    //                     0,
+    //                     0,
+    //                     255
+    //                 ]
+    //                     }"#;
+    //         let v: Value = serde_json::from_str(colortable_str).unwrap();
 
-//         let r: Vec<(String, [f64; 4])> = serde_json::from_value(v).unwrap();
+    //         let r: Vec<(String, [f64; 4])> = serde_json::from_value(v).unwrap();
 
-//         println!(" value {:?}", r);
-//     }
+    //         println!(" value {:?}", r);
+    //     }
 }
