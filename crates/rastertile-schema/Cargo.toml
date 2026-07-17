@@ -1,12 +1,11 @@
 [package]
 name = "rastertile-schema"
 version.workspace = true
-# authors.workspace = true
+authors.workspace = true
 edition.workspace = true
-# license.workspace = true
-# repository.workspace = true
-# rust-version.workspace = true
-# categories.workspace = true
+license.workspace = true
+repository.workspace = true
+categories.workspace = true
 
 
 
