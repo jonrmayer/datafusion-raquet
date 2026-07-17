@@ -11,16 +11,10 @@ mod utils;
 pub use utils::{decode_array, filter_float_array, get_pixel, no_data, no_filter_float_array};
 
 pub use utils::{
-decode_native_array_i8,
-decode_native_array_u8,
-decode_native_array_i16,
-decode_native_array_u16,
-decode_native_array_i32,
-decode_native_array_u32,
-decode_native_array_i64,
-decode_native_array_u64,
-decode_native_array_f32,
-decode_native_array_f64,
+    decode_native_array_f32, decode_native_array_f64, decode_native_array_i8,
+    decode_native_array_i16, decode_native_array_i32, decode_native_array_i64,
+    decode_native_array_u8, decode_native_array_u16, decode_native_array_u32,
+    decode_native_array_u64,
 };
 
 pub use statistics::TileStatistics;
@@ -53,8 +47,7 @@ impl Operations {
     }
 
     fn no_data(&self) -> Option<f64> {
-        let out = no_data(self.metadata().data_type(), self.metadata().no_data());
-        out
+        no_data(self.metadata().data_type(), self.metadata().no_data())
     }
 
     pub fn decompress(&self, input: Option<&[u8]>) -> OperationsResult<Vec<u8>> {
@@ -82,7 +75,6 @@ impl Operations {
         Ok(decode_array(raw.data()))
     }
 
-
     //     pub fn decode_native(&self, input: Option<&[u8]>) -> OperationsResult<Vec<Option<f64>>> {
     //     let raw = self.raw_array(input)?;
 
@@ -102,29 +94,22 @@ impl Operations {
         let raw = self.raw_array(input)?;
 
         let data = match self.no_data() {
-            Some(v) => {
-                let f = filter_float_array(raw.data(), v);
-                f
-            }
-            None => {
-                let f = no_filter_float_array(raw.data());
-                f
-            }
+            Some(v) => filter_float_array(raw.data(), v),
+            None => no_filter_float_array(raw.data()),
         };
 
         let mut stats: Stats<f64> = Stats::new();
         data.iter().for_each(|v| stats.update(*v));
         let out = TileStatistics {
-            min: stats.min as f64,
-            max: stats.max as f64,
-            mean: stats.mean as f64,
-            std_dev: stats.std_dev as f64,
+            min: stats.min,
+            max: stats.max,
+            mean: stats.mean,
+            std_dev: stats.std_dev,
             valid_count: stats.count as u64,
         };
         Ok(out)
     }
 }
-
 
 #[macro_export]
 macro_rules! impl_decode_native {
@@ -135,25 +120,22 @@ macro_rules! impl_decode_native {
                 let raw = self.raw_array(input)?;
 
                 Ok($out_array(raw.data()))
-               
             }
-    }
+        }
     };
 }
 
-impl_decode_native!(decode_native_array_i8,i8,decode_native_i8);
-impl_decode_native!(decode_native_array_u8,u8,decode_native_u8);
+impl_decode_native!(decode_native_array_i8, i8, decode_native_i8);
+impl_decode_native!(decode_native_array_u8, u8, decode_native_u8);
 
-impl_decode_native!(decode_native_array_i16,i16,decode_native_i16);
-impl_decode_native!(decode_native_array_u16,u16,decode_native_u16);
+impl_decode_native!(decode_native_array_i16, i16, decode_native_i16);
+impl_decode_native!(decode_native_array_u16, u16, decode_native_u16);
 
-impl_decode_native!(decode_native_array_i32,i32,decode_native_i32);
-impl_decode_native!(decode_native_array_u32,u32,decode_native_u32);
+impl_decode_native!(decode_native_array_i32, i32, decode_native_i32);
+impl_decode_native!(decode_native_array_u32, u32, decode_native_u32);
 
-impl_decode_native!(decode_native_array_i64,i64,decode_native_i64);
-impl_decode_native!(decode_native_array_u64,u64,decode_native_u64);
+impl_decode_native!(decode_native_array_i64, i64, decode_native_i64);
+impl_decode_native!(decode_native_array_u64, u64, decode_native_u64);
 
-
-
-impl_decode_native!(decode_native_array_f32,f32,decode_native_f32);
-impl_decode_native!(decode_native_array_f64,f64,decode_native_f64);
+impl_decode_native!(decode_native_array_f32, f32, decode_native_f32);
+impl_decode_native!(decode_native_array_f64, f64, decode_native_f64);

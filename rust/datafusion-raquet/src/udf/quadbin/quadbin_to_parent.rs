@@ -1,8 +1,6 @@
-use std::sync::{Arc, OnceLock};
-
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::{Int64Type, UInt64Type};
 use arrow_array::{ArrayRef, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -11,6 +9,8 @@ use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
 };
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 
@@ -26,8 +26,8 @@ impl QuadBinToParent {
         Self {
             signature: Signature::one_of(
                 vec![
-                    TypeSignature::Exact(vec![DataType::Int64]),
-                    TypeSignature::Exact(vec![DataType::Int64, DataType::Int64]),
+                    TypeSignature::Exact(vec![DataType::UInt64]),
+                    TypeSignature::Exact(vec![DataType::UInt64, DataType::Int64]),
                 ],
                 Volatility::Immutable,
             ),
@@ -44,6 +44,9 @@ impl Default for QuadBinToParent {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToParent {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_to_parent"
     }
@@ -85,7 +88,7 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array> {
-    let cell = arrays[0].as_primitive::<Int64Type>();
+    let cell = arrays[0].as_primitive::<UInt64Type>();
     let resolution = arrays.get(1).map(|arr| arr.as_primitive::<Int64Type>());
 
     let mut builder = UInt64Builder::with_capacity(cell.len());
@@ -93,18 +96,15 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt64Array
         Some(resolution) => {
             for (cell, resolution) in cell.iter().zip(resolution.iter()) {
                 if let (Some(cell), Some(resolution)) = (cell, resolution) {
-                    let parent =
-                        QuadBin::from_cell(cell as u64)?.parent_resolution(resolution as u8)?;
+                    let parent = QuadBin::from_cell(cell)?.parent_resolution(resolution as u8)?;
                     builder.append_value(parent);
                 }
             }
         }
         None => {
-            for cell in cell.iter() {
-                if let Some(cell) = cell {
-                    let parent = QuadBin::from_cell(cell as u64)?.parent()?;
-                    builder.append_value(parent);
-                }
+            for cell in cell.iter().flatten() {
+                let parent = QuadBin::from_cell(cell)?.parent()?;
+                builder.append_value(parent);
             }
         }
     };

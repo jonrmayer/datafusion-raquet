@@ -1,10 +1,10 @@
-use std::sync::{Arc, OnceLock};
-
 use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::UInt64Type;
 use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -27,8 +27,8 @@ impl QuadBinToBBOXMercator {
         Self {
             signature: Signature::one_of(
                 vec![
-                    TypeSignature::Exact(vec![DataType::Int64]),
-                    TypeSignature::Exact(vec![DataType::Int64, DataType::Int64]),
+                    TypeSignature::Exact(vec![DataType::UInt64]),
+                    TypeSignature::Exact(vec![DataType::UInt64, DataType::Int64]),
                 ],
                 Volatility::Immutable,
             ),
@@ -45,6 +45,9 @@ impl Default for QuadBinToBBOXMercator {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToBBOXMercator {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_to_bbox_mercator"
     }
@@ -93,14 +96,14 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
-    let cells = arrays[0].as_primitive::<Int64Type>();
+    let cells = arrays[0].as_primitive::<UInt64Type>();
     let mut xmin_builder = Float64Builder::new();
     let mut ymin_builder = Float64Builder::new();
     let mut xmax_builder = Float64Builder::new();
     let mut ymax_builder = Float64Builder::new();
 
     for cell in cells.iter() {
-        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap() as u64)?
+        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap())?
             .to_tile()?
             .to_bbox_mercator()?;
 

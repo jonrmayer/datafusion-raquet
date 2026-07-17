@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::fmt::Formatter;
 use std::sync::Arc;
 
@@ -24,6 +25,9 @@ impl From<RaquetSource> for Arc<dyn FileSource> {
 }
 
 impl FileSource for RaquetSource {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn create_file_opener(
         &self,
         object_store: Arc<dyn object_store::ObjectStore>,
@@ -33,8 +37,6 @@ impl FileSource for RaquetSource {
         self.inner
             .create_file_opener(object_store, base_config, partition)
     }
-
-
 
     fn with_batch_size(&self, batch_size: usize) -> Arc<dyn FileSource> {
         self.inner.with_batch_size(batch_size)
@@ -71,7 +73,7 @@ impl FileSource for RaquetSource {
         let projected_parquet_source = self.inner.try_pushdown_projection(projection)?;
         if let Some(dyn_file_source) = projected_parquet_source {
             let inner = dyn_file_source
-                // .as_any()
+                .as_any()
                 .downcast_ref::<ParquetSource>()
                 .unwrap();
             Ok(Some(Arc::new(RaquetSource {

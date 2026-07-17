@@ -1,14 +1,16 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::{Int64Type, UInt64Type};
 use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
-    ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature, Volatility,
+    ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
+    Volatility,
 };
 
 use crate::error::RaquetDataFusionResult;
@@ -24,7 +26,7 @@ impl QuadBinKRing {
     pub fn new() -> Self {
         Self {
             signature: Signature::exact(
-                vec![DataType::Int64, DataType::Int64],
+                vec![DataType::UInt64, DataType::Int64],
                 Volatility::Immutable,
             ),
         }
@@ -40,6 +42,9 @@ impl Default for QuadBinKRing {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinKRing {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn name(&self) -> &str {
         "quadbin_kring"
@@ -78,12 +83,15 @@ impl ScalarUDFImpl for QuadBinKRing {
 }
 
 fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    let item_field = Arc::new(Field::new("", DataType::UInt64, false));
-    Ok(Arc::new(Field::new_list("", item_field.clone(), false)))
+    let list_field = Field::new_list_field(DataType::UInt64, true);
+    let dt = DataType::List(Arc::new(list_field));
+    let out_field: Field = Field::new("", dt, true);
+
+    Ok(Arc::new(out_field))
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> {
-    let cell = arrays[0].as_primitive::<Int64Type>();
+    let cell = arrays[0].as_primitive::<UInt64Type>();
     let k = arrays[1].as_primitive::<Int64Type>();
 
     let values_builder = UInt64Builder::new();
@@ -91,7 +99,7 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
     let mut builder = ListBuilder::new(values_builder);
     for (cell, k) in cell.iter().zip(k.iter()) {
         if let (Some(cell), Some(k)) = (cell, k) {
-            let child_cells =QuadBin::from_cell(cell as u64)?.kring(k as i32)?;
+            let child_cells = QuadBin::from_cell(cell)?.kring(k as i32)?;
             let children = UInt64Array::from(child_cells);
             builder.append_value(&children);
         }
@@ -101,4 +109,3 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
 
     Ok(point_arr)
 }
-

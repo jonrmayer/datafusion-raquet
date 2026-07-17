@@ -1,5 +1,5 @@
 mod error;
-pub use error::{RasterTileError,RasterTileResult};
+pub use error::{RasterTileError, RasterTileResult};
 
 mod compression;
 pub use compression::Compression;
@@ -21,4 +21,3 @@ mod operations;
 
 pub use operations::Operations;
 pub use operations::OperationsError;
-

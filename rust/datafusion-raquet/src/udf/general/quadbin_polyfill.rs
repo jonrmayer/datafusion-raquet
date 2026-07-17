@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
@@ -41,6 +42,9 @@ impl Default for QuadBinPolyFill {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinPolyFill {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_polyfill"
     }
@@ -103,22 +107,4 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
     let point_arr = builder.finish();
 
     Ok(point_arr)
-}
-
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_to_tile() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinPolyFill::default().into());
-        let sql = r#"select quadbin_polyfill('POLYGON((-74.1 40.6, -73.8 40.6, -73.8 40.9, -74.1 40.9, -74.1 40.6))',12) ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
 }

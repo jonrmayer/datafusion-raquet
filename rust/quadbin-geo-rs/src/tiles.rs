@@ -1,17 +1,18 @@
-use geo::{BoundingRect, Geometry};
-use quadbin_rs::{QuadBin, Tile};
+use quadbin_rs::Tile;
 
 use crate::rasterizer::GeoRasterizer;
 use crate::transforms::transform_latlon_to_tile_coord;
 
 use crate::BaseGeo;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct GeoTiles {
     pub geo: BaseGeo,
     // pub increment: i8,
 }
 
+#[allow(dead_code)]
 impl GeoTiles {
     pub fn new(geo: BaseGeo) -> Self {
         Self { geo }
@@ -45,11 +46,11 @@ impl GeoTiles {
         let gr0 = GeoRasterizer::new(tile_geom0);
         let gr1 = GeoRasterizer::new(tile_geom1);
         // gr.
-        for (i, v) in gr0.intersecting().iter().enumerate() {
+        for v in gr0.intersecting().iter() {
             println!("{:?}", 2.0_f64.powf(5.0) + v.0);
         }
 
-        for (i, v) in gr1.intersecting().iter().enumerate() {
+        for v in gr1.intersecting().iter() {
             println!("{:?}", v);
         }
 
@@ -68,7 +69,7 @@ impl GeoTiles {
         let w_h = self.tile_width_height();
         let max = w_h.0.max(w_h.1);
         let range = max.ilog2() as i8;
-        let mut steps: i8 = (range / increment) + 1;
+        let steps: i8 = (range / increment) + 1;
 
         for i in 0..steps {
             let res = self.geo().resolution() - (i * increment);

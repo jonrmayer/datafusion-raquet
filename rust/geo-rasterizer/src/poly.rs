@@ -1,6 +1,6 @@
 use std::{iter::once, ops::Add};
 
-use geo::{coords_iter::CoordsIter, winding_order::Winding, LineString, Point};
+use geo::{LineString, Point, coords_iter::CoordsIter, winding_order::Winding};
 use itertools::Itertools;
 
 use crate::{Rasterize, Rasterizer};
@@ -9,11 +9,9 @@ fn y_coordinates<'a>(
     first: &'a LineString<f64>,
     rest: &'a [LineString<f64>],
 ) -> impl Iterator<Item = isize> + 'a {
-    once(first).chain(rest).flat_map(|line_string| {
-        line_string
-            .points_iter()
-            .map(|point| point.y().floor() as isize)
-    })
+    once(first)
+        .chain(rest)
+        .flat_map(|line_string| line_string.points().map(|point| point.y().floor() as isize))
 }
 
 type PointPair = (Point<f64>, Point<f64>);
@@ -31,9 +29,9 @@ fn into_pointpairs(first: &LineString<f64>, rest: &[LineString<f64>]) -> Vec<Poi
 
     for ls in once(first).chain(rest) {
         if ls.is_cw() {
-            result.extend(ls.points_iter().tuple_windows::<PointPair>());
+            result.extend(ls.points().tuple_windows::<PointPair>());
         } else {
-            result.extend(ls.points_iter().rev().tuple_windows::<PointPair>());
+            result.extend(ls.points().rev().tuple_windows::<PointPair>());
         }
     }
 

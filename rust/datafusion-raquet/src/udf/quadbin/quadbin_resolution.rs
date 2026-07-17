@@ -1,8 +1,9 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::UInt8Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::UInt64Type;
 use arrow_array::{ArrayRef, UInt8Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -24,7 +25,7 @@ pub struct QuadBinResolution {
 impl QuadBinResolution {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::UInt64], Volatility::Immutable),
         }
     }
 }
@@ -38,6 +39,9 @@ impl Default for QuadBinResolution {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinResolution {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_resolution"
     }
@@ -78,12 +82,12 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<UInt8Array> {
-    let cell = arrays[0].as_primitive::<Int64Type>();
+    let cell = arrays[0].as_primitive::<UInt64Type>();
 
     let mut builder = UInt8Builder::with_capacity(cell.len());
 
     for cell in cell.iter() {
-        let resolution = QuadBin::from_cell(cell.unwrap() as u64)?.resolution()?;
+        let resolution = QuadBin::from_cell(cell.unwrap())?.resolution()?;
         builder.append_value(resolution);
     }
     let point_arr = builder.finish();

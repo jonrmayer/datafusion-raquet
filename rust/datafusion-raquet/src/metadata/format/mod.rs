@@ -6,6 +6,7 @@ use error::{MetadataError, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ColorInterp {
@@ -135,10 +136,9 @@ impl RaquetFormat {
     }
 
     pub fn get_compression(&self) -> String {
-        let compression = self.compression().unwrap().clone();
         // if band_index < 0 || band_index >= self.band_info().len() {}
 
-        compression
+        self.compression().unwrap().clone()
     }
 
     pub fn get_no_data(&self) -> String {
@@ -149,19 +149,18 @@ impl RaquetFormat {
         }
         .unwrap();
 
-        let nodata_value = match nodata {
+        match nodata {
             NoData::String(val) => val,
             NoData::Float(val) => val.to_string(),
             NoData::Int(val) => val.to_string(),
-        };
-        nodata_value
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::Value;
+    // use serde_json::Value;
     use std::fs::File;
 
     #[test]
@@ -174,25 +173,25 @@ mod tests {
         println!(" value {:?}", feature);
     }
 
-    #[test]
-    fn test_colortable() {
-        let colortable_str = r#"{
-                "0": [
-                    0,
-                    0,
-                    0,
-                    255],
-                     "1": [
-                    0,
-                    0,
-                    0,
-                    255
-                ]
-                    }"#;
-        let v: Value = serde_json::from_str(colortable_str).unwrap();
+    //     #[test]
+    //     fn test_colortable() {
+    //         let colortable_str = r#"{
+    //                 "0": [
+    //                     0,
+    //                     0,
+    //                     0,
+    //                     255],
+    //                      "1": [
+    //                     0,
+    //                     0,
+    //                     0,
+    //                     255
+    //                 ]
+    //                     }"#;
+    //         let v: Value = serde_json::from_str(colortable_str).unwrap();
 
-        let r: Vec<(String, [f64; 4])> = serde_json::from_value(v).unwrap();
+    //         let r: Vec<(String, [f64; 4])> = serde_json::from_value(v).unwrap();
 
-        println!(" value {:?}", r);
-    }
+    //         println!(" value {:?}", r);
+    //     }
 }

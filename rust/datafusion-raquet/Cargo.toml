@@ -51,6 +51,6 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [dev-dependencies]
 tokio = { version = "1.9", features = ["rt", "macros", "net", "rt-multi-thread"] }
-datafusion = { workspace = true, features = ["sql"] }
+datafusion = { workspace = true, features = ["sql","parquet"] }
 
 

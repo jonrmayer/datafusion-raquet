@@ -100,8 +100,8 @@ impl GeoCells {
                     y: p.1 as u32,
                     z: self.geo().resolution() as u8,
                 };
-                let cell = new_tile.to_cell().unwrap();
-                cell
+
+                new_tile.to_cell().unwrap()
             })
             .collect();
 
@@ -133,8 +133,8 @@ mod tests {
     #[test]
     fn it_works() {
         let wkt_str = "POLYGON((-45 40.9798980696201, 0 40.9798980696201, 0 66.5132604431119, -45 66.5132604431119, -45 40.9798980696201))";
-        let linestring_str = "LINESTRING(-45 40.979898069620134, 0 40.979898069620134, 0 66.51326044311186, -45 66.51326044311186, -45 40.979898069620134)";
-        let wkt_pt_str = "POINT(-74.0 40.7)";
+        let _linestring_str = "LINESTRING(-45 40.979898069620134, 0 40.979898069620134, 0 66.51326044311186, -45 66.51326044311186, -45 40.979898069620134)";
+        let _wkt_pt_str = "POINT(-74.0 40.7)";
         let z: i8 = 5;
 
         let gc = GeoCells::new(wkt_str.to_string(), z);

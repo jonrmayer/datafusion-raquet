@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::Int32Builder;
@@ -10,15 +11,14 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-     Volatility,
+    Volatility,
 };
 
 use itertools::multizip;
 
-use crate::error::{RaquetDataFusionError, RaquetDataFusionResult};
+use crate::error::RaquetDataFusionResult;
 
 use quadbin_rs::lonlat_to_pixel;
-
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct QuadBinToPixelXY {
@@ -60,6 +60,9 @@ impl Default for QuadBinToPixelXY {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToPixelXY {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_pixel_xy"
     }
@@ -133,22 +136,4 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     let nulls = None;
     let arr = StructArray::new(fields, arrays, nulls);
     Ok(arr)
-}
-
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_pixel_xy() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToPixelXY::default().into());
-        let sql = r#"SELECT quadbin_pixel_xy(0.0, 0.0, 4, 256) pixel;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
 }

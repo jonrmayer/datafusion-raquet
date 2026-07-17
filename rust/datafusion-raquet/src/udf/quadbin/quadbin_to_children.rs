@@ -1,8 +1,9 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::{Int64Type, UInt64Type};
 use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -26,8 +27,8 @@ impl QuadBinToChildren {
         Self {
             signature: Signature::one_of(
                 vec![
-                    TypeSignature::Exact(vec![DataType::Int64]),
-                    TypeSignature::Exact(vec![DataType::Int64, DataType::Int64]),
+                    TypeSignature::Exact(vec![DataType::UInt64]),
+                    TypeSignature::Exact(vec![DataType::UInt64, DataType::Int64]),
                 ],
                 Volatility::Immutable,
             ),
@@ -44,6 +45,9 @@ impl Default for QuadBinToChildren {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToChildren {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn name(&self) -> &str {
         "quadbin_to_children"
@@ -90,7 +94,7 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> {
-    let cell = arrays[0].as_primitive::<Int64Type>();
+    let cell = arrays[0].as_primitive::<UInt64Type>();
     let resolution = arrays.get(1).map(|arr| arr.as_primitive::<Int64Type>());
     let values_builder = UInt64Builder::new();
 
@@ -99,19 +103,18 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
         Some(resolution) => {
             for (cell, resolution) in cell.iter().zip(resolution.iter()) {
                 if let (Some(cell), Some(resolution)) = (cell, resolution) {
-                    let child_cells = QuadBin::from_cell(cell as u64)?.children_resolution(resolution as u8)?;
+                    let child_cells =
+                        QuadBin::from_cell(cell)?.children_resolution(resolution as u8)?;
                     let children = UInt64Array::from(child_cells);
                     builder.append_value(&children);
                 }
             }
         }
         None => {
-            for cell in cell.iter() {
-                if let Some(cell) = cell {
-                    let child_cells = QuadBin::from_cell(cell as u64)?.children()?;
-                    let children = UInt64Array::from(child_cells);
-                    builder.append_value(&children);
-                }
+            for cell in cell.iter().flatten() {
+                let child_cells = QuadBin::from_cell(cell)?.children()?;
+                let children = UInt64Array::from(child_cells);
+                builder.append_value(&children);
             }
         }
     };
@@ -119,22 +122,4 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> 
     let point_arr = builder.finish();
 
     Ok(point_arr)
-}
-
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_to_tile() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToChildren::default().into());
-        let sql = r#"select quadbin_to_children(5256690695657226239) ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-        df.show().await.unwrap();
-    }
 }

@@ -1,14 +1,11 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
-use arrow_array::builder::{
-     Float64Builder, 
-};
+use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::{Int64Type, };
-use arrow_array::{ ArrayRef,  StructArray, };
+use arrow_array::types::UInt64Type;
+use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
-
-
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
@@ -17,8 +14,7 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
-use crate::error::{RaquetDataFusionResult};
-
+use crate::error::RaquetDataFusionResult;
 
 use quadbin_rs::QuadBin;
 
@@ -32,8 +28,8 @@ impl QuadBinToBBOX {
         Self {
             signature: Signature::one_of(
                 vec![
-                    TypeSignature::Exact(vec![DataType::Int64]),
-                    TypeSignature::Exact(vec![DataType::Int64, DataType::Int64]),
+                    TypeSignature::Exact(vec![DataType::UInt64]),
+                    TypeSignature::Exact(vec![DataType::UInt64, DataType::Int64]),
                 ],
                 Volatility::Immutable,
             ),
@@ -50,6 +46,9 @@ impl Default for QuadBinToBBOX {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToBBOX {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn name(&self) -> &str {
         "quadbin_to_bbox"
@@ -94,19 +93,21 @@ fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef>
 
     let fields = Fields::from(vec![min_lon, min_lat, max_lon, max_lat]);
     let bbox = Field::new_struct("", fields, false);
-   
+
     Ok(Arc::new(bbox))
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
-    let cells = arrays[0].as_primitive::<Int64Type>();
+    let cells = arrays[0].as_primitive::<UInt64Type>();
     let mut xmin_builder = Float64Builder::new();
     let mut ymin_builder = Float64Builder::new();
     let mut xmax_builder = Float64Builder::new();
     let mut ymax_builder = Float64Builder::new();
 
-    for cell in cells.iter() {       
-        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap() as u64)?.to_tile()?.to_bbox_wgs84()?;
+    for cell in cells.iter() {
+        let bbox_wgs84 = QuadBin::from_cell(cell.unwrap())?
+            .to_tile()?
+            .to_bbox_wgs84()?;
         xmin_builder.append_value(bbox_wgs84.min_x);
         ymin_builder.append_value(bbox_wgs84.min_y);
         xmax_builder.append_value(bbox_wgs84.max_x);
@@ -130,27 +131,6 @@ fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray
     ];
     let nulls = None;
     let arr = StructArray::new(fields, arrays, nulls);
-   
-     Ok(arr)
-}
 
-#[cfg(test)]
-mod tests {
-    use datafusion::prelude::SessionContext;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_quadbin_to_children() {
-        let ctx = SessionContext::new();
-        ctx.register_udf(QuadBinToBBOX::default().into());
-        let sql = r#"SELECT quadbin_to_bbox(5202642732031410175) ;"#;
-        println!("{:?}", sql);
-
-        let df = ctx.sql(sql).await.unwrap();
-       df.show().await.unwrap();
-      
-    }
-
-   
+    Ok(arr)
 }

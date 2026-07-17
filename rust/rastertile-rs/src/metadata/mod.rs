@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use std::fmt;
 use std::str::FromStr;
 use std::usize;
 
@@ -18,7 +19,28 @@ pub enum BinaryType {
     Interleaved,
 }
 
+impl fmt::Display for BinaryType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BinaryType::Separated => write!(f, "Separated"),
+            BinaryType::Interleaved => write!(f, "Interleaved"),
+        }
+    }
+}
 
+impl FromStr for BinaryType {
+    type Err = MetadataError;
+    fn from_str(s: &str) -> MetadataResult<Self> {
+        let parser: Option<BinaryType> = match s {
+            "Separated" => Some(BinaryType::Separated),
+            "Interleaved" => Some(BinaryType::Interleaved),
+
+            _ => todo!(),
+        };
+
+        Ok(parser.unwrap())
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
 pub enum CompressionFormat {
@@ -31,6 +53,17 @@ pub enum CompressionFormat {
     Jpeg,
     /// WebP format
     WebP,
+}
+
+impl fmt::Display for CompressionFormat {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CompressionFormat::Gzip => write!(f, "gzip"),
+            CompressionFormat::Jpeg => write!(f, "jpeg"),
+            CompressionFormat::WebP => write!(f, "webp"),
+            CompressionFormat::None => write!(f, "none"),
+        }
+    }
 }
 
 impl FromStr for CompressionFormat {
@@ -47,7 +80,6 @@ impl FromStr for CompressionFormat {
     }
 }
 
-
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Metadata {
     pub tile_size: usize,
@@ -62,9 +94,9 @@ impl Metadata {
     /// Creates a new [`Metadata`] object.
     pub fn new(
         tile_size: usize,
-        binary_type: BinaryType,       
+        binary_type: BinaryType,
         data_type: DataType,
-         no_data: String,
+        no_data: String,
         compression: CompressionFormat,
         bands: Option<Vec<String>>,
     ) -> Self {
@@ -77,32 +109,48 @@ impl Metadata {
             bands,
         }
     }
+    pub fn new_from_strings(
+        tile_size_str: String,
+        binary_type_str: String,
+        data_type_str: String,
+        no_data: String,
+        compression_str: String,
+        bands: Option<Vec<String>>,
+    ) -> Self {
+        Self {
+            tile_size: tile_size_str.parse().expect("Could not convert"),
+            binary_type: BinaryType::from_str(&binary_type_str).unwrap(),
+            data_type: DataType::from_str(&data_type_str).unwrap(),
+            no_data,
+            compression: CompressionFormat::from_str(&compression_str).unwrap(),
+            bands,
+        }
+    }
 
     pub fn bands(&self) -> Option<Vec<String>> {
         self.bands.clone()
     }
 
     pub fn samples(&self) -> usize {
-        let samples = match self.bands() {
+        match self.bands() {
             Some(bands) => bands.len(),
             _ => 1,
-        };
-        samples
+        }
     }
 
     /// Expose the underlying tile_size.
     pub fn tile_size(&self) -> usize {
-        self.tile_size.clone()
+        self.tile_size
     }
 
     /// Expose the underlying binary_type
     pub fn binary_type(&self) -> BinaryType {
-        self.binary_type.clone()
+        self.binary_type
     }
 
     /// Expose the underlying binary_type
     pub fn data_type(&self) -> DataType {
-        self.data_type.clone()
+        self.data_type
     }
 
     pub fn no_data(&self) -> String {
@@ -111,18 +159,17 @@ impl Metadata {
 
     /// Expose the underlying binary_type
     pub fn compression(&self) -> CompressionFormat {
-        self.compression.clone()
+        self.compression
     }
 
     pub fn to_json_value(&self) -> Value {
-        let val = serde_json::to_value(self).unwrap();
-        val
+        serde_json::to_value(self).unwrap()
     }
 
     pub fn to_str_value(&self) -> String {
         let json_value = self.to_json_value();
-        let val = serde_json::to_string(&json_value).unwrap();
-        val
+
+        serde_json::to_string(&json_value).unwrap()
     }
 
     /// Serialize this metadata to a string.
@@ -135,7 +182,7 @@ impl Metadata {
     // /// Deserialize metadata from a string.
     pub fn deserialize<S: AsRef<str>>(metadata: Option<S>) -> Result<Self, MetadataError> {
         if let Some(ext_meta) = metadata {
-            Ok(serde_json::from_str(ext_meta.as_ref()).map_err(|err| {
+            Ok(serde_json::from_str(ext_meta.as_ref()).map_err(|_err| {
                 MetadataError::General("Bool must be constructed via Array::try_new".to_string())
             })?)
         } else {

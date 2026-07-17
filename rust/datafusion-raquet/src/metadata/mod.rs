@@ -33,10 +33,134 @@ use arrow_schema::{Field, FieldRef, Schema, SchemaRef};
 use rastertile_schema::error::RasterArrowResult;
 use rastertile_schema::{Metadata as TileMetadata, RasterArrowType, RasterType};
 
+use rastertile_rs::Metadata as RasterTileMetadata;
 
 use quadbin_schema::{Metadata as QMetadata, QuadbinArrowType, QuadbinType};
 
-use crate::metadata::format::{BandInfo, NoData};
+pub fn raquet_format_from_str(raquet_str: &str) -> RaquetFormat {
+    let raquet_format: RaquetFormat = serde_json::from_str(raquet_str).unwrap();
+    raquet_format
+}
+
+pub fn raquet_quadbin_metadata(raquet_str: &str) -> QuadbinColumnMetadata {
+    let raquet_format = raquet_format_from_str(raquet_str);
+    let min_zoom = raquet_format.tiling().unwrap().min_zoom.unwrap();
+    let max_zoom = raquet_format.tiling().unwrap().max_zoom.unwrap();
+    QuadbinColumnMetadata::new(min_zoom, max_zoom)
+}
+
+pub fn raquet_band_metadata(band_name: &str, raquet_str: &str) -> RasterTileMetadata {
+    let raquet_format = raquet_format_from_str(raquet_str);
+    let tile_size = raquet_format.tiling().unwrap().block_height.unwrap() as usize;
+
+    let compression_str = raquet_format.compression().unwrap();
+    let compression = CompressionFormat::from_str(&compression_str).unwrap();
+    let bands = raquet_format.bands().unwrap();
+    let band: Vec<_> = bands
+        .iter()
+        .filter(|&x| x.clone().name.unwrap() == band_name)
+        .collect();
+    let no_data = raquet_format.get_no_data();
+    let dtype = band[0].r#type.clone().unwrap();
+    let rdt = RasterDataType::from_str(&dtype).unwrap();
+
+    //     tile_size,
+    //     rdt,
+    //     no_data.clone(),
+    //     compression,
+    //     BinaryType::Separated,
+    //     None,
+    // );
+    RasterTileMetadata {
+        tile_size,
+        binary_type: BinaryType::Separated,
+        data_type: rdt,
+        no_data,
+        compression,
+        bands: None,
+    }
+}
+
+pub fn get_quadbin_metadata(
+    raquet_format: RaquetFormat,
+    existing_schema: Schema,
+) -> Result<QuadbinMetadata> {
+    let mut columns: HashMap<String, QuadbinColumnMetadata> = HashMap::new();
+    let version = raquet_format.version().unwrap();
+    let min_zoom = raquet_format.tiling().unwrap().min_zoom.unwrap();
+    let max_zoom = raquet_format.tiling().unwrap().max_zoom.unwrap();
+    let quadbin_column_name = existing_schema
+        .fields()
+        .iter()
+        .filter(|&x| *x.data_type() == arrow::datatypes::DataType::UInt64)
+        .collect::<Vec<_>>()[0]
+        .name();
+    let qcm = QuadbinColumnMetadata::new(min_zoom, max_zoom);
+    columns.insert(quadbin_column_name.to_string(), qcm);
+
+    let qm = QuadbinMetadata { version, columns };
+
+    Ok(qm)
+}
+
+pub fn get_raquet_metadata(
+    raquet_format: RaquetFormat,
+    existing_schema: Schema,
+) -> Result<RaquetMetadata> {
+    let mut columns: HashMap<String, RaquetColumnMetadata> = HashMap::new();
+
+    let version = raquet_format.version().unwrap();
+    let tile_size = raquet_format.tiling().unwrap().block_height.unwrap() as usize;
+
+    let compression_str = raquet_format.compression().unwrap();
+    let compression = CompressionFormat::from_str(&compression_str).unwrap();
+
+    let raster_columns = existing_schema
+        .fields()
+        .iter()
+        .filter(|&x| *x.data_type() == arrow::datatypes::DataType::Binary)
+        .collect::<Vec<_>>();
+    let bands = raquet_format.bands().unwrap();
+    let no_data = raquet_format.get_no_data();
+
+    if bands.len() == raster_columns.len() {
+        let binary_type: BinaryType = BinaryType::Separated;
+        for band in bands.iter() {
+            let name = band.name.clone().unwrap();
+            let dtype = band.r#type.clone().unwrap();
+            let rdt = RasterDataType::from_str(&dtype).unwrap();
+            let rcm = RaquetColumnMetadata::new(
+                tile_size,
+                rdt,
+                no_data.clone(),
+                compression,
+                binary_type,
+                None,
+            );
+            columns.insert(name, rcm);
+        }
+    } else {
+        let binary_type: BinaryType = BinaryType::Interleaved;
+        let band = &bands[0];
+        let names: Vec<String> = bands.iter().map(|x| x.clone().name.unwrap()).collect();
+        let name = raster_columns[0].name().clone();
+        let dtype = band.r#type.clone().unwrap();
+        let rdt = RasterDataType::from_str(&dtype).unwrap();
+        let rcm = RaquetColumnMetadata::new(
+            tile_size,
+            rdt,
+            no_data,
+            compression,
+            binary_type,
+            Some(names),
+        );
+        columns.insert(name, rcm);
+    }
+
+    let rm = RaquetMetadata { version, columns };
+
+    Ok(rm)
+}
 
 #[derive(Debug, Clone)]
 pub struct RaquetMetadataReader {
@@ -58,88 +182,96 @@ impl RaquetMetadataReader {
 
     pub async fn get_raquet_schema(&self) -> SchemaRef {
         let (raquet_format, existing_schema) = self.get_format_and_schema().await.unwrap();
-        let raquet_metadata = self
-            .get_raquet_metadata(raquet_format.clone(), existing_schema.clone())
-            .unwrap();
-        let quadbin_metadata = self
-            .get_quadbin_metadata(raquet_format.clone(), existing_schema.clone())
-            .unwrap();
+        let raquet_metadata =
+            get_raquet_metadata(raquet_format.clone(), existing_schema.clone()).unwrap();
+        let quadbin_metadata =
+            get_quadbin_metadata(raquet_format.clone(), existing_schema.clone()).unwrap();
 
-        let new_schema =
-            infer_rastertile_schema(&existing_schema, &raquet_metadata, &quadbin_metadata)
-                .unwrap();
-        new_schema
+        infer_rastertile_schema(&existing_schema, &raquet_metadata, &quadbin_metadata).unwrap()
     }
 
-    fn get_quadbin_metadata(
-        &self,
-        raquet_format: RaquetFormat,
-        existing_schema: Schema,
-    ) -> Result<QuadbinMetadata> {
-        let mut columns: HashMap<String, QuadbinColumnMetadata> = HashMap::new();
-        let version = raquet_format.version().unwrap();
-        let min_zoom = raquet_format.tiling().unwrap().min_zoom.unwrap();
-        let max_zoom = raquet_format.tiling().unwrap().max_zoom.unwrap();
-        let quadbin_column_name = existing_schema
-            .fields()
-            .iter()
-            .filter(|&x| *x.data_type() == arrow::datatypes::DataType::UInt64)
-            .collect::<Vec<_>>()[0]
-            .name();
-        let qcm = QuadbinColumnMetadata::new(min_zoom, max_zoom);
-        columns.insert(quadbin_column_name.to_string(), qcm);
+    // fn get_quadbin_metadata(
+    //     &self,
+    //     raquet_format: RaquetFormat,
+    //     existing_schema: Schema,
+    // ) -> Result<QuadbinMetadata> {
+    //     let mut columns: HashMap<String, QuadbinColumnMetadata> = HashMap::new();
+    //     let version = raquet_format.version().unwrap();
+    //     let min_zoom = raquet_format.tiling().unwrap().min_zoom.unwrap();
+    //     let max_zoom = raquet_format.tiling().unwrap().max_zoom.unwrap();
+    //     let quadbin_column_name = existing_schema
+    //         .fields()
+    //         .iter()
+    //         .filter(|&x| *x.data_type() == arrow::datatypes::DataType::UInt64)
+    //         .collect::<Vec<_>>()[0]
+    //         .name();
+    //     let qcm = QuadbinColumnMetadata::new(min_zoom, max_zoom);
+    //     columns.insert(quadbin_column_name.to_string(), qcm);
 
-        let qm = QuadbinMetadata { version, columns };
+    //     let qm = QuadbinMetadata { version, columns };
 
-        return Ok(qm);
-    }
+    //     return Ok(qm);
+    // }
 
-    fn get_raquet_metadata(
-        &self,
-        raquet_format: RaquetFormat,
-        existing_schema: Schema,
-    ) -> Result<RaquetMetadata> {
-        let mut columns: HashMap<String, RaquetColumnMetadata> = HashMap::new();
+    // fn get_raquet_metadata(
+    //     &self,
+    //     raquet_format: RaquetFormat,
+    //     existing_schema: Schema,
+    // ) -> Result<RaquetMetadata> {
+    //     let mut columns: HashMap<String, RaquetColumnMetadata> = HashMap::new();
 
-        let version = raquet_format.version().unwrap();
-        let tile_size = raquet_format.tiling().unwrap().block_height.unwrap() as usize;
+    //     let version = raquet_format.version().unwrap();
+    //     let tile_size = raquet_format.tiling().unwrap().block_height.unwrap() as usize;
 
-        let compression_str = raquet_format.compression().unwrap();
-        let compression = CompressionFormat::from_str(&compression_str).unwrap();
+    //     let compression_str = raquet_format.compression().unwrap();
+    //     let compression = CompressionFormat::from_str(&compression_str).unwrap();
 
-        let raster_columns = existing_schema
-            .fields()
-            .iter()
-            .filter(|&x| *x.data_type() == arrow::datatypes::DataType::Binary)
-            .collect::<Vec<_>>();
-        let bands = raquet_format.bands().unwrap();
-        let no_data = raquet_format.get_no_data();
+    //     let raster_columns = existing_schema
+    //         .fields()
+    //         .iter()
+    //         .filter(|&x| *x.data_type() == arrow::datatypes::DataType::Binary)
+    //         .collect::<Vec<_>>();
+    //     let bands = raquet_format.bands().unwrap();
+    //     let no_data = raquet_format.get_no_data();
 
-        if bands.len() == raster_columns.len() {
-            let binary_type: BinaryType = BinaryType::Separated;
-            for (_, band) in bands.iter().enumerate() {
-                let name = band.name.clone().unwrap();
-                let dtype = band.r#type.clone().unwrap();               
-                let rdt = RasterDataType::from_str(&dtype).unwrap();
-                let rcm = RaquetColumnMetadata::new(tile_size, rdt,no_data.clone(), compression, binary_type, None);
-                columns.insert(name, rcm);
-            }
-        } else {
-            let binary_type: BinaryType = BinaryType::Interleaved;
-            let band = &bands[0];
-            let names: Vec<String> = bands.iter().map(|x| x.clone().name.unwrap()).collect();
-            let name = raster_columns[0].name().clone();
-            let dtype = band.r#type.clone().unwrap();
-            let rdt = RasterDataType::from_str(&dtype).unwrap();
-            let rcm =
-                RaquetColumnMetadata::new(tile_size, rdt,no_data, compression, binary_type, Some(names));
-            columns.insert(name, rcm);
-        }
+    //     if bands.len() == raster_columns.len() {
+    //         let binary_type: BinaryType = BinaryType::Separated;
+    //         for (_, band) in bands.iter().enumerate() {
+    //             let name = band.name.clone().unwrap();
+    //             let dtype = band.r#type.clone().unwrap();
+    //             let rdt = RasterDataType::from_str(&dtype).unwrap();
+    //             let rcm = RaquetColumnMetadata::new(
+    //                 tile_size,
+    //                 rdt,
+    //                 no_data.clone(),
+    //                 compression,
+    //                 binary_type,
+    //                 None,
+    //             );
+    //             columns.insert(name, rcm);
+    //         }
+    //     } else {
+    //         let binary_type: BinaryType = BinaryType::Interleaved;
+    //         let band = &bands[0];
+    //         let names: Vec<String> = bands.iter().map(|x| x.clone().name.unwrap()).collect();
+    //         let name = raster_columns[0].name().clone();
+    //         let dtype = band.r#type.clone().unwrap();
+    //         let rdt = RasterDataType::from_str(&dtype).unwrap();
+    //         let rcm = RaquetColumnMetadata::new(
+    //             tile_size,
+    //             rdt,
+    //             no_data,
+    //             compression,
+    //             binary_type,
+    //             Some(names),
+    //         );
+    //         columns.insert(name, rcm);
+    //     }
 
-        let rm = RaquetMetadata { version, columns };
+    //     let rm = RaquetMetadata { version, columns };
 
-        return Ok(rm);
-    }
+    //     return Ok(rm);
+    // }
 
     async fn get_format_and_schema(&self) -> Result<(RaquetFormat, Schema)> {
         let object_reader = ParquetObjectReader::new(self.store(), self.meta().location)
@@ -191,10 +323,7 @@ pub struct QuadbinColumnMetadata {
 
 impl QuadbinColumnMetadata {
     pub fn new(min_zoom: i32, max_zoom: i32) -> Self {
-        QuadbinColumnMetadata {
-            min_zoom: min_zoom,
-            max_zoom: max_zoom,
-        }
+        QuadbinColumnMetadata { min_zoom, max_zoom }
     }
 }
 
@@ -239,12 +368,12 @@ impl RaquetColumnMetadata {
         bands: Option<Vec<String>>,
     ) -> Self {
         RaquetColumnMetadata {
-            tile_size: tile_size,
-            binary_type: binary_type,
-            data_type: data_type,
-            no_data:no_data,
-            compression: compression,
-            bands: bands,
+            tile_size,
+            binary_type,
+            data_type,
+            no_data,
+            compression,
+            bands,
         }
     }
 }

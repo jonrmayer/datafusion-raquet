@@ -1,8 +1,9 @@
+use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 use arrow_array::builder::{ListBuilder, UInt64Builder};
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::UInt64Type;
 use arrow_array::{ArrayRef, ListArray, UInt64Array};
 use arrow_schema::{DataType, Field, FieldRef};
 use datafusion::error::{DataFusionError, Result};
@@ -24,7 +25,7 @@ pub struct QuadBinToSibling {
 impl QuadBinToSibling {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::UInt64], Volatility::Immutable),
         }
     }
 }
@@ -38,6 +39,9 @@ impl Default for QuadBinToSibling {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToSibling {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_sibling"
     }
@@ -74,18 +78,21 @@ impl ScalarUDFImpl for QuadBinToSibling {
 }
 
 fn return_field_impl(_args: ReturnFieldArgs) -> RaquetDataFusionResult<FieldRef> {
-    let item_field = Arc::new(Field::new("", DataType::UInt64, false));
-    Ok(Arc::new(Field::new_list("", item_field.clone(), false)))
+    let list_field = Field::new_list_field(DataType::UInt64, true);
+    let dt = DataType::List(Arc::new(list_field));
+    let out_field: Field = Field::new("", dt, true);
+
+    Ok(Arc::new(out_field))
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<ListArray> {
-    let cell = arrays[0].as_primitive::<Int64Type>();
+    let cell = arrays[0].as_primitive::<UInt64Type>();
 
     let values_builder = UInt64Builder::new();
 
     let mut builder = ListBuilder::new(values_builder);
     for cell in cell.iter() {
-        let cell_siblings = QuadBin::from_cell(cell.unwrap() as u64)?.siblings()?;
+        let cell_siblings = QuadBin::from_cell(cell.unwrap())?.siblings()?;
         let siblings = UInt64Array::from(cell_siblings);
         builder.append_value(&siblings);
     }

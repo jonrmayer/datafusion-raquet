@@ -1,4 +1,3 @@
-use std::sync::{Arc, OnceLock};
 use arrow_array::builder::UInt64Builder;
 use arrow_array::cast::AsArray;
 use arrow_array::types::Int64Type;
@@ -10,6 +9,8 @@ use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
     Volatility,
 };
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use crate::error::RaquetDataFusionResult;
 
@@ -40,6 +41,9 @@ impl Default for QuadBinFromTile {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinFromTile {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_from_tile"
     }

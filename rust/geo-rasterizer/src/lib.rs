@@ -14,7 +14,7 @@ use geo::{
 
 use ndarray::Array2;
 use ndarray::s;
-use num_traits::{ Num, NumCast};
+use num_traits::{Num, NumCast};
 use thiserror::Error;
 
 mod line;
@@ -92,14 +92,14 @@ pub struct BinaryRasterizer {
 //             x: x as f32,
 //             y: y as f32,
 //         });
-
+#[allow(dead_code)]
 fn to_float<T>(coords: Coord) -> Coord
 where
     T: Into<Coord> + Copy,
 {
     Coord {
-        x: coords.x.into(),
-        y: coords.y.into(),
+        x: coords.x,
+        y: coords.y,
     }
 }
 
@@ -136,9 +136,7 @@ impl BinaryRasterizer {
 
     /// Retrieve the completed raster array.
     pub fn finish(self) -> Array2<bool> {
-        self.inner
-            .finish()
-            .mapv(|v| if v == 1u8 { true } else { false })
+        self.inner.finish().mapv(|v| v == 1u8)
     }
 }
 
@@ -151,21 +149,16 @@ where
 
 /// Conflict resolution strategy for cases where two shapes cover the
 /// same pixel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MergeAlgorithm {
     /// Overwrite the pixel with the burn value associated with the
     /// last shape to be written to it. This is the default.
+    #[default]
     Replace,
 
     /// Overwrite the pixel with the sum of the burn values associated
     /// with the shapes written to it.
     Add,
-}
-
-impl Default for MergeAlgorithm {
-    fn default() -> Self {
-        MergeAlgorithm::Replace
-    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -553,6 +546,7 @@ where
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -563,7 +557,6 @@ mod tests {
         let _ = r.rasterize(&shape, 1u8);
         let pixels = r.finish();
         let a = pixels.mapv(|v| v as u8);
-
 
         println!("{:?}", a);
     }

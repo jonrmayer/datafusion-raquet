@@ -1,16 +1,16 @@
-use std::sync::{Arc, OnceLock};
-
 use arrow_array::builder::Float64Builder;
 use arrow_array::cast::AsArray;
-use arrow_array::types::Int64Type;
+use arrow_array::types::UInt64Type;
 use arrow_array::{ArrayRef, StructArray};
 use arrow_schema::{DataType, Field, FieldRef, Fields};
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::scalar_doc_sections::DOC_SECTION_OTHER;
 use datafusion::logical_expr::{
     ColumnarValue, Documentation, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDFImpl, Signature,
-     Volatility,
+    Volatility,
 };
 
 use crate::error::RaquetDataFusionResult;
@@ -25,7 +25,7 @@ pub struct QuadBinToLonLat {
 impl QuadBinToLonLat {
     pub fn new() -> Self {
         Self {
-            signature: Signature::exact(vec![DataType::Int64], Volatility::Immutable),
+            signature: Signature::exact(vec![DataType::UInt64], Volatility::Immutable),
         }
     }
     fn data_type(&self) -> DataType {
@@ -49,6 +49,9 @@ impl Default for QuadBinToLonLat {
 static DOCUMENTATION: OnceLock<Documentation> = OnceLock::new();
 
 impl ScalarUDFImpl for QuadBinToLonLat {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn name(&self) -> &str {
         "quadbin_to_lonlat"
     }
@@ -85,12 +88,12 @@ impl ScalarUDFImpl for QuadBinToLonLat {
 }
 
 fn build_cell_array(arrays: Vec<ArrayRef>) -> RaquetDataFusionResult<StructArray> {
-    let cells = arrays[0].as_primitive::<Int64Type>();
+    let cells = arrays[0].as_primitive::<UInt64Type>();
     let mut lon_builder = Float64Builder::new();
     let mut lat_builder = Float64Builder::new();
 
     for cell in cells.iter() {
-        let lonlat = QuadBin::from_cell(cell.unwrap() as u64)?.to_lonlat()?;
+        let lonlat = QuadBin::from_cell(cell.unwrap())?.to_lonlat()?;
         lon_builder.append_value(lonlat.0);
         lat_builder.append_value(lonlat.1);
     }
