@@ -99,7 +99,7 @@ impl ScalarUDFImpl for CastRaquet {
         Some(DOCUMENTATION.get_or_init(|| {
             Documentation::builder(
                 DOC_SECTION_OTHER,
-                "Return a raquet binary from a binary.",
+                "Return a raquet band from a binary.",
                 "binary_to_raquet(band_1,'256', 'Separated', 'float32','NaN','gzip')",
             )
             .with_argument("band", "band value")

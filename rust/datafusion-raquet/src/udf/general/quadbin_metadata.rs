@@ -79,7 +79,7 @@ impl ScalarUDFImpl for QuadbinMetadata {
         Some(DOCUMENTATION.get_or_init(|| {
             Documentation::builder(
                 DOC_SECTION_OTHER,
-                "Return a metdata struct for a band",
+                "Return the quadbin metadata struct for the index column",
                 "quadbin_metadata(metadata)",
             )
             .with_argument("metadata", "metadata value")

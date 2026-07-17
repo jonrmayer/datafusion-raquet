@@ -1,13 +1,16 @@
 [workspace]
 members = ["rust/datafusion-raquet","rust/rastertile-rs","rust/rastertile-schema","rust/quadbin-schema","rust/quadbin-rs","rust/quadbin-geo-rs", "rust/geo-rasterizer"]
 
-
 resolver = "2"
 
 [workspace.package]
 name = "datafusion-raquet"
 version = "0.1.0"
 edition = "2024"
+authors = ["Jonathan Mayer <jonrmayer@yahoo.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/jonrmayer/datafusion-raquet"
+categories = ["science::geo"]
 
 [workspace.dependencies]
 

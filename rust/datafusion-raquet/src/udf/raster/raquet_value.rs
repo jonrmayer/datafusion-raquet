@@ -101,8 +101,8 @@ impl ScalarUDFImpl for RaquetValue {
         Some(DOCUMENTATION.get_or_init(|| {
             Documentation::builder(
                 DOC_SECTION_OTHER,
-                "Return a decoded binary   an encoded binary.",
-                "raquet_value(band_1,wkt,resolution)",
+                "Pixel Value by Point WKT and resolution.",
+                "raquet_value(band,wkt,resolution)",
             )
             .with_argument("band", "band value")
             .with_argument("wkt", "wkt value")
