@@ -11,6 +11,7 @@ authors = ["Jonathan Mayer <jonrmayer@yahoo.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/jonrmayer/datafusion-raquet"
 categories = ["science::geo"]
+description = "Raquet extension for Apache DataFusion"
 
 [workspace.dependencies]
 
