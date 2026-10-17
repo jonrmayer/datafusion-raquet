@@ -5,6 +5,7 @@ pub mod metadata;
 // pub mod tables;
 pub mod udf;
 // pub mod views;
+pub mod udtf;
 
 pub use format::source::RaquetSource;
 
@@ -21,6 +22,7 @@ pub fn register(session_context: &datafusion::prelude::SessionContext) {
     crate::udf::quadbin::register(session_context);
     crate::udf::raster::register(session_context);
     crate::udf::general::register(session_context);
+    crate::udtf::register(session_context);
 
     // crate::views::register(session_context);
 }

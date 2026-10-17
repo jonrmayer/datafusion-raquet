@@ -21,6 +21,7 @@ bytes = "1.7.0"
 
 flate2 = "1.1.9"
 jpeg-decoder = "0.3"
+jpeg-encoder = "0.7.1"
 image-webp = "0.2.4"
 
 serde = "1"
@@ -35,7 +36,7 @@ arrow = { version = "58" }
 arrow-array = { version = "58" }
 arrow-schema = { version = "58" }
 datafusion = { version = "53.1" ,default-features = false }
-# datafusion-common = { version = "53.1" }
+datafusion-common = { version = "53.1" }
 datafusion-sql = { version = "53.1" }
 datafusion-datasource = { version = "53.1", default-features = false }
 datafusion-datasource-parquet = "53.1"

@@ -24,6 +24,7 @@ byteorder = { workspace = true }
 
 flate2 = { workspace = true }
 jpeg-decoder = { workspace = true }
+jpeg-encoder = { workspace = true }
 image-webp = { workspace = true }
 
 ndarray = "0.17.2"

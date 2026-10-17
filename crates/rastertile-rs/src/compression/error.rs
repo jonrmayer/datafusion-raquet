@@ -1,20 +1,22 @@
 use thiserror::Error;
 
-/// Result type for compression operations
-pub type CompressionResult<T> = std::result::Result<T, CompressionError>;
-
-/// Errors that can occur during compression operations
 #[derive(Error, Debug)]
 pub enum CompressionError {
-    /// I/O error
-    #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("IO error encountered during compression/decompression: {0}")]
+    IoError(#[from] std::io::Error),
 
-    /// Error while decoding JPEG data.
-    #[error(transparent)]
-    JPEGDecodingError(#[from] jpeg_decoder::Error),
+    #[error("Serialization or byte-casting error: {0}")]
+    ByteCastError(String),
 
-    /// Error while decoding JPEG data.
-    #[error(transparent)]
-    WEBPDecodingError(#[from] image_webp::DecodingError),
+    #[error("Gzip strategy failure: {0}")]
+    GzipError(String),
+
+    #[error("JPEG engine operational failure: {0}")]
+    JpegError(String),
+
+    #[error("WebP engine operational failure: {0}")]
+    WebpError(String),
+
+    #[error("Invalid data shape or array layout: {0}")]
+    InvalidDimensions(String),
 }

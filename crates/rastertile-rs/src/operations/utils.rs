@@ -2,44 +2,44 @@ use crate::DataType;
 use crate::operations::TypedArray;
 use crate::operations::{OperationsError, OperationsResult};
 
-#[macro_export]
-macro_rules! impl_decode_native_array {
-    ($in_type:ident, $out_type:ident, $name:ident) => {
-        pub fn $name(data: &TypedArray) -> Vec<Option<$out_type>> {
-            let vals = match data {
-                TypedArray::$in_type(v) => {
-                    let out = v.iter().map(|n| Some(*n)).collect();
-                    out
-                }
-                _ => todo!(),
-            };
-            vals
+
+
+/// Helper trait mapping primitive Rust types directly to their corresponding TypedArray variant containers.
+pub trait ToTypedArray: Sized {
+    fn to_typed_array(data: Vec<Self>) -> TypedArray;
+    fn to_typed_array_from_options(data: &[Option<Self>], fallback_no_data: Self) -> TypedArray;
+}
+
+macro_rules! impl_to_typed_array_trait {
+    ($t:ty, $variant:ident) => {
+        impl ToTypedArray for $t {
+            fn to_typed_array(data: Vec<Self>) -> TypedArray {
+                TypedArray::$variant(data)
+            }
+
+            fn to_typed_array_from_options(data: &[Option<Self>], fallback_no_data: Self) -> TypedArray {
+                let flattened: Vec<Self> = data
+                    .iter()
+                    .map(|opt| opt.unwrap_or(fallback_no_data))
+                    .collect();
+                TypedArray::$variant(flattened)
+            }
         }
     };
 }
 
-impl_decode_native_array!(Int8, i8, decode_native_array_i8);
-impl_decode_native_array!(UInt8, u8, decode_native_array_u8);
-impl_decode_native_array!(Int16, i16, decode_native_array_i16);
-impl_decode_native_array!(UInt16, u16, decode_native_array_u16);
-impl_decode_native_array!(Int32, i32, decode_native_array_i32);
-impl_decode_native_array!(UInt32, u32, decode_native_array_u32);
-impl_decode_native_array!(Int64, i64, decode_native_array_i64);
-impl_decode_native_array!(UInt64, u64, decode_native_array_u64);
-impl_decode_native_array!(Float32, f32, decode_native_array_f32);
-impl_decode_native_array!(Float64, f64, decode_native_array_f64);
+// Generate the complete suite of conversion implementations across the primitive type matrix
+impl_to_typed_array_trait!(i8, Int8);
+impl_to_typed_array_trait!(u8, UInt8);
+impl_to_typed_array_trait!(i16, Int16);
+impl_to_typed_array_trait!(u16, UInt16);
+impl_to_typed_array_trait!(i32, Int32);
+impl_to_typed_array_trait!(u32, UInt32);
+impl_to_typed_array_trait!(i64, Int64);
+impl_to_typed_array_trait!(u64, UInt64);
+impl_to_typed_array_trait!(f32, Float32);
+impl_to_typed_array_trait!(f64, Float64);
 
-// pub fn decode_native_array_i8(data: &TypedArray) -> Vec<Option<i8>> {
-//      let vals = match data {
-//         TypedArray::Int8(v) => {
-//             let out = v.iter().map(|n| Some(*n )).collect();
-//             out
-//         }
-//         _ => todo!(),
-//     };
-//     vals
-
-// }
 
 pub fn decode_array(data: &TypedArray) -> Vec<Option<f64>> {
     match data {
@@ -177,21 +177,3 @@ pub fn get_pixel(data: Vec<u8>, data_type: DataType, offset: usize) -> Operation
 
     Ok(value)
 }
-
-// #[macro_export]
-// macro_rules! impl_decode_array {
-//     ($in_type:ident, $name:ident) => {
-//         pub fn $name(data: &TypedArray) -> Vec<Option<$out_type>> {
-//             let vals = match data {
-//                 TypedArray::$in_type(v) => {
-//                     let out = v.iter().map(|n| Some(n.clone())).collect();
-//                     out
-//                 }
-//                 _ => panic!("expected Float32"),
-//             };
-//             vals
-//         }
-//     };
-// }
-
-// impl_convert_array!(Float32,  convert_f32);

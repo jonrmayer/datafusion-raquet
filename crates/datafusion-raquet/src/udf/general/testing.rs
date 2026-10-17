@@ -112,4 +112,8 @@ mod tests {
         let _df = ctx.sql(sql).await.unwrap();
         // df.show().await.unwrap();
     }
+    
 }
+
+
+// SELECT CAST([1, 2, 3, 4] AS TINYINT[]) AS i8_array;

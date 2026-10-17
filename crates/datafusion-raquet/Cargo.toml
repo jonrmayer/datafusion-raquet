@@ -14,10 +14,10 @@ arrow-array = { workspace = true }
 arrow-schema = { workspace = true }
 # async-stream = "0.3"
 async-trait = { version = "0.1.89" }
-datafusion = { workspace = true }
+datafusion = { workspace = true,  features = ["nested_expressions"] }
 datafusion-datasource = { workspace = true }
 datafusion-datasource-parquet = { workspace = true }
-# datafusion-common = { workspace = true }
+datafusion-common = { workspace = true }
 datafusion-sql = { workspace = true }
 # datafusion-python-util = { workspace = true }
 
