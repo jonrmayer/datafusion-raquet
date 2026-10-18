@@ -18,11 +18,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_quadbin_polyfill() {
+    async fn test_intersecting_cells_tbl() {
         let ctx = get_ctx().await;
         let sql = r###"
         with tbl as (
-            SELECT count(quadbin) FROM quadbin_polyfill_tbl('POLYGON((-45 40, 0 40, 0 66, -45 66, -45 40))', 10)
+            SELECT count(quadbin) FROM intersecting_cells_tbl('POLYGON((-45 40, 0 40, 0 66, -45 66, -45 40))', 10)
         )
 
         select * from tbl

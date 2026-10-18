@@ -130,7 +130,53 @@ impl GeoCells {
         Ok(result)
     }
 
+    fn cast_to_multipolygon(&self, geom: Geometry) -> Option<MultiPolygon<f64>> {
+        match geom {
+            // Variant is already a MultiPolygon, return it directly
+            Geometry::MultiPolygon(mp) => Some(mp),
+
+            // Variant is a single Polygon, wrap it into a MultiPolygon collection
+            Geometry::Polygon(p) => Some(MultiPolygon::new(vec![p])),
+
+            // Any other type (Point, LineString, etc.) cannot be cast
+            _ => None,
+        }
+    }
+
+    pub fn intersection(&self, wkt: String) {
+        let other = geo_types::Geometry::<f64>::try_from_wkt_str(&wkt).unwrap();
+
+        let mp_other = self.cast_to_multipolygon(other).unwrap();
+        
+
+        let mp = self.cast_to_multipolygon(self.geo().geom()).unwrap();
+
+        let intersection_shape: MultiPolygon<f64> = mp.intersection(&mp_other);
+
+        let flat_area = intersection_shape.unsigned_area();
+        println!("Flat Cartesian Area: {} square units", flat_area);
+
+        // for tile_geom in tile_geoms {
+        //     let intersection_shape: MultiPolygon<f64> = polys[0].intersection(&tile_geom);
+        //     let flat_area = intersection_shape.unsigned_area();
+        //     println!("Flat Cartesian Area: {} square units", flat_area);
+        //     // println!("{:?}",intersection_shape.);
+        // }
+    }
+
     pub fn intersections(&self, tile_geoms: Vec<Polygon>) {
+        let validated_geom = Geo::new(self.geo().geom());
+        let polys = validated_geom.to_polys();
+
+        for tile_geom in tile_geoms {
+            let intersection_shape: MultiPolygon<f64> = polys[0].intersection(&tile_geom);
+            let flat_area = intersection_shape.unsigned_area();
+            println!("Flat Cartesian Area: {} square units", flat_area);
+            // println!("{:?}",intersection_shape.);
+        }
+    }
+
+    pub fn tile_intersection(&self, tile_geoms: Vec<Polygon>) {
         let validated_geom = Geo::new(self.geo().geom());
         let polys = validated_geom.to_polys();
 
@@ -191,6 +237,35 @@ impl GeoCells {
 mod tests {
     use super::*;
     use quadbin_rs::QuadBin;
+
+    #[test]
+    fn test_tiles_intersection() {
+        let wkt_str = "POLYGON((-45 40.9798980696201, 0 40.9798980696201, 0 66.5132604431119, -45 66.5132604431119, -45 40.9798980696201))";
+
+        let z: i8 = 9;
+
+        let gc = GeoCells::new(wkt_str.to_string(), z);
+        // println!("extent {:?}", gc.extent());
+        let boundary_cells = gc.boundary_cells().unwrap();
+
+        for boundary_cell in boundary_cells {
+            let bbox = QuadBin::from_cell(boundary_cell)
+                .unwrap()
+                .to_tile()
+                .unwrap()
+                .to_bbox_wgs84()
+                .unwrap();
+
+            let wkt = GeoFormats::new(bbox).to_wkt();
+            gc.intersection(wkt);
+
+            // // 3. Convert the Rect directly into a Polygon
+            // let polygon: Polygon<f64> = bbox.into();
+            // tile_geoms.push(polygon);
+            // println!("{:?}", polygon);
+        }
+        // gc.intersections(tile_geoms);
+    }
 
     #[test]
     fn test_tile_intersections() {

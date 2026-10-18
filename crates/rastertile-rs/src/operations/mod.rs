@@ -12,6 +12,8 @@ mod decode;
 
 mod encode;
 
+mod mask;
+
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -52,6 +54,8 @@ use crate::Metadata;
 // use nd_array::NdArray;
 
 use rolling_stats::Stats;
+
+
 
 /// Helper trait mapping primitive Rust types directly to their corresponding TypedArray variant containers.
 pub trait ToTypedArray: Sized {
@@ -215,6 +219,8 @@ impl Operations {
         get_pixel(decompressed, data_type, offset)
     }
 
+   
+
     pub fn statistics(&self, input: Option<&[u8]>) -> OperationsResult<TileStatistics> {
         let raw = self.raw_array(input)?;
 
@@ -290,10 +296,7 @@ macro_rules! impl_encode_native {
         impl Operations {
             /// Encodes native primitive slices back into raw binary segments,
             /// operating as the exact uncompressed mirror to your decode_native functions.
-            pub fn $name(
-                &self,
-                input: Vec<$in_type>
-            ) -> OperationsResult<Vec<u8>> {
+            pub fn $name(&self, input: Vec<$in_type>) -> OperationsResult<Vec<u8>> {
                 let typed_array = $in_encoder(input);
 
                 let encoded_bytes = encode_typed_array(&typed_array)?;

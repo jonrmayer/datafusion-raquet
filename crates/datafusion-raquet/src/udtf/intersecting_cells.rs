@@ -23,13 +23,13 @@ use datafusion::physical_plan::projection::ProjectionExec;
 
 /// Dynamic TableProvider mapping logic
 #[derive(Debug)]
-pub struct QuadBinPolyFillTableProvider {
+pub struct IntersectingCellsTableProvider {
     wkt_expr: Expr,
     resolution_expr: Expr,
     schema: SchemaRef,
 }
 
-impl QuadBinPolyFillTableProvider {
+impl IntersectingCellsTableProvider {
     pub fn new(wkt_expr: Expr, resolution_expr: Expr) -> Self {
         let schema = Arc::new(Schema::new(vec![Field::new(
             "quadbin",
@@ -45,7 +45,7 @@ impl QuadBinPolyFillTableProvider {
 }
 
 #[async_trait::async_trait]
-impl TableProvider for QuadBinPolyFillTableProvider {
+impl TableProvider for IntersectingCellsTableProvider {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -147,15 +147,15 @@ impl TableProvider for QuadBinPolyFillTableProvider {
 // 2. TableFunctionImpl Hook Mapping
 // =========================================================================
 #[derive(Debug, Default)]
-pub struct QuadBinPolyFillUDTF;
+pub struct IntersectingCellsUDTF;
 
-impl QuadBinPolyFillUDTF {
+impl IntersectingCellsUDTF {
     pub fn new() -> Self {
         Self
     }
 }
 
-impl TableFunctionImpl for QuadBinPolyFillUDTF {
+impl TableFunctionImpl for IntersectingCellsUDTF {
     
     fn call(&self, exprs: &[Expr]) -> Result<Arc<dyn TableProvider>> {
         if exprs.len() != 2 {
@@ -166,7 +166,7 @@ impl TableFunctionImpl for QuadBinPolyFillUDTF {
         }
 
         // Return the dynamic table source context provider
-        Ok(Arc::new(QuadBinPolyFillTableProvider::new(
+        Ok(Arc::new(IntersectingCellsTableProvider::new(
             exprs[0].clone(),
             exprs[1].clone(),
         )))
