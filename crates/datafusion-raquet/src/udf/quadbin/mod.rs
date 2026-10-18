@@ -1,6 +1,6 @@
 // pub mod converter;
 
-mod quadbin_from_lonlat;
+// mod quadbin_from_lonlat;
 mod quadbin_from_tile;
 mod quadbin_kring;
 
@@ -15,11 +15,13 @@ mod quadbin_to_lonlat;
 mod quadbin_to_parent;
 mod quadbin_to_tile;
 mod quadbin_to_wkt;
+mod quadbin_from_lonlat_udf;
 
 #[cfg(any(test, debug_assertions))]
 pub mod testing;
 
-pub use quadbin_from_lonlat::QuadBinFromLonLat;
+// pub use quadbin_from_lonlat::QuadBinFromLonLat;
+pub use quadbin_from_lonlat_udf::QuadbinFromLonLatUDF;
 pub use quadbin_from_tile::QuadBinFromTile;
 pub use quadbin_kring::QuadBinKRing;
 
@@ -35,10 +37,13 @@ pub use quadbin_to_parent::QuadBinToParent;
 pub use quadbin_to_tile::QuadBinToTile;
 pub use quadbin_to_wkt::QuadBinToWKT;
 
+// pub use quadbin_from_lonlat_udf;
+
 pub fn register(session_context: &datafusion::prelude::SessionContext) {
     session_context.register_udf(QuadBinFromTile::default().into());
     session_context.register_udf(QuadBinToTile::default().into());
-    session_context.register_udf(QuadBinFromLonLat::default().into());
+     session_context.register_udf(QuadbinFromLonLatUDF::default().into());
+    // session_context.register_udf(QuadBinFromLonLat::default().into());
     session_context.register_udf(QuadBinToLonLat::default().into());
     session_context.register_udf(QuadBinToParent::default().into());
     session_context.register_udf(QuadBinResolution::default().into());

@@ -35,7 +35,7 @@ parquet = { workspace = true,features = [
     "snap",
     "zstd",
 ] }
-
+raquet-rs = { workspace = true }
 rastertile-rs = { workspace = true }
 quadbin-rs = { workspace = true }
 quadbin-geo-rs = { workspace = true }

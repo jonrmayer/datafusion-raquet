@@ -1571,6 +1571,7 @@ dependencies = [
  "quadbin-geo-rs",
  "quadbin-rs",
  "quadbin-schema",
+ "raquet-rs",
  "rastertile-rs",
  "rastertile-schema",
  "serde",
