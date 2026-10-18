@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/datafusion-raquet","crates/rastertile-rs","crates/rastertile-schema","crates/quadbin-schema","crates/quadbin-rs","crates/quadbin-geo-rs", "crates/geo-rasterizer"]
+members = ["crates/datafusion-raquet","crates/rastertile-rs","crates/rastertile-schema","crates/quadbin-schema","crates/quadbin-rs","crates/quadbin-geo-rs", "crates/geo-rasterizer", "crates/raquet-rs"]
 
 resolver = "2"
 
@@ -43,6 +43,8 @@ datafusion-datasource-parquet = "53.1"
 # datafusion-python-util = { version = "53.1"}
 
 datafusion-raquet = { path = "crates/datafusion-raquet", version = "0.1.0" }
+
+raquet-rs = { path = "crates/raquet-rs", version = "0.1.0" }
 
 
 geo-rasterizer =  { path = "crates/geo-rasterizer", version = "0.1.0" }
