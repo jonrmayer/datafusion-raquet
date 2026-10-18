@@ -57,5 +57,17 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 [dev-dependencies]
 tokio = { version = "1.9", features = ["rt", "macros", "net", "rt-multi-thread"] }
 datafusion = { workspace = true, features = ["sql","parquet"] }
+datafusion-expr = "53.1"
+# datafusion = { workspace = true,  features = ["nested_expressions"] }
+# datafusion-datasource = { workspace = true }
+# datafusion-datasource-parquet = { workspace = true }
+# datafusion-common = { workspace = true }
+# datafusion-sql = { workspace = true }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "quadbin_from_lonlat_bench"
+harness = false
+
 
 

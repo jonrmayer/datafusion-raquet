@@ -15,7 +15,7 @@ mod quadbin_to_lonlat;
 mod quadbin_to_parent;
 mod quadbin_to_tile;
 mod quadbin_to_wkt;
-mod quadbin_from_lonlat_udf;
+pub mod quadbin_from_lonlat_udf;
 
 #[cfg(any(test, debug_assertions))]
 pub mod testing;
