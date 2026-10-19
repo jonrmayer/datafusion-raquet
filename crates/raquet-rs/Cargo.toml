@@ -10,6 +10,10 @@ description.workspace = true
 
 [dependencies]
 # Internal workspace crates
+arrow = { workspace = true }
+arrow-array = { workspace = true }
+arrow-schema = { workspace = true }
+
 rastertile-rs = { workspace = true }
 quadbin-rs = { workspace = true }
 quadbin-geo-rs = { workspace = true }
@@ -21,7 +25,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 quadbin-rs = { workspace = true }
 
 
-# Declare the benchmark target boundary
-[[bench]]
-name = "batch_processing"
-harness = false
+# # Declare the benchmark target boundary
+# [[bench]]
+# name = "batch_processing"
+# harness = false

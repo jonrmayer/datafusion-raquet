@@ -1,300 +1,380 @@
-use quadbin_rs::{Bbox, PixelCoord, QuadBin, QuadBinError, QuadBinResult, Tile};
-use thiserror::Error;
+use arrow::array::{
+    Array, Float64Array, Int32Array, ListArray, StringArray, StructArray, UInt8Array, UInt64Array,
+};
+// use arrow::buffer::OffsetBuffer;
+use arrow::buffer::{OffsetBuffer, ScalarBuffer};
+use arrow::datatypes::{DataType, Field};
+use arrow::error::ArrowError;
+use quadbin_rs::{Tile,QuadBin};
+use std::sync::Arc;
 
-use crate::RaquetOrchestrator;
-use crate::error::RaquetError;
+/// `QuadbinOrchestrator` centralises vectorized spatial conversion pipelines,
+/// interacting exclusively with Apache Arrow arrays completely decoupled from DataFusion.
+pub struct QuadbinOrchestrator;
 
-impl RaquetOrchestrator {
-    // =====================================================================
-    // 1. CORE SCALAR INDEX MAPPING & FACTORIES
-    // =====================================================================
+impl QuadbinOrchestrator {
+    // ==========================================
+    // Coordinate Transformations
+    // ==========================================
 
-    /// Encodes a geographic coordinate into an unwrapped structured `QuadBin` instance.
-    #[inline]
-    pub fn point_to_cell(lon: f64, lat: f64, resolution: i8) -> Result<QuadBin, RaquetError> {
-        if !(0..=26).contains(&resolution) {
-            return Err(RaquetError::InvalidResolution(resolution));
+    /// Maps standard Lon/Lat coordinates into a 64-bit integer QUADBIN index.
+    pub fn quadbin_from_lonlat_batch(
+        lon_array: &Float64Array,
+        lat_array: &Float64Array,
+        res_array: &UInt8Array,
+    ) -> Result<UInt64Array, ArrowError> {
+        let num_rows = lon_array.len();
+        let mut builder = UInt64Array::builder(num_rows);
+
+        for i in 0..num_rows {
+            if lon_array.is_null(i) || lat_array.is_null(i) || res_array.is_null(i) {
+                builder.append_null();
+                continue;
+            }
+
+            // Gracefully unwrap geographic initialization results
+            match QuadBin::from_lonlat(lon_array.value(i), lat_array.value(i), res_array.value(i) as i8) {
+                // Safely extract the raw u64 token out of the unwrapped tuple struct slot
+                Ok(quadbin) => builder.append_value(quadbin.cell()),
+                Err(err) => {
+                    return Err(ArrowError::ComputeError(format!(
+                        "from_lonlat failed at row {i}: {err}"
+                    )));
+                }
+            }
         }
-        if !(-180.0..=180.0).contains(&lon) || !(-90.0..=90.0).contains(&lat) {
-            return Err(RaquetError::InvalidCoordinates { lon, lat });
-        }
-
-        QuadBin::from_lonlat(lon, lat, resolution).map_err(RaquetError::IndexInitializationError)
+        Ok(builder.finish())
     }
 
-    /// Decodes a structured `QuadBin` cell index back into a geographic longitude/latitude tuple.
-    #[inline]
-    pub fn cell_to_point(cell: QuadBin) -> Result<(f64, f64), RaquetError> {
-        let center = cell
-            .to_lonlat()
-            .map_err(RaquetError::CoordinateDecodingError)?;
-        Ok((center.0, center.1))
-    }
+    /// Decodes 64-bit indices back into a composite StructArray containing `lon` and `lat` fields.
+    pub fn quadbin_to_lonlat_batch(cell_array: &UInt64Array) -> Result<StructArray, ArrowError> {
+        let num_rows = cell_array.len();
+        let mut lon_builder = Float64Array::builder(num_rows);
+        let mut lat_builder = Float64Array::builder(num_rows);
 
-    /// Converts explicit tile space grid metrics (x, y, zoom) directly into a structured `QuadBin` instance.
-    #[inline]
-    pub fn tile_to_cell(x: u32, y: u32, z: i8) -> Result<QuadBin, RaquetError> {
-        if !(0..=26).contains(&z) {
-            return Err(RaquetError::InvalidResolution(z));
-        }
+        for i in 0..num_rows {
+            if cell_array.is_null(i) {
+                lon_builder.append_null();
+                lat_builder.append_null();
+                continue;
+            }
 
-        let tile_input = Tile { x, y, z: z as u8 };
-        QuadBin::from_tile(tile_input).map_err(RaquetError::IndexInitializationError)
-    }
-
-    /// Converts a structured `QuadBin` index back into an independent `Tile` reference.
-    #[inline]
-    pub fn cell_to_tile(cell: QuadBin) -> Tile {
-        cell.to_tile().unwrap()
-    }
-
-    /// Instantly returns the specific zoom scale or resolution metadata encoded inside a `QuadBin` instance.
-    #[inline]
-    pub fn get_resolution(cell: QuadBin) -> i8 {
-        cell.resolution().unwrap() as i8
-    }
-
-    // // =====================================================================
-    // // 2. BOUNDING BOX & RASTER PIXEL TRANSLATIONS
-    // // =====================================================================
-
-    // /// Extracts the complete geographic `Bbox` boundaries for a given `QuadBin` cell.
-    // #[inline]
-    // pub fn cell_to_bbox(cell: QuadBin) -> Result<Bbox, RaquetError> {
-    //     cell.
-    //     cell.bbox()
-    //         .map_err(RaquetError::CoordinateDecodingError)
-    // }
-
-    /// Computes the exact grid pixel coordinates (`PixelCoord`) for a longitude/latitude point.
-    #[inline]
-    pub fn point_to_pixel(
-        lon: f64,
-        lat: f64,
-        resolution: i8,
-        tile_size: u32,
-    ) -> Result<PixelCoord, RaquetError> {
-        Ok(quadbin_rs::lonlat_to_pixel(
-            lon,
-            lat,
-            resolution,
-            tile_size as i16,
-        ))
-    }
-
-    // =====================================================================
-    // 3. HIERARCHICAL OPERATIONS (UNWRAPPED INSTANCE METHODS)
-    // =====================================================================
-
-    // /// Retrieves the ancestor cell at a lower requested resolution via unwrapped instance evaluation.
-    // #[inline]
-    // pub fn get_parent(cell: QuadBin, parent_resolution: i8) -> Result<QuadBin, RaquetError> {
-    //     // Safe unwrap of the instance method result
-    //     cell.parent(parent_resolution)
-    //         .map_err(RaquetError::HierarchyError)
-    // }
-
-    // /// Resolves an array containing all child cells for a specified resolution level via unwrapped instance evaluation.
-    // #[inline]
-    // pub fn get_children(cell: QuadBin, children_resolution: i8) -> Result<Vec<QuadBin>, RaquetError> {
-    //     // Safe unwrap of the instance method result
-    //     cell.children(children_resolution).unwrap()
-    //         .map_err(RaquetError::HierarchyError)
-    // }
-
-    // /// Calculates the immediate k-ring geographic neighborhood array surrounding a target cell via unwrapped instance evaluation.
-    // #[inline]
-    // pub fn get_kring(cell: QuadBin, ring_size: u32) -> Result<Vec<QuadBin>, RaquetError> {
-    //     // Safe unwrap of the instance method result
-    //     cell.kring(ring_size)
-    //         .map_err(RaquetError::HierarchyError)
-    // }
-
-    // =====================================================================
-    // 4. HIGH-PERFORMANCE VECTORIZED BATCH EXTRACTIONS
-    // =====================================================================
-
-    /// Vectorized utility mapping an input memory slice of raw 64-bit cell integers
-    /// down into contiguous float coordinate output arrays.
-    pub fn batch_cells_to_lonlat(
-        cells: &[u64],
-        lons: &mut [f64],
-        lats: &mut [f64],
-    ) -> Result<(), RaquetError> {
-        if cells.len() != lons.len() || cells.len() != lats.len() {
-            return Err(RaquetError::BufferSizeMismatch(cells.len(), lons.len()));
-        }
-
-        for (i, &cell_val) in cells.iter().enumerate() {
-            match QuadBin::from_cell(cell_val) {
-                Ok(cell) => match cell.to_lonlat() {
-                    Ok(center) => {
-                        lons[i] = center.0;
-                        lats[i] = center.1;
+            // Gracefully unwrap pure cell token initialization
+            match QuadBin::from_cell(cell_array.value(i)) {
+                Ok(quadbin) => match quadbin.to_lonlat() {
+                    Ok(coords) => {
+                        lon_builder.append_value(coords.0);
+                        lat_builder.append_value(coords.1);
                     }
-                    Err(_) => {
-                        lons[i] = f64::NAN;
-                        lats[i] = f64::NAN;
+                    Err(err) => {
+                        return Err(ArrowError::ComputeError(format!(
+                            "to_lonlat failed at row {i}: {err}"
+                        )));
                     }
                 },
-                Err(_) => {
-                    lons[i] = f64::NAN;
-                    lats[i] = f64::NAN;
+                Err(err) => {
+                    return Err(ArrowError::ComputeError(format!(
+                        "from_cell failed at row {i}: {err}"
+                    )));
                 }
             }
         }
-        Ok(())
+
+        let fields = vec![
+            Field::new("lon", DataType::Float64, true),
+            Field::new("lat", DataType::Float64, true),
+        ];
+        let child_arrays = vec![
+            Arc::new(lon_builder.finish()) as Arc<dyn Array>,
+            Arc::new(lat_builder.finish()) as Arc<dyn Array>,
+        ];
+        StructArray::try_new(fields.into(), child_arrays, cell_array.nulls().cloned())
     }
 
-    /// Vectorized utility converting flat contiguous coordinate array blocks into raw 64-bit cell values.
-    pub fn batch_lonlat_to_cells(
-        lons: &[f64],
-        lats: &[f64],
-        resolution: i8,
-        out_cells: &mut [u64],
-    ) -> Result<(), RaquetError> {
-        if !(0..=26).contains(&resolution) {
-            return Err(RaquetError::InvalidResolution(resolution));
-        }
-        if lons.len() != lats.len() || lons.len() != out_cells.len() {
-            return Err(RaquetError::BufferSizeMismatch(lons.len(), out_cells.len()));
-        }
+    // ==========================================
+    // Tile Mappings
+    // ==========================================
 
-        for i in 0..lons.len() {
-            if !(-180.0..=180.0).contains(&lons[i]) || !(-90.0..=90.0).contains(&lats[i]) {
-                return Err(RaquetError::InvalidCoordinates {
-                    lon: lons[i],
-                    lat: lats[i],
-                });
+    /// Converts concrete X, Y, Z tile grid paths straight into indexed spatial arrays.
+    pub fn quadbin_from_tile_batch(
+        x_array: &Int32Array,
+        y_array: &Int32Array,
+        z_array: &Int32Array,
+    ) -> Result<UInt64Array, ArrowError> {
+        let num_rows = x_array.len();
+        let mut builder = UInt64Array::builder(num_rows);
+
+        for i in 0..num_rows {
+            if x_array.is_null(i) || y_array.is_null(i) || z_array.is_null(i) {
+                builder.append_null();
+                continue;
             }
 
-            match QuadBin::from_lonlat(lons[i], lats[i], resolution) {
-                Ok(cell) => {
-                    out_cells[i] = cell.cell();
+            // 1. Build the specific structural tile element first
+            let source_tile = Tile {
+                x: x_array.value(i) as u32,
+                y: y_array.value(i) as u32,
+                z: z_array.value(i) as u8,
+            };
+
+            // Gracefully unwrap tile-based initialization maps
+            match QuadBin::from_tile(source_tile) {
+                Ok(quadbin) => builder.append_value(quadbin.cell()),
+                Err(err) => {
+                    return Err(ArrowError::ComputeError(format!(
+                        "from_tile failed at row {i}: {err}"
+                    )));
                 }
-                Err(e) => {
-                    return Err(RaquetError::IndexInitializationError(e));
+            }
+        }
+        Ok(builder.finish())
+    }
+
+    /// Extracts structural tile parameters (x, y, z) into a composite Arrow StructArray layout.
+    pub fn quadbin_to_tile_batch(cell_array: &UInt64Array) -> Result<StructArray, ArrowError> {
+        let num_rows = cell_array.len();
+        let mut x_builder = Int32Array::builder(num_rows);
+        let mut y_builder = Int32Array::builder(num_rows);
+        let mut z_builder = Int32Array::builder(num_rows);
+
+        for i in 0..num_rows {
+            if cell_array.is_null(i) {
+                x_builder.append_null();
+                y_builder.append_null();
+                z_builder.append_null();
+                continue;
+            }
+
+            match QuadBin::from_cell(cell_array.value(i)) {
+                Ok(quadbin) => match quadbin.to_tile() {
+                    Ok(tile) => {
+                        x_builder.append_value(tile.x as i32);
+                        y_builder.append_value(tile.y as i32);
+                        z_builder.append_value(tile.z as i32);
+                    }
+                    Err(err) => {
+                        return Err(ArrowError::ComputeError(format!(
+                            "to_tile failed at row {i}: {err}"
+                        )));
+                    }
+                },
+                Err(err) => {
+                    return Err(ArrowError::ComputeError(format!(
+                        "from_cell failed at row {i}: {err}"
+                    )));
                 }
             }
         }
-        Ok(())
-    }
-}
 
-// =====================================================================
-// AUTOMATED UNIT TESTS FOR HIGH-PERFORMANCE BATCH PIPELINES
-// =====================================================================
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_batch_lonlat_to_cells_success() {
-        // Arrange: Sample coordinates for London and New York at zoom level 4
-        let lons = vec![-0.1278, -74.0060];
-        let lats = vec![51.5074, 40.7128];
-        let resolution = 4i8;
-        let mut out_cells = vec![0u64; lons.len()];
-
-        // Act: Execute the vectorized array transformation pipeline
-        let result =
-            RaquetOrchestrator::batch_lonlat_to_cells(&lons, &lats, resolution, &mut out_cells);
-
-        // Assert: Ensure execution completed cleanly and populated real non-zero integers
-        assert!(result.is_ok());
-        assert_ne!(out_cells[0], 0);
-        assert_ne!(out_cells[1], 0);
-
-        // Double check individual cell metadata values unwrap correctly
-        let cell_0 = QuadBin::from_cell(out_cells[0]).unwrap();
-        let cell_1 = QuadBin::from_cell(out_cells[1]).unwrap();
-        assert_eq!(cell_0.resolution().unwrap(), resolution as u8);
-        assert_eq!(cell_1.resolution().unwrap(), resolution as u8);
+        let fields = vec![
+            Field::new("x", DataType::Int32, true),
+            Field::new("y", DataType::Int32, true),
+            Field::new("z", DataType::Int32, true),
+        ];
+        let child_arrays = vec![
+            Arc::new(x_builder.finish()) as Arc<dyn Array>,
+            Arc::new(y_builder.finish()) as Arc<dyn Array>,
+            Arc::new(z_builder.finish()) as Arc<dyn Array>,
+        ];
+        StructArray::try_new(fields.into(), child_arrays, cell_array.nulls().cloned())
     }
 
-    #[test]
-    fn test_batch_lonlat_to_cells_invalid_resolution() {
-        let lons = vec![0.0];
-        let lats = vec![0.0];
-        let invalid_resolution = 32i8; // Out of valid index scope limits (0-26)
-        let mut out_cells = vec![0u64; 1];
+    // ==========================================
+    // Hierarchy & Proximity Resolution
+    // ==========================================
 
-        let result = RaquetOrchestrator::batch_lonlat_to_cells(
-            &lons,
-            &lats,
-            invalid_resolution,
-            &mut out_cells,
-        );
+    /// Iterates parent assignments at either relative step markers or customized zoom resolution values.
+    pub fn quadbin_to_parent_batch(
+        cell_array: &UInt64Array,
+        res_array: &UInt8Array,
+    ) -> Result<UInt64Array, ArrowError> {
+        let num_rows = cell_array.len();
+        let mut builder = UInt64Array::builder(num_rows);
 
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            RaquetError::InvalidResolution(res) => assert_eq!(res, invalid_resolution),
-            _ => panic!("Expected InvalidResolution error matrix layout"),
-        }
-    }
-
-    #[test]
-    fn test_batch_lonlat_to_cells_out_of_bounds_coordinates() {
-        let lons = vec![200.0]; // Exceeds valid longitude limit (+180.0)
-        let lats = vec![45.0];
-        let mut out_cells = vec![0u64; 1];
-
-        let result = RaquetOrchestrator::batch_lonlat_to_cells(&lons, &lats, 10, &mut out_cells);
-
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            RaquetError::InvalidCoordinates { lon, lat } => {
-                assert_eq!(lon, 200.0);
-                assert_eq!(lat, 45.0);
+        for i in 0..num_rows {
+            if cell_array.is_null(i) || res_array.is_null(i) {
+                builder.append_null();
+                continue;
             }
-            _ => panic!("Expected InvalidCoordinates pattern validation match"),
-        }
-    }
 
-    #[test]
-    fn test_batch_cells_to_lonlat_success_and_fallback() {
-        // Arrange: Prepare an array with one valid cell index and one corrupt/malformed cell payload
-        let valid_cell_struct = QuadBin::from_lonlat(0.0, 0.0, 4i8).unwrap();
-        let valid_raw_u64 = valid_cell_struct.cell();
-        let corrupt_raw_u64 = 999_999_999_u64; // Highly likely an invalid or non-decodable raw bitmask
-
-        let cells = vec![valid_raw_u64, corrupt_raw_u64];
-        let mut lons = vec![0.0; cells.len()];
-        let mut lats = vec![0.0; cells.len()];
-
-        // Act: Execute the cell decoding transformation pipeline
-        let result = RaquetOrchestrator::batch_cells_to_lonlat(&cells, &mut lons, &mut lats);
-
-        // Assert: The batch processor itself must return Ok(()) because it recovers internally
-        assert!(result.is_ok());
-
-        // Index 0: Valid mapping should result in real numbers approximately near our initial zero midpoint
-        assert!(lons[0].is_finite());
-        assert!(lats[0].is_finite());
-        assert!((lons[0] - 0.0).abs() < 1.0);
-
-        // Index 1: Corrupt tracking index must be handled safely without causing a register panic
-        // It drops into the fallback pattern and outputs an unwrapped float placeholder instead
-        assert!(lons[1].is_nan());
-        assert!(lats[1].is_nan());
-    }
-
-    #[test]
-    fn test_batch_pipeline_size_mismatch_protection() {
-        let cells = vec![111_111, 222_222];
-        let mut insufficient_lons = vec![0.0; 1]; // Length is shorter than the source cells array slice
-        let mut lats = vec![0.0; 2];
-
-        let result =
-            RaquetOrchestrator::batch_cells_to_lonlat(&cells, &mut insufficient_lons, &mut lats);
-
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            RaquetError::BufferSizeMismatch(expected, found) => {
-                assert_eq!(expected, 2);
-                assert_eq!(found, 1);
+            match QuadBin::from_cell(cell_array.value(i)) {
+                Ok(quadbin) => match quadbin.parent() {
+                    Ok(parent_quadbin) => builder.append_value(parent_quadbin),
+                    Err(err) => {
+                        return Err(ArrowError::ComputeError(format!(
+                            "to_parent failed at row {i}: {err}"
+                        )));
+                    }
+                },
+                Err(err) => {
+                    return Err(ArrowError::ComputeError(format!(
+                        "from_cell failed at row {i}: {err}"
+                    )));
+                }
             }
-            _ => panic!("Expected BufferSizeMismatch crash barrier check to fire cleanly"),
         }
+        Ok(builder.finish())
     }
+
+    /// Evaluates the zoom depth hierarchy resolution index from a cell array.
+    pub fn quadbin_resolution_batch(cell_array: &UInt64Array) -> Result<Int32Array, ArrowError> {
+        let num_rows = cell_array.len();
+        let mut builder = Int32Array::builder(num_rows);
+
+        for i in 0..num_rows {
+            if cell_array.is_null(i) {
+                builder.append_null();
+                continue;
+            }
+
+            match QuadBin::from_cell(cell_array.value(i)) {
+                Ok(quadbin) => builder.append_value(quadbin.resolution().unwrap() as i32),
+                Err(err) => {
+                    return Err(ArrowError::ComputeError(format!(
+                        "from_cell failed at row {i}: {err}"
+                    )));
+                }
+            }
+        }
+        Ok(builder.finish())
+    }
+
+     /// Unrolls variable-length proximity rings (k-rings) into an Arrow ListArray data block.
+    /// Engineered to pass raw buffer constraints safely without type-casting mismatches.
+    pub fn quadbin_kring_batch(
+        cell_array: &UInt64Array,
+        k_array: &Int32Array,
+    ) -> Result<ListArray, ArrowError> {
+        let num_rows = cell_array.len();
+        
+        // Track list slicing boundaries safely using standard 32-bit integer indexes
+        let mut offsets = Vec::with_capacity(num_rows + 1);
+        let mut flat_cells = Vec::new();
+        
+        offsets.push(0i32);
+        
+        for i in 0..num_rows {
+            if cell_array.is_null(i) || k_array.is_null(i) {
+                // If the row contains a null value, maintain the previous offset point boundary
+                offsets.push(flat_cells.len() as i32);
+                continue;
+            }
+            
+            match QuadBin::from_cell(cell_array.value(i)) {
+                Ok(quadbin) => {
+                    match quadbin.kring(k_array.value(i)) {
+                        Ok(neighbors) => {
+                            let raw_neighbors = neighbors.into_iter().map(|q| q);
+                            flat_cells.extend(raw_neighbors);
+                            offsets.push(flat_cells.len() as i32);
+                        }
+                        Err(err) => return Err(ArrowError::ComputeError(format!("kring failed at row {i}: {err}"))),
+                    }
+                }
+                Err(err) => return Err(ArrowError::ComputeError(format!("from_cell failed at row {i}: {err}"))),
+            }
+        }
+
+        // 1. Build an explicit inner field descriptor matching List specifications
+        let field = Arc::new(Field::new_list_field(DataType::UInt64, true));
+        
+        // 2. Wrap the flat primitive buffer arrays cleanly
+        let values_array = UInt64Array::from(flat_cells);
+        
+        // 3. Resolve vector arrays into explicit structural ScalarBuffers before instantiation
+        let scalar_buffer = ScalarBuffer::from(offsets);
+        let offset_buffer = OffsetBuffer::new(scalar_buffer);
+        
+        // 4. Extract validity mappings from the source cell tracker array
+        let validity_bitmap = cell_array.nulls().cloned();
+
+        // Package buffers into a memory-aligned ListArray mapping container layer
+        ListArray::try_new(
+            field,
+            offset_buffer,
+            Arc::new(values_array) as Arc<dyn Array>,
+            validity_bitmap,
+        )
+    }
+
+    // // ==========================================
+    // // Spatial Sizing & Visual Geometry Outputs
+    // // ==========================================
+    // /// Extracts structural bounding boxes (min_lon, min_lat, max_lon, max_lat) into an Arrow StructArray.
+    // pub fn quadbin_to_bbox_batch(cell_array: &UInt64Array) -> Result<StructArray, ArrowError> {
+    //     let num_rows = cell_array.len();
+    //     let mut min_lon = Float64Array::builder(num_rows);
+    //     let mut min_lat = Float64Array::builder(num_rows);
+    //     let mut max_lon = Float64Array::builder(num_rows);
+    //     let mut max_lat = Float64Array::builder(num_rows);
+    //     for i in 0..num_rows {
+    //         if cell_array.is_null(i) {
+    //             min_lon.append_null();
+    //             min_lat.append_null();
+    //             max_lon.append_null();
+    //             max_lat.append_null();
+    //             continue;
+    //         }
+    //         match QuadBin::from_cell(cell_array.value(i)) {
+    //             Ok(quadbin) => match quadbin.to_bbox() {
+    //                 Ok(bbox) => {
+    //                     min_lon.append_value(bbox.min_lon);
+    //                     min_lat.append_value(bbox.min_lat);
+    //                     max_lon.append_value(bbox.max_lon);
+    //                     max_lat.append_value(bbox.max_lat);
+    //                 }
+    //                 Err(err) => {
+    //                     return Err(ArrowError::ComputeError(format!(
+    //                         "to_bbox failed at row {i}: {err}"
+    //                     )));
+    //                 }
+    //             },
+    //             Err(err) => {
+    //                 return Err(ArrowError::ComputeError(format!(
+    //                     "from_cell failed at row {i}: {err}"
+    //                 )));
+    //             }
+    //         }
+    //     }
+    //     let fields = vec![
+    //         Field::new("min_lon", DataType::Float64, true),
+    //         Field::new("min_lat", DataType::Float64, true),
+    //         Field::new("max_lon", DataType::Float64, true),
+    //         Field::new("max_lat", DataType::Float64, true),
+    //     ];
+    //     let child_arrays = vec![
+    //         Arc::new(min_lon.finish()) as Arc,
+    //         Arc::new(min_lat.finish()) as Arc,
+    //         Arc::new(max_lon.finish()) as Arc,
+    //         Arc::new(max_lat.finish()) as Arc,
+    //     ];
+    //     StructArray::try_new(fields.into(), child_arrays, cell_array.nulls().cloned())
+    // }
+    // /// Translates 64-bit indexes directly into text representations (WKT Polygon strings).
+    // pub fn quadbin_to_wkt_batch(cell_array: &UInt64Array) -> Result<StringArray, ArrowError> {
+    //     let num_rows = cell_array.len();
+    //     let mut builder = StringArray::builder(num_rows);
+    //     for i in 0..num_rows {
+    //         if cell_array.is_null(i) {
+    //             builder.append_null();
+    //             continue;
+    //         }
+    //         match QuadBin::from_cell(cell_array.value(i)) {
+    //             Ok(quadbin) => match quadbin.to_wkt() {
+    //                 Ok(wkt_str) => builder.append_value(wkt_str),
+    //                 Err(err) => {
+    //                     return Err(ArrowError::ComputeError(format!(
+    //                         "to_wkt failed at row {i}: {err}"
+    //                     )));
+    //                 }
+    //             },
+    //             Err(err) => {
+    //                 return Err(ArrowError::ComputeError(format!(
+    //                     "from_cell failed at row {i}: {err}"
+    //                 )));
+    //             }
+    //         }
+    //     }
+    //     Ok(builder.finish())
+    // }
 }
