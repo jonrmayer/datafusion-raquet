@@ -1,0 +1,1 @@
+cargo bench -p datafusion-raquet --bench quadbin_from_lonlat_bench
