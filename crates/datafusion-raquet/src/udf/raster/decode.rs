@@ -155,3 +155,48 @@ fn build_cell_array(
 
     Ok(point_arr)
 }
+
+
+
+// #[macro_export]
+// macro_rules! impl_binary_to_list {
+//     ($downcast:ident, $builder:ty,$operation:ident, $name:ident) => {
+//         pub fn $name(arrays: Vec<ArrayRef>, column_metadata: Metadata) -> ArrayRef {
+//             let mut builder = <$builder>::new();
+//             let in_binary = arrays[0]
+//                 .as_any()
+//                 .downcast_ref::<$downcast>()
+//                 .expect("cast failed");
+//             let ops: Operations = Operations::new(column_metadata.inner());
+//             for input in in_binary.iter() {
+//                 let output = ops.$operation(input).expect("...");
+
+//                 builder.append_value(output);
+//             }
+//             let binary_arr = builder.finish();
+//             Arc::new(binary_arr)
+//         }
+//     };
+// }
+
+// impl_binary_to_binary!(
+//     BinaryArray,
+//     GenericBinaryBuilder::<i32>,
+//     decompress,
+//     binary_decompress
+// );
+
+// impl_binary_to_binary!(
+//     LargeBinaryArray,
+//     GenericBinaryBuilder::<i64>,
+//     decompress,
+//     large_binary_decompress
+// );
+
+// impl_binary_to_binary!(
+//     BinaryViewArray,
+//     BinaryViewBuilder,
+//     decompress,
+//     binary_view_decompress
+// );
+

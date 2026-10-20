@@ -147,110 +147,278 @@ fn build_cell_array(
     binary_type: &DataType,
     column_metadata: Metadata,
 ) -> RaquetDataFusionResult<ListArray> {
-    let out_array = match binary_type {
-        DataType::Binary => {
-            let in_binary = arrays[0]
-                .as_any()
-                .downcast_ref::<BinaryArray>()
-                .expect("cast failed");
-            let ops: Operations = Operations::new(column_metadata.inner());
 
-            match column_metadata.data_type() {
-                RasterDataType::Int8 => convert_binary_list_array_i8(in_binary, ops)?.finish(),
-                RasterDataType::UInt8 => convert_binary_list_array_u8(in_binary, ops)?.finish(),
-                RasterDataType::Int16 => convert_binary_list_array_i16(in_binary, ops)?.finish(),
-                RasterDataType::UInt16 => convert_binary_list_array_u16(in_binary, ops)?.finish(),
-                RasterDataType::Int32 => convert_binary_list_array_i32(in_binary, ops)?.finish(),
-                RasterDataType::UInt32 => convert_binary_list_array_u32(in_binary, ops)?.finish(),
-                RasterDataType::Int64 => convert_binary_list_array_i64(in_binary, ops)?.finish(),
-                RasterDataType::UInt64 => convert_binary_list_array_u64(in_binary, ops)?.finish(),
-                RasterDataType::Float32 => convert_binary_list_array_f32(in_binary, ops)?.finish(),
-                RasterDataType::Float64 => convert_binary_list_array_f64(in_binary, ops)?.finish(),
-                _ => todo!(),
-            }
-        }
-        DataType::BinaryView => {
-            let in_binary = arrays[0]
-                .as_any()
-                .downcast_ref::<BinaryViewArray>()
-                .expect("cast failed");
-            let ops: Operations = Operations::new(column_metadata.inner());
+    let out_array = raquet_rs::raster::build_list_array(arrays, binary_type, column_metadata).expect("msg");
+    // let out_array = match binary_type {
+    //     DataType::Binary => {
+    //         let in_binary = arrays[0]
+    //             .as_any()
+    //             .downcast_ref::<BinaryArray>()
+    //             .expect("cast failed");
+    //         let ops: Operations = Operations::new(column_metadata.inner());
 
-            match column_metadata.data_type() {
-                RasterDataType::Int8 => convert_binaryview_list_array_i8(in_binary, ops)?.finish(),
-                RasterDataType::UInt8 => convert_binaryview_list_array_u8(in_binary, ops)?.finish(),
-                RasterDataType::Int16 => {
-                    convert_binaryview_list_array_i16(in_binary, ops)?.finish()
-                }
-                RasterDataType::UInt16 => {
-                    convert_binaryview_list_array_u16(in_binary, ops)?.finish()
-                }
-                RasterDataType::Int32 => {
-                    convert_binaryview_list_array_i32(in_binary, ops)?.finish()
-                }
-                RasterDataType::UInt32 => {
-                    convert_binaryview_list_array_u32(in_binary, ops)?.finish()
-                }
-                RasterDataType::Int64 => {
-                    convert_binaryview_list_array_i64(in_binary, ops)?.finish()
-                }
-                RasterDataType::UInt64 => {
-                    convert_binaryview_list_array_u64(in_binary, ops)?.finish()
-                }
-                RasterDataType::Float32 => {
-                    convert_binaryview_list_array_f32(in_binary, ops)?.finish()
-                }
-                RasterDataType::Float64 => {
-                    convert_binaryview_list_array_f64(in_binary, ops)?.finish()
-                }
-                _ => todo!(),
-            }
-        }
-        DataType::LargeBinary => {
-            let in_binary = arrays[0]
-                .as_any()
-                .downcast_ref::<LargeBinaryArray>()
-                .expect("cast failed");
-            let ops: Operations = Operations::new(column_metadata.inner());
+    //         match column_metadata.data_type() {
+    //             RasterDataType::Int8 => convert_binary_list_array_i8(in_binary, ops)?.finish(),
+    //             RasterDataType::UInt8 => convert_binary_list_array_u8(in_binary, ops)?.finish(),
+    //             RasterDataType::Int16 => convert_binary_list_array_i16(in_binary, ops)?.finish(),
+    //             RasterDataType::UInt16 => convert_binary_list_array_u16(in_binary, ops)?.finish(),
+    //             RasterDataType::Int32 => convert_binary_list_array_i32(in_binary, ops)?.finish(),
+    //             RasterDataType::UInt32 => convert_binary_list_array_u32(in_binary, ops)?.finish(),
+    //             RasterDataType::Int64 => convert_binary_list_array_i64(in_binary, ops)?.finish(),
+    //             RasterDataType::UInt64 => convert_binary_list_array_u64(in_binary, ops)?.finish(),
+    //             RasterDataType::Float32 => convert_binary_list_array_f32(in_binary, ops)?.finish(),
+    //             RasterDataType::Float64 => convert_binary_list_array_f64(in_binary, ops)?.finish(),
+    //             _ => todo!(),
+    //         }
+    //     }
+    //     DataType::BinaryView => {
+    //         let in_binary = arrays[0]
+    //             .as_any()
+    //             .downcast_ref::<BinaryViewArray>()
+    //             .expect("cast failed");
+    //         let ops: Operations = Operations::new(column_metadata.inner());
 
-            match column_metadata.data_type() {
-                RasterDataType::Int8 => convert_largebinary_list_array_i8(in_binary, ops)?.finish(),
-                RasterDataType::UInt8 => {
-                    convert_largebinary_list_array_u8(in_binary, ops)?.finish()
-                }
-                RasterDataType::Int16 => {
-                    convert_largebinary_list_array_i16(in_binary, ops)?.finish()
-                }
-                RasterDataType::UInt16 => {
-                    convert_largebinary_list_array_u16(in_binary, ops)?.finish()
-                }
-                RasterDataType::Int32 => {
-                    convert_largebinary_list_array_i32(in_binary, ops)?.finish()
-                }
-                RasterDataType::UInt32 => {
-                    convert_largebinary_list_array_u32(in_binary, ops)?.finish()
-                }
-                RasterDataType::Int64 => {
-                    convert_largebinary_list_array_i64(in_binary, ops)?.finish()
-                }
-                RasterDataType::UInt64 => {
-                    convert_largebinary_list_array_u64(in_binary, ops)?.finish()
-                }
-                RasterDataType::Float32 => {
-                    convert_largebinary_list_array_f32(in_binary, ops)?.finish()
-                }
-                RasterDataType::Float64 => {
-                    convert_largebinary_list_array_f64(in_binary, ops)?.finish()
-                }
-                _ => todo!(),
-            }
-        }
+    //         match column_metadata.data_type() {
+    //             RasterDataType::Int8 => convert_binaryview_list_array_i8(in_binary, ops)?.finish(),
+    //             RasterDataType::UInt8 => convert_binaryview_list_array_u8(in_binary, ops)?.finish(),
+    //             RasterDataType::Int16 => {
+    //                 convert_binaryview_list_array_i16(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::UInt16 => {
+    //                 convert_binaryview_list_array_u16(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Int32 => {
+    //                 convert_binaryview_list_array_i32(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::UInt32 => {
+    //                 convert_binaryview_list_array_u32(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Int64 => {
+    //                 convert_binaryview_list_array_i64(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::UInt64 => {
+    //                 convert_binaryview_list_array_u64(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Float32 => {
+    //                 convert_binaryview_list_array_f32(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Float64 => {
+    //                 convert_binaryview_list_array_f64(in_binary, ops)?.finish()
+    //             }
+    //             _ => todo!(),
+    //         }
+    //     }
+    //     DataType::LargeBinary => {
+    //         let in_binary = arrays[0]
+    //             .as_any()
+    //             .downcast_ref::<LargeBinaryArray>()
+    //             .expect("cast failed");
+    //         let ops: Operations = Operations::new(column_metadata.inner());
 
-        _ => unreachable!(),
-    };
+    //         match column_metadata.data_type() {
+    //             RasterDataType::Int8 => convert_largebinary_list_array_i8(in_binary, ops)?.finish(),
+    //             RasterDataType::UInt8 => {
+    //                 convert_largebinary_list_array_u8(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Int16 => {
+    //                 convert_largebinary_list_array_i16(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::UInt16 => {
+    //                 convert_largebinary_list_array_u16(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Int32 => {
+    //                 convert_largebinary_list_array_i32(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::UInt32 => {
+    //                 convert_largebinary_list_array_u32(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Int64 => {
+    //                 convert_largebinary_list_array_i64(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::UInt64 => {
+    //                 convert_largebinary_list_array_u64(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Float32 => {
+    //                 convert_largebinary_list_array_f32(in_binary, ops)?.finish()
+    //             }
+    //             RasterDataType::Float64 => {
+    //                 convert_largebinary_list_array_f64(in_binary, ops)?.finish()
+    //             }
+    //             _ => todo!(),
+    //         }
+    //     }
+
+    //     _ => unreachable!(),
+    // };
 
     Ok(out_array)
 }
+
+// use arrow_array::types::ArrowPrimitiveType;
+// /// A single generic function replacing all 30 macro-generated variants.
+// pub fn convert_to_list_array<'a, A, T, F>(in_binary: A, ops: &Operations, decode_fn: F) -> ListArray
+// where
+//     A: IntoIterator<Item = Option<&'a [u8]>>,
+//     T: ArrowPrimitiveType,
+//     // Note that the closure bound now expects an inner vector of Option elements
+//     F: Fn(&Operations, Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<Option<T::Native>>>>,
+// {
+//     let values_builder = PrimitiveBuilder::<T>::new();
+//     let mut builder = ListBuilder::new(values_builder);
+
+//     for input in in_binary {
+//         // 1. Unpack the outer Option block safely using ?
+
+//         //  RaquetDataFusionResult<Option<Vec<i8>>>
+//                 // let output_option: Option<Vec<<T::Native>>> = decode_fn(ops, input).expect("....");
+//         let output_option: Option<Vec<Option<T::Native>>> = decode_fn(ops, input).expect("....");
+
+//         match output_option {
+//             Some(vector) => {
+//                 // // 2. Loop through individual pixels and append them one by one
+//                 // for pixel in vector {
+//                 //     builder.values().append_option(pixel);
+//                 // }
+//                 // ALTERNATIVE: Since primitive builders implement Extend, you can also use:
+//                 builder.values().extend(vector);
+
+//                 // 3. Mark the row index slot as valid
+//                 builder.append(true);
+//             }
+//             None => {
+//                 // 4. Mark the whole row slot as a database NULL list index entry
+//                 builder.append(false);
+//             }
+//         }
+//     }
+
+//     builder.finish()
+// }
+
+// use crate::error::RaquetDataFusionError;
+// fn build_cell_array(
+//     arrays: Vec<ArrayRef>,
+//     binary_type: &DataType,
+//     column_metadata: Metadata,
+// ) -> RaquetDataFusionResult<ListArray> {
+//     let ops = Operations::new(column_metadata.inner());
+//     let target_array = &arrays[0];
+
+//     // Local dispatcher macro mapping metadata to our clean, unified helper function
+//     macro_rules! dispatch_types {
+//         ($input_array:expr) => {
+//             match column_metadata.data_type() {
+//                 RasterDataType::Int8 => {
+//                     convert_to_list_array::<_, Int8Type, _>($input_array.iter(), &ops, decode_i8)
+//                 }
+//                 // RasterDataType::UInt8 => {
+//                 //     convert_to_list_array::<_, UInt8Type, _>($input_array.iter(), &ops, decode_u8)
+//                 // }
+//                 // RasterDataType::Int16 => {
+//                 //     convert_to_list_array::<_, Int16Type, _>($input_array.iter(), &ops, decode_i16)
+//                 // }
+//                 // RasterDataType::UInt16 => convert_to_list_array::<_, UInt16Type, _>(
+//                 //     $input_array.iter(),
+//                 //     &ops,
+//                 //     decode_u16,
+//                 // ),
+//                 // RasterDataType::Int32 => {
+//                 //     convert_to_list_array::<_, Int32Type, _>($input_array.iter(), &ops, decode_i32)
+//                 // }
+//                 // RasterDataType::UInt32 => convert_to_list_array::<_, UInt32Type, _>(
+//                 //     $input_array.iter(),
+//                 //     &ops,
+//                 //     decode_u32,
+//                 // ),
+//                 // RasterDataType::Int64 => {
+//                 //     convert_to_list_array::<_, Int64Type, _>($input_array.iter(), &ops, decode_i64)
+//                 // }
+//                 // RasterDataType::UInt64 => convert_to_list_array::<_, UInt64Type, _>(
+//                 //     $input_array.iter(),
+//                 //     &ops,
+//                 //     decode_u64,
+//                 // ),
+//                 // RasterDataType::Float32 => convert_to_list_array::<_, Float32Type, _>(
+//                 //     $input_array.iter(),
+//                 //     &ops,
+//                 //     decode_f32,
+//                 // ),
+//                 // RasterDataType::Float64 => convert_to_list_array::<_, Float64Type, _>(
+//                 //     $input_array.iter(),
+//                 //     &ops,
+//                 //     decode_f64,
+//                 // ),
+//                 _ => {
+//                     return Err(DataFusionError::Internal(
+//                         "Unsupported raster data type layout".to_string(),
+//                     )
+//                     .into())
+//                 }
+//             }
+//         };
+//     }
+
+//     let out_array = match binary_type {
+//         DataType::Binary => {
+//             let casted = target_array
+//                 .as_any()
+//                 .downcast_ref::<BinaryArray>()
+//                 .expect("cast failed");
+//             dispatch_types!(casted)
+//         }
+//         DataType::BinaryView => {
+//             let casted = target_array
+//                 .as_any()
+//                 .downcast_ref::<BinaryViewArray>()
+//                 .expect("cast failed");
+//             dispatch_types!(casted)
+//         }
+//         DataType::LargeBinary => {
+//             let casted = target_array
+//                 .as_any()
+//                 .downcast_ref::<LargeBinaryArray>()
+//                 .expect("cast failed");
+//             dispatch_types!(casted)
+//         }
+//         _ => unreachable!(),
+//     };
+
+//     Ok(out_array)
+// }
+
+// let output_option: Option<Vec<Option<T::Native>>
+// Vec<Option<i8>>
+
+// fn decode_i8(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Vec<Option<i8>>> {
+//     o.decode_native_i8(idx)
+// }
+// fn decode_u8(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<u8>>> {
+//     o.decode_native_u8(idx)
+// }
+// fn decode_i16(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<i16>>> {
+//     o.decode_native_i16(idx)
+// }
+// fn decode_u16(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<u16>>> {
+//     o.decode_native_u16(idx)
+// }
+// fn decode_i32(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<i32>>> {
+//     o.decode_native_i32(idx)
+// }
+// fn decode_u32(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<u32>>> {
+//     o.decode_native_u32(idx)
+// }
+// fn decode_i64(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<i64>>> {
+//     o.decode_native_i64(idx)
+// }
+// fn decode_u64(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<u64>>> {
+//     o.decode_native_u64(idx)
+// }
+// fn decode_f32(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<f32>>> {
+//     o.decode_native_f32(idx)
+// }
+// fn decode_f64(o: &Operations, idx: Option<&[u8]>) -> RaquetDataFusionResult<Option<Vec<f64>>> {
+//     o.decode_native_f64(idx)
+// }
 
 #[macro_export]
 macro_rules! impl_binary_convert_list_builder {

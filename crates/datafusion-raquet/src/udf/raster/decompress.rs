@@ -129,51 +129,99 @@ fn build_cell_array(
 ) -> RaquetDataFusionResult<ColumnarValue> {
     match binary_type {
         DataType::Binary => {
-            let mut builder = GenericBinaryBuilder::<i32>::new();
-            let in_binary = arrays[0]
-                .as_any()
-                .downcast_ref::<BinaryArray>()
-                .expect("cast failed");
-            let ops: Operations = Operations::new(column_metadata.inner());
-            for input in in_binary.iter() {
-                let output = ops.decompress(input)?;
+            let out = binary_decompress(arrays, column_metadata);
+            Ok(ColumnarValue::Array(out))
+            // let mut builder = GenericBinaryBuilder::<i32>::new();
+            // let in_binary = arrays[0]
+            //     .as_any()
+            //     .downcast_ref::<BinaryArray>()
+            //     .expect("cast failed");
+            // let ops: Operations = Operations::new(column_metadata.inner());
+            // for input in in_binary.iter() {
+            //     let output = ops.decompress(input)?;
 
-                builder.append_value(output);
-            }
-            let point_arr = builder.finish();
-            Ok(ColumnarValue::Array(Arc::new(point_arr)))
+            //     builder.append_value(output);
+            // }
+            // let point_arr = builder.finish();
+            // Ok(ColumnarValue::Array(Arc::new(point_arr)))
         }
         DataType::LargeBinary => {
-            let mut builder = GenericBinaryBuilder::<i64>::new();
-            let in_binary = arrays[0]
-                .as_any()
-                .downcast_ref::<LargeBinaryArray>()
-                .expect("cast failed");
-            let ops: Operations = Operations::new(column_metadata.inner());
-            for input in in_binary.iter() {
-                let output = ops.decompress(input)?;
+            let out = large_binary_decompress(arrays, column_metadata);
+            Ok(ColumnarValue::Array(out))
+            // let mut builder = GenericBinaryBuilder::<i64>::new();
+            // let in_binary = arrays[0]
+            //     .as_any()
+            //     .downcast_ref::<LargeBinaryArray>()
+            //     .expect("cast failed");
+            // let ops: Operations = Operations::new(column_metadata.inner());
+            // for input in in_binary.iter() {
+            //     let output = ops.decompress(input)?;
 
-                builder.append_value(output);
-            }
-            let point_arr = builder.finish();
-            Ok(ColumnarValue::Array(Arc::new(point_arr)))
+            //     builder.append_value(output);
+            // }
+            // let point_arr = builder.finish();
+            // Ok(ColumnarValue::Array(Arc::new(point_arr)))
         }
 
         DataType::BinaryView => {
-            let mut builder = BinaryViewBuilder::new();
-            let in_binary = arrays[0]
-                .as_any()
-                .downcast_ref::<BinaryViewArray>()
-                .expect("cast failed");
-            let ops: Operations = Operations::new(column_metadata.inner());
-            for input in in_binary.iter() {
-                let output = ops.decompress(input)?;
+            let out = binary_view_decompress(arrays, column_metadata);
+            Ok(ColumnarValue::Array(out))
+            // let mut builder = BinaryViewBuilder::new();
+            // let in_binary = arrays[0]
+            //     .as_any()
+            //     .downcast_ref::<BinaryViewArray>()
+            //     .expect("cast failed");
+            // let ops: Operations = Operations::new(column_metadata.inner());
+            // for input in in_binary.iter() {
+            //     let output = ops.decompress(input)?;
 
-                builder.append_value(output);
-            }
-            let point_arr = builder.finish();
-            Ok(ColumnarValue::Array(Arc::new(point_arr)))
+            //     builder.append_value(output);
+            // }
+            // let point_arr = builder.finish();
+            // Ok(ColumnarValue::Array(Arc::new(point_arr)))
         }
         _ => unreachable!(),
     }
 }
+
+#[macro_export]
+macro_rules! impl_binary_to_binary {
+    ($downcast:ident, $builder:ty,$operation:ident, $name:ident) => {
+        pub fn $name(arrays: Vec<ArrayRef>, column_metadata: Metadata) -> ArrayRef {
+            let mut builder = <$builder>::new();
+            let in_binary = arrays[0]
+                .as_any()
+                .downcast_ref::<$downcast>()
+                .expect("cast failed");
+            let ops: Operations = Operations::new(column_metadata.inner());
+            for input in in_binary.iter() {
+                let output = ops.$operation(input).expect("...");
+
+                builder.append_value(output);
+            }
+            let binary_arr = builder.finish();
+            Arc::new(binary_arr)
+        }
+    };
+}
+
+impl_binary_to_binary!(
+    BinaryArray,
+    GenericBinaryBuilder::<i32>,
+    decompress,
+    binary_decompress
+);
+
+impl_binary_to_binary!(
+    LargeBinaryArray,
+    GenericBinaryBuilder::<i64>,
+    decompress,
+    large_binary_decompress
+);
+
+impl_binary_to_binary!(
+    BinaryViewArray,
+    BinaryViewBuilder,
+    decompress,
+    binary_view_decompress
+);

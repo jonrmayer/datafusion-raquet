@@ -21,3 +21,4 @@ mod operations;
 
 pub use operations::Operations;
 pub use operations::OperationsError;
+pub use operations::OperationsResult;
